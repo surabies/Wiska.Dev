@@ -1,0 +1,337 @@
+{
+  // ============================================================
+  // HONO SNIPPETS (TypeScript, Hono v4)
+  // Cara pakai: ketik prefix lalu tekan Tab atau Enter
+  // ============================================================
+
+  // ---------- APP / SERVER ----------
+  "Hono App (Bun / Cloudflare Workers)": {
+    "prefix": "happ",
+    "scope": "typescript",
+    "description": "Aplikasi Hono dasar dengan export default",
+    "body": [
+      "import { Hono } from 'hono';",
+      "",
+      "const app = new Hono();",
+      "",
+      "app.get('/', (c) => {",
+      "  return c.text('${1:Hello Hono!}');",
+      "});",
+      "",
+      "$0",
+      "",
+      "export default app;"
+    ]
+  },
+
+  "Hono App (Node.js Server)": {
+    "prefix": "hnode",
+    "scope": "typescript",
+    "description": "Aplikasi Hono untuk Node.js dengan @hono/node-server",
+    "body": [
+      "import { serve } from '@hono/node-server';",
+      "import { Hono } from 'hono';",
+      "",
+      "const app = new Hono();",
+      "",
+      "app.get('/', (c) => {",
+      "  return c.text('${1:Hello Hono!}');",
+      "});",
+      "",
+      "$0",
+      "",
+      "serve({ fetch: app.fetch, port: ${2:3000} }, (info) => {",
+      "  console.log('Server berjalan di http://localhost:' + info.port);",
+      "});"
+    ]
+  },
+
+  "Hono App (dengan Bindings & Variables)": {
+    "prefix": "htypes",
+    "scope": "typescript",
+    "description": "Hono dengan generic Bindings dan Variables",
+    "body": [
+      "import { Hono } from 'hono';",
+      "",
+      "type Bindings = {",
+      "  ${1:DATABASE_URL}: string;",
+      "};",
+      "",
+      "type Variables = {",
+      "  ${2:userId}: string;",
+      "};",
+      "",
+      "const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();",
+      "",
+      "$0",
+      "",
+      "export default app;"
+    ]
+  },
+
+  // ---------- ROUTES ----------
+  "Hono GET Route": {
+    "prefix": "hget",
+    "scope": "typescript",
+    "description": "Route GET",
+    "body": [
+      "app.get('${1:/path}', (c) => {",
+      "  return c.json({ ${2:message}: '${3:OK}' });",
+      "});"
+    ]
+  },
+
+  "Hono POST Route": {
+    "prefix": "hpost",
+    "scope": "typescript",
+    "description": "Route POST dengan body JSON",
+    "body": [
+      "app.post('${1:/path}', async (c) => {",
+      "  const body = await c.req.json();",
+      "",
+      "  $0",
+      "",
+      "  return c.json({ data: body }, 201);",
+      "});"
+    ]
+  },
+
+  "Hono PUT Route": {
+    "prefix": "hput",
+    "scope": "typescript",
+    "description": "Route PUT dengan path param dan body",
+    "body": [
+      "app.put('${1:/path}/:${2:id}', async (c) => {",
+      "  const ${2:id} = c.req.param('${2:id}');",
+      "  const body = await c.req.json();",
+      "",
+      "  $0",
+      "",
+      "  return c.json({ ${2:id}, data: body });",
+      "});"
+    ]
+  },
+
+  "Hono DELETE Route": {
+    "prefix": "hdelete",
+    "scope": "typescript",
+    "description": "Route DELETE dengan path param",
+    "body": [
+      "app.delete('${1:/path}/:${2:id}', (c) => {",
+      "  const ${2:id} = c.req.param('${2:id}');",
+      "",
+      "  $0",
+      "",
+      "  return c.json({ deleted: ${2:id} });",
+      "});"
+    ]
+  },
+
+  "Hono Path Param": {
+    "prefix": "hparam",
+    "scope": "typescript",
+    "description": "Ambil path parameter",
+    "body": [
+      "const ${1:id} = c.req.param('${1:id}');"
+    ]
+  },
+
+  "Hono Query String": {
+    "prefix": "hquery",
+    "scope": "typescript",
+    "description": "Ambil query string",
+    "body": [
+      "const ${1:page} = c.req.query('${1:page}');"
+    ]
+  },
+
+  "Hono Request Body": {
+    "prefix": "hbody",
+    "scope": "typescript",
+    "description": "Ambil body JSON",
+    "body": [
+      "const body = await c.req.json();"
+    ]
+  },
+
+  "Hono Sub Router": {
+    "prefix": "hrouter",
+    "scope": "typescript",
+    "description": "File router terpisah untuk dipasang dengan app.route()",
+    "body": [
+      "import { Hono } from 'hono';",
+      "",
+      "const ${1:users} = new Hono();",
+      "",
+      "${1:users}.get('/', (c) => {",
+      "  return c.json([]);",
+      "});",
+      "",
+      "${1:users}.get('/:id', (c) => {",
+      "  const id = c.req.param('id');",
+      "",
+      "  return c.json({ id });",
+      "});",
+      "",
+      "$0",
+      "",
+      "export default ${1:users};"
+    ]
+  },
+
+  "Hono Mount Router": {
+    "prefix": "hroute",
+    "scope": "typescript",
+    "description": "Pasang sub router ke app utama",
+    "body": [
+      "import ${1:users} from './routes/${1:users}';",
+      "",
+      "app.route('/${2:users}', ${1:users});"
+    ]
+  },
+
+  // ---------- MIDDLEWARE ----------
+  "Hono Inline Middleware": {
+    "prefix": "hmw",
+    "scope": "typescript",
+    "description": "Middleware sederhana dengan app.use",
+    "body": [
+      "app.use('${1:*}', async (c, next) => {",
+      "  $0",
+      "  await next();",
+      "});"
+    ]
+  },
+
+  "Hono Custom Middleware (createMiddleware)": {
+    "prefix": "hmwc",
+    "scope": "typescript",
+    "description": "Middleware reusable dengan createMiddleware",
+    "body": [
+      "import { createMiddleware } from 'hono/factory';",
+      "",
+      "export const ${1:authMiddleware} = createMiddleware(async (c, next) => {",
+      "  $0",
+      "  await next();",
+      "});"
+    ]
+  },
+
+  "Hono Logger": {
+    "prefix": "hlogger",
+    "scope": "typescript",
+    "description": "Middleware logger bawaan",
+    "body": [
+      "import { logger } from 'hono/logger';",
+      "",
+      "app.use('*', logger());"
+    ]
+  },
+
+  "Hono CORS": {
+    "prefix": "hcors",
+    "scope": "typescript",
+    "description": "Middleware CORS bawaan",
+    "body": [
+      "import { cors } from 'hono/cors';",
+      "",
+      "app.use(",
+      "  '*',",
+      "  cors({",
+      "    origin: '${1:http://localhost:3000}',",
+      "    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],",
+      "    allowHeaders: ['Content-Type', 'Authorization'],",
+      "  }),",
+      ");"
+    ]
+  },
+
+  "Hono JWT Middleware": {
+    "prefix": "hjwt",
+    "scope": "typescript",
+    "description": "Middleware JWT bawaan",
+    "body": [
+      "import { jwt } from 'hono/jwt';",
+      "",
+      "app.use(",
+      "  '${1:/api/*}',",
+      "  jwt({",
+      "    secret: process.env.${2:JWT_SECRET} as string,",
+      "    alg: 'HS256',",
+      "  }),",
+      ");"
+    ]
+  },
+
+  // ---------- VALIDATION ----------
+  "Hono Zod Validator": {
+    "prefix": "hzod",
+    "scope": "typescript",
+    "description": "Validasi body JSON dengan Zod (@hono/zod-validator)",
+    "body": [
+      "import { zValidator } from '@hono/zod-validator';",
+      "import { z } from 'zod';",
+      "",
+      "const ${1:create}Schema = z.object({",
+      "  ${2:name}: z.string().min(1),",
+      "});",
+      "",
+      "app.post('${3:/path}', zValidator('json', ${1:create}Schema), (c) => {",
+      "  const data = c.req.valid('json');",
+      "",
+      "  return c.json({ data }, 201);",
+      "});"
+    ]
+  },
+
+  // ---------- ERROR HANDLING ----------
+  "Hono Error & Not Found Handler": {
+    "prefix": "herror",
+    "scope": "typescript",
+    "description": "app.onError dan app.notFound",
+    "body": [
+      "app.notFound((c) => {",
+      "  return c.json({ message: 'Route tidak ditemukan' }, 404);",
+      "});",
+      "",
+      "app.onError((err, c) => {",
+      "  console.error(err);",
+      "",
+      "  return c.json({ message: 'Terjadi kesalahan pada server' }, 500);",
+      "});"
+    ]
+  },
+
+  "Hono HTTPException": {
+    "prefix": "hhttpex",
+    "scope": "typescript",
+    "description": "Lempar HTTPException",
+    "body": [
+      "import { HTTPException } from 'hono/http-exception';",
+      "",
+      "throw new HTTPException(${1:404}, { message: '${2:Data tidak ditemukan}' });"
+    ]
+  },
+
+  // ---------- RPC ----------
+  "Hono RPC Type Export": {
+    "prefix": "hrpc",
+    "scope": "typescript",
+    "description": "Export tipe app untuk Hono RPC client",
+    "body": [
+      "export type AppType = typeof ${1:routes};"
+    ]
+  },
+
+  "Hono RPC Client": {
+    "prefix": "hclient",
+    "scope": "typescript,typescriptreact",
+    "description": "Client Hono RPC (hc) dengan tipe dari server",
+    "body": [
+      "import { hc } from 'hono/client';",
+      "import type { AppType } from '${1:../server/src/index}';",
+      "",
+      "export const client = hc<AppType>('${2:http://localhost:3000}');"
+    ]
+  }
+}

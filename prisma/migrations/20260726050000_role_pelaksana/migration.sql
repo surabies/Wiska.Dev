@@ -1,0 +1,12 @@
+-- Role PELAKSANA — petugas lapangan (pencatat meter).
+--
+-- Mereka BUKAN staf kantor: menyetor pencatatan dari aplikasi mobile,
+-- mengunduh rute yang ditugaskan, mengunggah bukti — dan tidak boleh
+-- menyentuh dashboard, verifikasi, closing, atau data induk. Karena
+-- jenjangnya LAIN (bukan sekadar lebih rendah dari STAFF), ia tidak masuk
+-- STAFF_UP di middleware/rbac.ts melainkan punya grup sendiri.
+--
+-- Ditaruh SEBELUM 'USER' supaya urutan enum tetap mencerminkan "makin ke
+-- bawah makin sempit aksesnya" saat dibaca manusia. Postgres mengizinkan
+-- penyisipan posisi lewat BEFORE, dan ini tidak menyentuh baris mana pun.
+ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'PELAKSANA' BEFORE 'USER';

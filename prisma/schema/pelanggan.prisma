@@ -1,0 +1,467 @@
+model WilayahAdm {
+  id        String                                       @id @default(cuid())
+  kode      String                                       @unique
+  nama      String                                       @unique
+  area      Unsupported("geometry(MultiPolygon, 4326)")?
+  createdAt DateTime                                     @default(now())
+  updatedAt DateTime                                     @updatedAt
+  distrik   WilayahDist[]
+
+  @@index([area], map: "wilayah_adm_area_gist_idx", type: Gist)
+  @@map("wilayah_adm")
+}
+
+model WilayahDist {
+  id             String                                       @id @default(cuid())
+  kode           String                                       @unique
+  nama           String
+  area           Unsupported("geometry(MultiPolygon, 4326)")?
+  wilayahAdmId   String
+  createdAt      DateTime                                     @default(now())
+  updatedAt      DateTime                                     @updatedAt
+  seksiCater     SeksiCater[]
+  targetKinerjas TargetKinerja[]
+  wilayahAdm     WilayahAdm                                   @relation(fields: [wilayahAdmId], references: [id])
+  wilayahSeksi   WilayahSeksi[]
+
+  @@index([wilayahAdmId])
+  @@index([area], map: "wilayah_dist_area_gist_idx", type: Gist)
+  @@map("wilayah_dist")
+}
+
+model SeksiCater {
+  id             String                                       @id @default(cuid())
+  kode           String                                       @unique
+  nama           String
+  area           Unsupported("geometry(MultiPolygon, 4326)")?
+  wilayahDistId  String
+  createdAt      DateTime                                     @default(now())
+  updatedAt      DateTime                                     @updatedAt
+  pelanggan      Pelanggan[]
+  rute           Rute[]
+  wilayahDist    WilayahDist                                  @relation(fields: [wilayahDistId], references: [id])
+  targetKinerjas TargetKinerja[]
+
+  @@index([wilayahDistId])
+  @@index([area], map: "seksi_cater_area_gist_idx", type: Gist)
+  @@map("seksi_cater")
+}
+
+model WilayahSeksi {
+  id            String                                       @id @default(cuid())
+  kode          String                                       @unique
+  nama          String
+  area          Unsupported("geometry(MultiPolygon, 4326)")?
+  wilayahDistId String
+  createdAt     DateTime                                     @default(now())
+  updatedAt     DateTime                                     @updatedAt
+  wilayahDist   WilayahDist                                  @relation(fields: [wilayahDistId], references: [id])
+  zona          Zona[]
+
+  @@index([wilayahDistId])
+  @@index([area], map: "wilayah_seksi_area_gist_idx", type: Gist)
+  @@map("wilayah_seksi")
+}
+
+model Zona {
+  id             String                                       @id @default(cuid())
+  kode           String                                       @unique
+  nama           String
+  area           Unsupported("geometry(MultiPolygon, 4326)")?
+  wilayahSeksiId String
+  createdAt      DateTime                                     @default(now())
+  updatedAt      DateTime                                     @updatedAt
+  pelanggan      Pelanggan[]
+  wilayahSeksi   WilayahSeksi                                 @relation(fields: [wilayahSeksiId], references: [id])
+
+  @@index([wilayahSeksiId])
+  @@index([area], map: "zona_area_gist_idx", type: Gist)
+  @@map("zona")
+}
+
+/// Rute pencatatan meter (urutan kunjungan petugas). Geometri dibiarkan
+/// generik (bukan MultiPolygon) karena rute bisa direpresentasikan
+/// sebagai jalur (LineString) maupun cakupan area (Polygon) tergantung
+/// sumber data lapangan.
+model Rute {
+  id                String                   @id @default(cuid())
+  kode              String                   @unique
+  noUrut            Int?
+  area              Unsupported("geometry")?
+  seksiCaterId      String
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  daftarCatat       DaftarCatat[]
+  pelanggan         Pelanggan[]
+  penugasanRute     PenugasanRute[]
+  potensiPelanggans PotensiPelanggan[]
+  seksiCater        SeksiCater               @relation(fields: [seksiCaterId], references: [id])
+
+  @@index([seksiCaterId])
+  @@index([area], map: "rute_area_gist_idx", type: Gist)
+  @@map("rute")
+}
+
+/// District Metered Area — zona jaringan pipa untuk tracking NRW
+/// (non-revenue water: kehilangan air fisik/komersial per zona jaringan
+/// distribusi). Sumber: dmakode (ProgresCater). SANGAT jarang terisi di
+/// data saat ini (~8 dari 22.523 baris punya nilai riil, sisanya
+/// placeholder "-" atau kosong) — rollout DMA nampaknya belum matang
+/// secara operasional per snapshot data ini, tapi modelnya disiapkan
+/// sekarang karena NRW adalah tanggung jawab eksplisit tim TEHNIK (lihat
+/// SubBagian "NRW" di organisasi.prisma) dan akan makin terisi seiring
+/// waktu. `nama` opsional karena sumber data cuma punya kode, belum ada
+/// kamus kode->nama DMA yang lengkap.
+model Dma {
+  id        String      @id @default(cuid())
+  kode      String      @unique
+  nama      String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  pelanggan Pelanggan[]
+
+  @@map("dma")
+}
+
+model Kecamatan {
+  id         String                                       @id @default(cuid())
+  kode       String                                       @unique
+  nama       String
+  /// Batas wilayah Kecamatan, diturunkan via ST_Union dari Kelurahan
+  /// anggotanya — hasil union antar-kelurahan yang tidak selalu nempel
+  /// bisa menghasilkan >1 bagian, karena itu MultiPolygon.
+  area       Unsupported("geometry(MultiPolygon, 4326)")?
+  kelurahan  Kelurahan[]
+  pelanggan  Pelanggan[]
+  pemutusans Pemutusan[]
+  pengaduans Pengaduan[]
+
+  @@index([area], map: "kecamatan_area_gist_idx", type: Gist)
+  @@map("kecamatan")
+}
+
+model Kelurahan {
+  id                String                                       @id @default(cuid())
+  kode              String                                       @unique
+  nama              String
+  kecamatanId       String
+  /// 3 dari 32 kelurahan di data sumber (PASIR KALIKI, TURANGGA, KARASAK)
+  /// punya 2-4 bagian terpisah (enclave/exclave) -> WAJIB MultiPolygon,
+  /// Polygon tunggal akan gagal/insert sebagian.
+  area              Unsupported("geometry(MultiPolygon, 4326)")?
+  kecamatan         Kecamatan                                    @relation(fields: [kecamatanId], references: [id])
+  pelanggan         Pelanggan[]
+  pemutusans        Pemutusan[]
+  pengaduans        Pengaduan[]
+  potensiPelanggans PotensiPelanggan[]
+
+  @@index([kecamatanId])
+  @@index([area], map: "kelurahan_area_gist_idx", type: Gist)
+  @@map("kelurahan")
+}
+
+model TarifGolongan {
+  id        String        @id @default(cuid())
+  kode      GolonganTarif @unique
+  kodeAsli  String        @unique
+  nama      String
+  kategori  String
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  pelanggan Pelanggan[]
+  blokTarif TarifBlok[]
+  /// Tagihan yang DITERBITKAN memakai golongan ini — lihat
+  /// Tagihan.tarifGolonganId. Beda dari `pelanggan` di atas: yang itu siapa
+  /// yang golongannya INI SEKARANG, yang ini apa yang DIPAKAI saat menagih.
+  tagihan   Tagihan[]
+
+  @@map("tarif_golongan")
+}
+
+/// Tarif progresif per blok konsumsi (m3). Blok 1-4 dari data lapangan.
+/// Perubahan tarif -> INSERT baris baru dengan berlakuMulai baru, JANGAN
+/// update baris lama (histori harus terjaga untuk audit & penagihan ulang).
+model TarifBlok {
+  id              String        @id @default(cuid())
+  tarifGolonganId String
+  blok            Int
+  batasAwalM3     Int
+  batasAkhirM3    Int?
+  hargaPerM3      Int
+  berlakuMulai    DateTime
+  berlakuSampai   DateTime?
+  /// DASAR HUKUM baris ini. Wajib diisi untuk tarif yang belum bersandar
+  /// pada SK: angka tarif menentukan uang yang ditagih ke warga, jadi harus
+  /// selalu bisa dijawab "dari mana angka ini?" tanpa menggali git log.
+  ///
+  /// Sebagian blok di sistem ini DIREKONSTRUKSI dari tagihan Aurora yang
+  /// sudah terbit (lihat prisma/docs/PEMETAAN-DATA.md) — cara itu terbukti tepat
+  /// (135.197 pengamatan, nol konflik), TAPI rekonstruksi bukan pengesahan.
+  /// Kolom ini yang membedakan "sudah disahkan SK" dari "menunggu SK".
+  catatan         String?
+  createdAt       DateTime      @default(now())
+  tarifGolongan   TarifGolongan @relation(fields: [tarifGolonganId], references: [id], onDelete: Cascade)
+
+  @@unique([tarifGolonganId, blok, berlakuMulai])
+  @@index([tarifGolonganId])
+  @@map("tarif_blok")
+}
+
+/// Komponen tagihan bulanan DI LUAR harga air. Berversi seperti TarifBlok —
+/// perubahan tarif = INSERT baris baru dengan `berlakuMulai` baru, JANGAN
+/// update baris lama (tagihan periode lampau harus tetap bisa dihitung
+/// ulang persis seperti saat diterbitkan).
+///
+/// Diturunkan dari ProgresCater, bukan diketik manual (lihat
+/// prisma/seed/lib/tarif.ts):
+///   BEA_BEBAN  — fungsi murni UKURAN METER, bukan golongan tarif.
+///                1/2"=7.000, 1"=43.000, 1.5"=72.000, 2"=129.000,
+///                3"=158.000, 4"=187.000. Terverifikasi 32 kombinasi
+///                (golongan, ukuran) tanpa satu pun konflik.
+///   BEA_ADMIN  — flat 10.000 untuk seluruh 22.523 pelanggan.
+///   AIR_KOTOR  — flat 11.100 untuk seluruh 22.523 pelanggan.
+///
+/// `ukuranMeter` NULL berarti "berlaku untuk semua ukuran" (BEA_ADMIN &
+/// AIR_KOTOR). Sengaja TIDAK ada @@unique yang memuat kolom nullable ini:
+/// Postgres menganggap dua NULL sebagai nilai BERBEDA, sehingga unique
+/// index-nya tidak akan mencegah duplikat justru pada baris flat itu.
+/// Idempotensi seed ditegakkan lewat findFirst + update/create di
+/// steps/01-referensi.ts, bukan lewat constraint.
+model BiayaTetap {
+  id            String          @id @default(cuid())
+  jenis         JenisBiayaTetap
+  /// NULL = berlaku untuk semua ukuran meter.
+  ukuranMeter   UkuranMeter?
+  nominal       Int
+  berlakuMulai  DateTime
+  berlakuSampai DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([jenis, berlakuMulai])
+  @@map("biaya_tetap")
+}
+
+enum JenisBiayaTetap {
+  BEA_BEBAN
+  BEA_ADMIN
+  AIR_KOTOR
+}
+
+/// Instansi/perusahaan berlangganan golongan besar (bank, militer,
+/// korporat besar) — kategori billing terpisah dari GolonganTarif reguler,
+/// bukan pengganti tarif. Sumber: gbid/gbnama (ProgresCater), ~0.7%
+/// pelanggan (151 dari 22.523 baris). Dimodelkan sebagai tabel referensi
+/// (bukan enum) karena daftar instansinya panjang & terbuka (bisa
+/// bertambah kapan saja), bukan kategori tertutup.
+model GolonganBesar {
+  id        String      @id @default(cuid())
+  kode      String      @unique
+  nama      String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  pelanggan Pelanggan[]
+
+  @@map("golongan_besar")
+}
+
+model Pelanggan {
+  id               String                                @id @default(cuid())
+  /// nolg — nomor langganan, primary key bisnis, selalu 11 digit
+  /// (zero-padded). TIDAK PERNAH BERUBAH sepanjang masa kontrak pelanggan.
+  /// db.Char(11) mengunci panjang karakter tepat 11 digit di level database.
+  nomorLangganan   String                                @unique @db.Char(11)
+  /// nprs — nomor persil. BUKAN @unique: 116 kasus satu lokasi fisik,
+  /// beda pelanggan (rumah dipecah/disewakan ulang).
+  nomorPersil      String
+  nama             String
+  alamat           String
+  /// Leading zero ("001") -> VarChar(3) menghemat storage & mencegah input
+  /// teks yang merusak format (mis. "RT 01").
+  rt               String?                               @db.VarChar(3)
+  rw               String?                               @db.VarChar(3)
+  notelp           String?
+  jumlahPenghuni   Int?
+  /// GPS mentah dari PBPK (legacy/backup, dipertahankan untuk audit).
+  /// Validasi: nilai ~46168.x = Excel date serial placeholder, abaikan.
+  geoLat           Float?
+  geoLong          Float?
+  /// Kolom spasial utama: satu titik koordinat sambungan (SRID 4326).
+  koordinat        Unsupported("geometry(Point, 4326)")?
+  /// Status pasokan air untuk sambungan ini: PENUH (24 jam nonstop) atau
+  /// BERGILIR (dibatasi jam tertentu, lihat jamGilirMulai/jamGilirSelesai).
+  /// Null = data giliran air belum/tidak tersedia untuk sambungan ini
+  /// (~54% baris ProgresCater kosong di kolom ini). Sumber: durasi
+  /// (ProgresCater).
+  statusPasokanAir StatusPasokanAir?
+  /// Jam mulai/selesai pasokan air per hari, HANYA relevan kalau
+  /// statusPasokanAir = BERGILIR. Disimpan sebagai TIME (bukan DateTime
+  /// penuh) karena ini pola jam berulang harian, bukan kejadian sekali.
+  /// Sumber: jamgilirstart/jamgilirend (ProgresCater).
+  jamGilirMulai    DateTime?                             @db.Time(6)
+  jamGilirSelesai  DateTime?                             @db.Time(6)
+  /// Pola pengulangan giliran, mis. "TIAP HARI". Disimpan String (bukan
+  /// enum) karena baru 6 dari 22.523 baris terisi di data — ruang nilai
+  /// penuhnya belum diketahui, jangan diasumsikan tertutup dulu. Sumber:
+  /// waktugilir (ProgresCater).
+  polaGilir        String?
+  status           StatusPelanggan                       @default(AKTIF)
+  isMBR            Boolean                               @default(false)
+  kodeMBR          String?
+  /// Klasifikasi objek bayar untuk pelanggan golongan besar (SIPIL/
+  /// AUTODEBET/HANKAM). Null untuk pelanggan reguler. Sumber: obid/obnama
+  /// (ProgresCater).
+  objekBayar       ObjekBayar?
+  golonganBesarId  String?
+  dmaId            String?
+  tarifGolonganId  String?
+  seksiCaterId     String?
+  ruteId           String?
+  /// Urutan kunjungan dalam Rute Baca Meter (bill_nourutrute di sistem
+  /// Aurora legacy) — menentukan urutan daftar pelanggan di aplikasi
+  /// petugas. Nullable: data lama belum punya urutan (fallback urut
+  /// nomorLangganan). SENGAJA tidak unique per rute: data lapangan legacy
+  /// punya duplikat, dan renumbering total tiap sisip pelanggan baru
+  /// terlalu mahal — kestabilan urutan yang penting, bukan keunikan.
+  /// Petugas bisa mengusulkan urutan baru dari lapangan
+  /// (LaporanHarianPetugas.usulanNoUrut) — admin menerapkannya saat closing.
+  noUrutRute       Int?
+  /// Daftar catat per periode (DPM) yang memuat pelanggan ini.
+  daftarCatat      DaftarCatat[]
+  zonaId           String?
+  kecamatanId      String?
+  kelurahanId      String?
+  authorId         String?
+  lastEditorId     String?
+  /// ASAL-USUL PER KOLOM: peta {kolom -> sumber} untuk kolom yang
+  /// diperebutkan banyak berkas (nama, alamat, rt, rw, notelp,
+  /// tarifGolonganId). Menentukan siapa boleh menimpa siapa — aturan &
+  /// peringkatnya di `prisma/seed/lib/asal-usul.ts`, bukan di sini.
+  ///
+  /// Kenapa Json dan bukan tabel sendiri: isinya paling banyak enam pasang
+  /// kata per pelanggan, selalu dibaca bersama barisnya, dan tidak pernah
+  /// dicari terbalik ("kolom apa saja yang berasal dari X") dalam alur
+  /// operasional. Tabel terpisah hanya menambah join di jalur terpanas.
+  ///
+  /// Null = baris warisan sebelum pencatatan ini ada; isinya boleh ditimpa
+  /// sumber mana pun yang berhak (lihat catatan pLama di asal-usul.ts).
+  sumberKolom      Json?
+  /// Soft delete — data pelanggan tidak boleh dihapus permanen (jejak
+  /// billing & histori mutasi harus tetap bisa ditelusuri).
+  deletedAt        DateTime?
+  createdAt        DateTime                              @default(now())
+  updatedAt        DateTime                              @updatedAt
+  wargaTertaut     LanggananWarga[]
+  laporanHarian    LaporanHarianPetugas[]
+  laporanMandiri   LaporanMandiri[]
+  meter            Meter[]
+  mutasi           MutasiPelanggan[]
+  author           User?                                 @relation("PelangganAuthor", fields: [authorId], references: [id])
+  dma              Dma?                                  @relation(fields: [dmaId], references: [id])
+  golonganBesar    GolonganBesar?                        @relation(fields: [golonganBesarId], references: [id])
+  kecamatan        Kecamatan?                            @relation(fields: [kecamatanId], references: [id], onDelete: Restrict)
+  kelurahan        Kelurahan?                            @relation(fields: [kelurahanId], references: [id], onDelete: Restrict)
+  lastEditor       User?                                 @relation("PelangganLastEditor", fields: [lastEditorId], references: [id])
+  rute             Rute?                                 @relation(fields: [ruteId], references: [id], onDelete: Restrict)
+  seksiCater       SeksiCater?                           @relation(fields: [seksiCaterId], references: [id], onDelete: Restrict)
+  tarifGolongan    TarifGolongan?                        @relation(fields: [tarifGolonganId], references: [id], onDelete: Restrict)
+  zona             Zona?                                 @relation(fields: [zonaId], references: [id], onDelete: Restrict)
+  pemutusan        Pemutusan[]
+  kunjunganAnomali KunjunganAnomali[]
+  pengaduan        Pengaduan[]
+  tagihan          Tagihan[]
+  tagihanLain      TagihanLain[]
+
+  @@index([koordinat], map: "pelanggan_koordinat_gist_idx", type: Gist)
+  @@index([nama])
+  @@index([nomorPersil])
+  @@index([status, deletedAt])
+  @@index([ruteId, deletedAt])
+  @@index([ruteId, noUrutRute])
+  @@index([seksiCaterId, deletedAt])
+  @@index([zonaId, deletedAt])
+  @@index([tarifGolonganId, deletedAt])
+  @@index([golonganBesarId])
+  @@index([dmaId])
+  @@map("pelanggan")
+}
+
+/// Tautan akun warga (User hasil daftar mandiri, role USER) ke pelanggan
+/// yang ia klaim sebagai langganannya. Satu akun boleh menautkan BEBERAPA
+/// nomor langganan (rumah kedua, kios, dsb.) — karena itu tabel jembatan,
+/// bukan kolom di User. Klaim ini TIDAK diverifikasi kepemilikan (produk
+/// memutuskan cukup nomor langganan — lihat server/modules/publik/
+/// verifikasi.ts), jadi data yang dibuka lewat tautan ini tidak boleh
+/// melebihi yang sudah terbuka di endpoint publik.
+model LanggananWarga {
+  id          String    @id @default(cuid())
+  userId      String
+  pelangganId String
+  /// Tepat satu per akun (dijaga aplikasi, bukan constraint): biodata yang
+  /// tampil pertama di beranda aplikasi publik + nilai prefill formulir.
+  isUtama     Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  pelanggan   Pelanggan @relation(fields: [pelangganId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pelangganId])
+  @@index([pelangganId])
+  @@map("langganan_warga")
+}
+
+/// Dipetakan dari field trp (ProgresCater) dan kd_goltarif (PBPK).
+enum GolonganTarif {
+  GOL_1A
+  GOL_1B
+  GOL_2A1
+  GOL_2A2
+  GOL_2A3
+  GOL_2A4
+  GOL_2A5
+  GOL_2B
+  GOL_3A
+  GOL_3B
+  GOL_3C
+  GOL_4A
+  GOL_4B
+}
+
+/// Klasifikasi objek bayar untuk pelanggan golongan besar. Sumber:
+/// obid/obnama (ProgresCater) — hanya 3 nilai teramati di data (SIPIL,
+/// AUTODEBET, HANKAM), selalu terisi berbarengan dengan GolonganBesar
+/// (isovb='t' di sumber data == golonganBesarId terisi di sini, jadi
+/// isovb sendiri tidak perlu kolom terpisah, cukup derive dari
+/// golonganBesarId != null).
+enum ObjekBayar {
+  SIPIL
+  AUTODEBET
+  HANKAM
+}
+
+/// Dipetakan dari mutasinama (ProgresCater) + jenis_pemutusan (r-nomor).
+///
+/// TIDAK ADA "cabut permanen" di sini, dan itu disengaja: di PDAM tidak ada
+/// pencabutan yang selamanya — bekas pelanggan kapan pun boleh memasang
+/// kembali. Nilai `CABUT_PERMANEN` pernah ada dan sudah dihapus; ia juga
+/// bertabrakan istilah dengan `StatusDaftarCatat.DICABUT` (yang artinya
+/// "dicabut pada periode ini, tetap masuk beban kerja bulan itu"), sehingga
+/// kata "cabut" dulu menunjuk dua hal berbeda.
+enum StatusPelanggan {
+  AKTIF
+  TUTUP_SEMENTARA
+  /// Meter disegel karena tunggakan/pelanggaran, sambungan fisik masih ada.
+  DISEGEL
+  /// Ditutup karena TUNGGAKAN. Hanya bisa aktif kembali setelah pelanggan
+  /// melunasi seluruh tunggakannya — karena itu status ini terminal bagi
+  /// inferensi otomatis, lihat seed/lib/status.ts.
+  TUTUP_SPT
+}
+
+/// PENUH = pasokan 24 jam nonstop. BERGILIR = dibatasi jam tertentu per
+/// hari (lihat Pelanggan.jamGilirMulai/jamGilirSelesai). Sumber: durasi
+/// (ProgresCater) — nilai "24" -> PENUH, "< 12" -> BERGILIR.
+enum StatusPasokanAir {
+  PENUH
+  BERGILIR
+}

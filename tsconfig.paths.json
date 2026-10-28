@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "@server/*": ["./src/lib/server/*"],
+      "@db": ["./prisma/index.ts"],
+      "@db/*": ["./prisma/*"],
+      "@generated": ["./generated/client"],
+      "@generated/*": ["./generated/client/*"]
+    }
+  }
+}

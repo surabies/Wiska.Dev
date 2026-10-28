@@ -1,0 +1,369 @@
+/// 681 nomorMeter duplikat di data historis ProgresCater — penyebab: meter
+/// fisik diganti tapi nomor lama dipakai ulang, atau typo data entry.
+/// Solusi: isAktif flag. Hanya SATU meter aktif per pelanggan pada satu
+/// waktu, meter lama tetap ada sebagai baris histori (isAktif = false) —
+/// JANGAN update/timpa baris lama, JANGAN dihapus.
+///
+/// `pelangganId` SENGAJA BUKAN @unique (relasi 1:banyak) — versi awal
+/// skema ini memberi @unique di situ, yang justru BERTENTANGAN dengan
+/// niat histori di atas (cuma bisa nyimpan SATU baris Meter per pelanggan
+/// selamanya, jadi ganti meter = baris lama ketiban/hilang). Diperbaiki
+/// supaya penggantian meter benar-benar menghasilkan baris baru, bukan
+/// menimpa. "satu meter aktif per pelanggan" ditegakkan di APLIKASI
+/// (seed script & business logic), BUKAN constraint database — Prisma
+/// schema tidak punya sintaks untuk partial unique index
+/// (`WHERE isAktif = true`); kalau butuh ditegakkan di level DB juga,
+/// tambahkan index itu manual lewat raw SQL di file migrasi.
+model Meter {
+  id            String                 @id @default(cuid())
+  /// nometer (ProgresCater) = kd_wm (lapdatameter) — field yang sama.
+  /// Tidak @unique karena ada 681 duplikat di data lapangan.
+  nomorMeter    String
+  nomorSegel    String?
+  /// 60+ nilai merk dengan inkonsistensi case ("ITR","lin","AQ ","aq ").
+  /// Disimpan String, dinormalisasi UPPER+TRIM di seed script.
+  merkKode      String?
+  ukuran        UkuranMeter            @default(INCH_HALF)
+  tanggalPasang DateTime?
+  umurTahun     Int?
+  umurBulan     Int?
+  /// Sisa hari dari sisa-bagi umur meter (umurmeterhari di ProgresCater,
+  /// terisi 100% baris) — pelengkap umurTahun/umurBulan, bukan pengganti.
+  umurHari      Int?
+  /// true = meter aktif saat ini. false = sudah diganti, disimpan sebagai
+  /// histori.
+  isAktif       Boolean                @default(true)
+  catatan       String?
+  pelangganId   String
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  laporanVerif  LaporanHarianPetugas[] @relation("LaporanMeterVerif")
+  pelanggan     Pelanggan              @relation(fields: [pelangganId], references: [id], onDelete: Cascade)
+  pembacaan     PembacaanMeter[]
+
+  @@index([nomorMeter])
+  @@index([pelangganId, isAktif])
+  @@index([merkKode])
+  @@map("meter")
+}
+
+model PembacaanMeter {
+  id             String                @id @default(cuid())
+  meterId        String
+  /// Tanggal 1 bulan periode. thbl 202605 -> 2026-05-01.
+  periode        DateTime
+  standLalu      Int
+  standAkhir     Int
+  /// PEMAKAIAN YANG DITAGIHKAN (sumber: `pakai_drd`) — inilah angka yang
+  /// masuk Tagihan dan dilihat pelanggan. SERING BERBEDA dari selisih
+  /// stand: di periode 202605 berbeda pada 10.160 dari 22.523 baris (45%).
+  /// Namanya dipertahankan `pemakaianM3` (bukan diganti `pemakaianTagih`)
+  /// karena sudah dipakai di ~80 tempat lintas server/web/mobile —
+  /// perbedaannya dijelaskan di sini alih-alih lewat rename berisiko.
+  pemakaianM3    Int
+  /// PEMAKAIAN YANG BENAR-BENAR TERBACA di meter = standAkhir - standLalu.
+  /// Nullable karena baris hasil impor sistem lama sebelum kolom ini ada
+  /// tidak punya nilainya. Dipisah dari `pemakaianM3` supaya pertanyaan
+  /// "kenapa saya ditagih 10 m3 padahal meter saya tidak jalan?" punya
+  /// jawaban yang bisa ditelusuri, bukan cuma satu angka tanpa asal-usul.
+  pemakaianRiil  Int?
+  /// Kenapa `pemakaianM3` berbeda dari `pemakaianRiil`. NULL = tidak
+  /// berbeda (pemakaian riil dipakai apa adanya — mayoritas baris).
+  /// Lihat prisma/seed/lib/domain/tagihan.ts untuk aturan & dasar hukumnya.
+  alasanTaksir   AlasanTaksir?
+  blokTarif      Int
+  pemakaianLalu  Int?
+  blokTarifLalu  Int?
+  kondisi        KondisiCatat          @default(NORMAL)
+  kategori       KategoriPembacaan     @default(ONSITE)
+  /// FK ke Pencatat (bukan User langsung) — lihat organisasi.prisma.
+  pencatatId     String?
+  tanggalCatat   DateTime?
+  fotoBukti      String?
+  createdAt      DateTime              @default(now())
+  laporanHarian  LaporanHarianPetugas?
+  laporanMandiri LaporanMandiri?
+  meter          Meter                 @relation(fields: [meterId], references: [id], onDelete: Cascade)
+  pencatat       Pencatat?             @relation(fields: [pencatatId], references: [id])
+  tagihan        Tagihan?
+
+  @@unique([meterId, periode])
+  @@index([meterId])
+  @@index([periode])
+  @@index([kondisi])
+  @@map("pembacaan_meter")
+}
+
+/// Tagihan air periodik (1 baris per periode tagih, terikat ke satu
+/// PembacaanMeter resmi). Komponen "non-air" recurring (beaAdmin,
+/// airKotor/limbah, lainLain) tetap digabung dalam satu invoice bulanan —
+/// sesuai praktik lapangan PDAM. Untuk pungutan non-air yang SIFATNYA
+/// insidental (bukan bulanan), lihat model TagihanLain di bawah.
+model Tagihan {
+  id                String              @id @default(cuid())
+  nomorTagihan      String              @unique @default(cuid())
+  pelangganId       String
+  pembacaanId       String?             @unique
+  /// GOLONGAN TARIF YANG DIPAKAI SAAT TAGIHAN INI DITERBITKAN — dibekukan,
+  /// bukan diambil lewat relasi Pelanggan saat dibaca.
+  ///
+  /// `Pelanggan.tarifGolonganId` adalah nilai BERJALAN; tagihan adalah
+  /// dokumen SEJARAH. Tanpa pembekuan ini, tagihan lama tidak bisa
+  /// menjelaskan dasarnya sendiri begitu pelanggannya pindah golongan —
+  /// dan itu persis yang ditanyakan pelanggan saat mengadu dan diperiksa
+  /// auditor.
+  ///
+  /// Ditemukan dari kejadian nyata: tiga pelanggan berpindah golongan antara
+  /// April dan Juni 2026, dan menghitung ulang tagihan MEI memakai golongan
+  /// HARI INI langsung meleset (mis. 2A3 vs 3B = selisih Rp 241.140).
+  ///
+  /// Nullable karena baris warisan impor Aurora tidak membawanya; diisi
+  /// belakangan lewat backfill yang MENURUNKANNYA dari angka tagihan itu
+  /// sendiri (golongan mana yang blok tarifnya mereproduksi jmlHargaAir).
+  tarifGolonganId   String?
+  periode           DateTime
+  pemakaianM3       Int
+  jmlHargaAir       Int
+  beaBeban          Int                 @default(7000)
+  beaAdmin          Int                 @default(10000)
+  /// Retribusi air limbah/kotor.
+  airKotor          Int                 @default(11100)
+  lainLain          Int                 @default(0)
+  denda             Int                 @default(0)
+  totalTagihan      Int
+  jumlahRekTunggak  Int?
+  /// BigInt — tunggakan bisa mencapai puluhan-ratusan juta rupiah di data
+  /// lapangan (maks. terobservasi ~Rp 132 juta).
+  nominalTunggak    BigInt?
+  status            StatusTagihan       @default(BELUM_BAYAR)
+  tanggalJatuhTempo DateTime
+  /// Cache tanggal bayar dari RiwayatPembayaran berstatus BERHASIL
+  /// terakhir — untuk query dashboard cepat tanpa join. Sumber kebenaran
+  /// tetap RiwayatPembayaran.
+  tanggalBayar      DateTime?
+  validatorId       String?
+  validasiAt        DateTime?
+  catatanValidasi   String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  riwayatPembayaran RiwayatPembayaran[]
+  pelanggan         Pelanggan           @relation(fields: [pelangganId], references: [id])
+  pembacaan         PembacaanMeter?     @relation(fields: [pembacaanId], references: [id])
+  tarifGolongan     TarifGolongan?      @relation(fields: [tarifGolonganId], references: [id])
+  validator         User?               @relation("TagihanValidator", fields: [validatorId], references: [id])
+
+  @@index([pelangganId, periode])
+  @@index([status, tanggalJatuhTempo])
+  @@index([periode])
+  @@index([nominalTunggak])
+  @@index([tarifGolonganId])
+  @@map("tagihan")
+}
+
+/// Pungutan non-air yang tidak terikat siklus catat-meter bulanan: biaya
+/// pasang baru, balik nama, ganti meter rusak akibat kelalaian pelanggan,
+/// denda pelanggaran, buka segel, dll.
+model TagihanLain {
+  id                String              @id @default(cuid())
+  nomorTagihan      String              @unique @default(cuid())
+  pelangganId       String
+  jenis             JenisTagihanLain
+  deskripsi         String
+  jumlah            Int
+  status            StatusTagihan       @default(BELUM_BAYAR)
+  tanggalJatuhTempo DateTime
+  tanggalBayar      DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  riwayatPembayaran RiwayatPembayaran[]
+  pelanggan         Pelanggan           @relation(fields: [pelangganId], references: [id])
+
+  @@index([pelangganId, status])
+  @@index([jenis])
+  @@map("tagihan_lain")
+}
+
+/// Satu baris per PERCOBAAN pembayaran (bukan hanya yang berhasil) —
+/// termasuk transaksi PPOB yang pending/expired. Tepat satu dari
+/// tagihanId/tagihanLainId wajib diisi (ditegakkan di application layer,
+/// Prisma tidak punya polymorphic relation native).
+model RiwayatPembayaran {
+  id              String           @id @default(cuid())
+  tagihanId       String?
+  tagihanLainId   String?
+  jumlahBayar     Int
+  kanal           KanalPembayaran
+  /// Nama mitra/channel PPOB: "Indomaret", "Alfamart", "BRIVA", "QRIS", dst.
+  penyelenggara   String?
+  /// Kode referensi dari payment gateway/PPOB — kunci idempoten untuk
+  /// callback webhook.
+  kodeReferensi   String           @unique
+  status          StatusPembayaran @default(PENDING)
+  waktuBayar      DateTime?
+  waktuKonfirmasi DateTime?
+  /// Payload mentah callback gateway, disimpan untuk audit/rekonsiliasi.
+  payloadCallback Json?
+  createdAt       DateTime         @default(now())
+  tagihan         Tagihan?         @relation(fields: [tagihanId], references: [id], onDelete: Cascade)
+  tagihanLain     TagihanLain?     @relation(fields: [tagihanLainId], references: [id], onDelete: Cascade)
+
+  @@index([tagihanId])
+  @@index([tagihanLainId])
+  @@index([status])
+  @@index([kanal])
+  @@map("riwayat_pembayaran")
+}
+
+/// Dipetakan dari ukmeter (ProgresCater) dan kd_ukmeter (PBPK).
+/// PBPK memakai kode "A" untuk 1/2 inci -> dimap ke INCH_HALF saat seed.
+/// Alasan pemakaian yang DITAGIHKAN berbeda dari yang TERBACA di meter.
+/// Nilai & aturannya didefinisikan di prisma/seed/lib/domain/tagihan.ts — enum ini
+/// hanya tempat menyimpannya. Diturunkan dari data 202605 dan dikonfirmasi
+/// ke aturan yang berlaku:
+///   MINIMUM_5M3         pemakaian di bawah 5 m3 ditagih 5 m3. Dasar:
+///                       Peraturan Direksi (Perdir). Diterapkan verifikator.
+///   TAKSIRAN_BULAN_LALU meter tidak terbaca (rumah kosong, meter rusak,
+///                       terhalang, dst) -> dipakai angka periode lalu.
+///   NOL_TIDAK_ADA_AIR   tidak ada air / sudah dicabut -> 0 m3, pemakaian
+///                       minimum TIDAK berlaku (terverifikasi: kode `8` dan
+///                       `D` selalu 0, tanpa pengecualian).
+///   OVERRIDE_MANUAL     verifikator menetapkan angka lain secara sadar.
+///                       Tidak ada rumusnya — yang wajib ada jejaknya.
+enum AlasanTaksir {
+  MINIMUM_5M3
+  TAKSIRAN_BULAN_LALU
+  NOL_TIDAK_ADA_AIR
+  OVERRIDE_MANUAL
+}
+
+enum UkuranMeter {
+  INCH_HALF
+  INCH_1
+  INCH_1_HALF
+  INCH_2
+  INCH_3
+  INCH_4
+}
+
+/// Dipetakan dari Nm_Kel (lapdatameter) + ketcatat (ProgresCater).
+/// METER_TERBALIK dan METER_DALAM_AIR ditemukan eksklusif di lapdatameter.
+enum KondisiCatat {
+  NORMAL
+  TIDAK_DIPAKAI
+  RUMAH_KOSONG
+  STAND_TEMPEL
+  STAND_KONSUMEN
+  METER_RUSAK
+  METER_MATI_ADA_AIR
+  METER_MUNDUR
+  METER_TERBALIK
+  METER_DALAM_AIR
+  LOS_METER
+  BMK_BMB
+  TTB
+  MTA
+  TERHALANG
+  TIDAK_ADA_AIR
+  ADA_ANJING
+  DK
+  MB
+  MUDA_KEMBALI
+  REV_PENCATAT
+  DICABUT
+}
+
+enum KategoriPembacaan {
+  ONSITE
+  OFFSITE
+}
+
+enum StatusTagihan {
+  BELUM_BAYAR
+  SUDAH_BAYAR
+  JATUH_TEMPO
+  DIHAPUSKAN
+}
+
+enum JenisTagihanLain {
+  PASANG_BARU
+  BALIK_NAMA
+  GANTI_METER
+  BUKA_SEGEL
+  DENDA_PELANGGARAN
+  LAINNYA
+}
+
+enum KanalPembayaran {
+  TELLER_KANTOR
+  PPOB_BANK
+  PPOB_MINIMARKET
+  VIRTUAL_ACCOUNT
+  QRIS
+  AUTODEBET
+}
+
+enum StatusPembayaran {
+  PENDING
+  BERHASIL
+  GAGAL
+  EXPIRED
+}
+
+// ============================================================================
+// CLOSING PERIODE — penerbitan tagihan resmi satu periode sekaligus
+// ============================================================================
+
+/// Status penagihan satu periode (thbl). Satu baris per periode.
+///
+/// KENAPA HARUS ADA TABELNYA, bukan sekadar "ada Tagihan berarti sudah closing":
+///
+/// 1. **Tanggal jatuh tempo akhirnya punya sumber.** Sebelum ini setiap
+///    Tagihan memakai placeholder `periode + 1 bulan` yang dikarang kode
+///    impor — tidak ada di CSV mana pun. Sekarang tanggalnya ditetapkan
+///    SEKALI saat menutup periode oleh orang yang berwenang, dan seluruh
+///    tagihan periode itu memakainya. Satu keputusan, satu jejak.
+///
+/// 2. **Menagih dua kali harus mustahil, bukan sekadar tidak disengaja.**
+///    Selama `status = TERKUNCI`, penerbitan tagihan periode itu ditolak.
+///    Tanpa penanda eksplisit, satu klik ganda pada tombol closing bisa
+///    menerbitkan tagihan kedua untuk pelanggan yang sama.
+///
+/// 3. **Angka DRD dibekukan sebagai bukti.** jumlahSL/totalM3/totalTagihan
+///    di-snapshot saat penutupan. Menghitungnya ulang saat dibaca akan
+///    membuat laporan bulan lalu diam-diam berubah setiap kali ada koreksi
+///    data — padahal yang sudah terlanjur ditagihkan ke pelanggan tidak
+///    ikut berubah. Pola yang sama dipakai target SLA di Pengaduan.
+model PeriodePenagihan {
+  id                String                 @id @default(cuid())
+  /// thbl, mis. 202605. Satu baris per periode.
+  periode           Int                    @unique
+  status            StatusPeriodePenagihan @default(BERJALAN)
+  /// Jatuh tempo seluruh tagihan periode ini — DITETAPKAN MANUSIA saat
+  /// menutup periode, bukan diturunkan dari rumus.
+  tanggalJatuhTempo DateTime?
+  ditutupAt         DateTime?
+  ditutupById       String?
+  dibukaAt          DateTime?
+  dibukaById        String?
+  /// Alasan periode dibuka kembali — wajib diisi saat membuka, karena
+  /// membuka periode yang sudah ditagihkan adalah tindakan luar biasa.
+  alasanBuka        String?
+  /// Snapshot hasil closing (lihat alasan 3 di atas). Null selama BERJALAN.
+  jumlahSL          Int?
+  totalM3           Int?
+  totalTagihan      BigInt?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  ditutupBy         User?                  @relation("PeriodeDitutupBy", fields: [ditutupById], references: [id])
+  dibukaBy          User?                  @relation("PeriodeDibukaBy", fields: [dibukaById], references: [id])
+
+  @@index([status])
+  @@map("periode_penagihan")
+}
+
+enum StatusPeriodePenagihan {
+  /// Masih menerima pencatatan & verifikasi. Tagihan belum terbit.
+  BERJALAN
+  /// Tagihan sudah terbit dan periode dikunci — tidak bisa ditagih ulang.
+  TERKUNCI
+}

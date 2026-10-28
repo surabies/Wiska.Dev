@@ -1,0 +1,178 @@
+/// 4 Divisi utama PERUMDA Tirtawening.
+/// Diisi via seed: PELAYANAN, TEHNIK, UMUM, UTAMA.
+model Divisi {
+  id        String     @id @default(cuid())
+  kode      KodeDivisi @unique
+  nama      String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  bagian    Bagian[]
+  users     User[]
+
+  @@map("divisi")
+}
+
+model Bagian {
+  id          String      @id @default(cuid())
+  kode        String      @unique
+  nama        String
+  /// Kepala bagian = SENIOR_MANAGER di PELAYANAN, MANAGER di TEHNIK/UMUM.
+  /// Bersifat dokumentatif — tidak ditegakkan sebagai constraint database.
+  levelKepala Role        @default(SENIOR_MANAGER)
+  divisiId    String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  divisi      Divisi      @relation(fields: [divisiId], references: [id])
+  subBagian   SubBagian[]
+  users       User[]
+
+  @@index([divisiId])
+  @@map("bagian")
+}
+
+/// SubBagian di dalam Bagian.
+/// Contoh di PELAYANAN/Wilayah N: "Pencatatan Meter", "Sub Zona",
+/// "Langganan", "NRW".
+/// Contoh di TEHNIK/Produksi 1: "Operator Pengolahan & Intake",
+/// "Mekanikal Engineering", "Bagian Perpipaan".
+/// Contoh di TEHNIK/Produksi 2: "Operator Pengolahan & Intake",
+/// "Sumur Bor", "Mata Air".
+model SubBagian {
+  id        String   @id @default(cuid())
+  kode      String   @unique
+  nama      String
+  bagianId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  bagian    Bagian   @relation(fields: [bagianId], references: [id])
+  users     User[]
+
+  @@index([bagianId])
+  @@map("sub_bagian")
+}
+
+/// Jembatan nama petugas lapangan (kd_petugas di CSV legacy, mis. "IWAN",
+/// "DADANG") ke akun User sistem. kd_petugas "-" -> pencatatId null di
+/// laporan (petugas tidak diketahui). Dipisah dari User karena riwayat
+/// pencatatan lama tidak selalu punya akun sistem.
+model Pencatat {
+  id               String                 @id @default(cuid())
+  /// Nama persis seperti di CSV setelah normalisasi (UPPER + TRIM).
+  /// Ini yang dipakai sebagai lookup key saat import.
+  namaLapangan     String                 @unique
+  namaLengkap      String?
+  nip              String?
+  /// Variasi penulisan lain yang merujuk ke orang yang sama.
+  /// Disimpan sebagai string JSON array: ["iwan","IWAN SURYANA","iwan s"]
+  /// Digunakan saat normalisasi data lama.
+  aliasLain        String?
+  /// Link ke akun User sistem. Nullable — pencatat lama boleh ada tanpa
+  /// akun User.
+  userId           String?                @unique
+  /// Jenis pekerjaan lapangan yang dipegang orang ini. Perannya di sistem
+  /// TETAP `PELAKSANA` — yang berbeda bukan kewenangannya, melainkan
+  /// penugasan yang ia terima. Menambah peran baru di enum Role akan
+  /// memaksa setiap ROLE_GROUPS dan setiap penjaga endpoint memikirkan
+  /// peran kedua yang aksesnya identik.
+  ///
+  /// PENYELIA_ANOMALI berbeda dalam satu hal yang penting: cakupan datanya
+  /// TIDAK dibatasi rute. Ia menerima SELURUH daftar anomali dan memilih
+  /// sendiri mana yang didatangi — tidak ada yang menugaskan per alamat.
+  /// Keberhasilannya diukur dari TURUNNYA jumlah anomali dari bulan ke
+  /// bulan, bukan dari jumlah kunjungan yang diselesaikan.
+  jenisTugas       JenisTugasPencatat     @default(PENCATAT_METER)
+  isAktif          Boolean                @default(true)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  daftarCatat      DaftarCatat[]
+  laporanHarian    LaporanHarianPetugas[]
+  pembacaanMeter   PembacaanMeter[]
+  kunjunganAnomali KunjunganAnomali[]
+  /// Rute Baca Meter (RBM) yang dipegang pencatat ini — many-to-many berurut
+  /// lewat PenugasanRute (satu pencatat banyak rute; satu rute boleh dibagi
+  /// >1 pencatat untuk pembagian beban/pengganti cuti). Diatur di dashboard
+  /// web (halaman Pemetaan Rute) dan dibaca mobile `GET /laporan-harian/rute-saya`.
+  /// Menggantikan kolom `ruteId` tunggal yang lama.
+  penugasanRute    PenugasanRute[]
+  user             User?                  @relation(fields: [userId], references: [id])
+
+  @@index([namaLapangan])
+  @@index([jenisTugas])
+  @@map("pencatat")
+}
+
+/// Jenis pekerjaan lapangan. BUKAN jenjang — keduanya sama-sama `PELAKSANA`
+/// di enum Role; yang berbeda adalah pekerjaan dan cakupan datanya.
+/// BERJENJANG, BUKAN SALING MENIADAKAN.
+///
+/// PENYELIA_ANOMALI adalah SUPERSET dari PENCATAT_METER: penyelia berada di
+/// ATAS pencatat, jadi ia tetap boleh membaca meter pada rute yang
+/// ditugaskan padanya SEKALIGUS mendatangi sambungan anomali di seluruh
+/// wilayah. Ia bukan "jenis lain yang tidak bisa mencatat".
+///
+/// Karena itu penjagaan mana pun WAJIB ditulis sebagai "minimal", bukan
+/// "sama dengan": memakai `jenisTugas === 'PENCATAT_METER'` sebagai syarat
+/// membaca meter akan MENGUNCI penyelia keluar dari pekerjaan yang justru
+/// ia awasi.
+enum JenisTugasPencatat {
+  /// Membaca meter pada rute yang ditugaskan. Datanya dibatasi rutenya.
+  PENCATAT_METER
+  /// Penyelia anomali. Mendatangi sambungan yang meternya berbulan-bulan
+  /// tidak terbaca — cakupannya SELURUH wilayah pelayanan, bukan satu rute,
+  /// karena sambungan bermasalah tersebar dan tidak mengenal batas rute.
+  /// TETAP bisa mencatat meter seperti PENCATAT_METER.
+  PENYELIA_ANOMALI
+}
+
+/// Penugasan Rute Baca Meter ke pencatat — join many-to-many BERURUT.
+/// `urutan` = posisi rute dalam beban kerja pencatat (rute mana dikerjakan
+/// lebih dulu). Bersifat PERMANEN: berlaku otomatis tiap periode tanpa admin
+/// mengatur ulang, kecuali penugasannya diubah. Satu rute boleh punya lebih
+/// dari satu baris (dibagi ke beberapa pencatat).
+model PenugasanRute {
+  id         String   @id @default(cuid())
+  pencatatId String
+  ruteId     String
+  urutan     Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  pencatat   Pencatat @relation(fields: [pencatatId], references: [id], onDelete: Cascade)
+  rute       Rute     @relation(fields: [ruteId], references: [id], onDelete: Cascade)
+
+  @@unique([pencatatId, ruteId])
+  @@index([pencatatId, urutan])
+  @@index([ruteId])
+  @@map("penugasan_rute")
+}
+
+/// Target kinerja bulanan/tahunan per wilayah distribusi & seksi catat —
+/// dipakai dashboard analitik untuk membandingkan realisasi (Tagihan,
+/// MutasiPelanggan) terhadap target.
+model TargetKinerja {
+  id                  String       @id @default(cuid())
+  tahun               Int
+  /// Null = target tahunan (bukan bulanan).
+  bulan               Int?
+  targetKubikasi      Decimal      @default(0)
+  targetSambunganBaru Int          @default(0)
+  seksiCaterId        String?
+  wilayahDistId       String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  seksiCater          SeksiCater?  @relation(fields: [seksiCaterId], references: [id])
+  wilayahDist         WilayahDist? @relation(fields: [wilayahDistId], references: [id])
+
+  @@index([tahun, bulan])
+  @@index([seksiCaterId])
+  @@index([wilayahDistId])
+  @@map("target_kinerja")
+}
+
+/// 4 Divisi utama PERUMDA Tirtawening Kota Bandung.
+/// UTAMA = Direktorat Utama (kantor Direksi).
+enum KodeDivisi {
+  PELAYANAN
+  TEHNIK
+  UMUM
+  UTAMA
+}

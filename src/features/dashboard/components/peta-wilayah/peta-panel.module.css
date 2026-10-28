@@ -1,0 +1,100 @@
+.panel {
+  width: 100%;
+  min-width: 0;
+  flex: 1 1 0%;
+}
+
+@media (min-width: 48rem) {
+  .panel {
+    width: 20rem;
+    flex: 0 0 20rem;
+  }
+}
+
+.kelurahan {
+  background-color: #2a78d6;
+}
+
+.kecamatan {
+  background-color: #0f766e;
+}
+
+.rute {
+  background-color: #7c3aed;
+}
+
+.pelanggan {
+  background-color: #0d9488;
+}
+
+.tutupSementara {
+  background-color: #eab308;
+}
+
+.disegel {
+  background-color: #f97316;
+}
+
+.tutupSpt {
+  background-color: #dc2626;
+}
+
+.pelangganDihapus {
+  background-color: #64748b;
+}
+
+.potensi {
+  background-color: #2563eb;
+}
+
+.eksPelanggan {
+  background-color: #64748b;
+}
+
+.pengaduan {
+  background-color: #dc2626;
+}
+
+.pengaduanSelesai {
+  background-color: #7c3aed;
+}
+
+.kebocoran {
+  background-color: #dc2626;
+}
+
+:global(.dark) .kelurahan {
+  background-color: #3987e5;
+}
+
+:global(.dark) .kecamatan {
+  background-color: #2dd4bf;
+}
+
+:global(.dark) .pelanggan {
+  background-color: #2dd4bf;
+}
+
+:global(.dark) .pelangganDihapus {
+  background-color: #94a3b8;
+}
+
+:global(.dark) .potensi {
+  background-color: #60a5fa;
+}
+
+:global(.dark) .eksPelanggan {
+  background-color: #94a3b8;
+}
+
+:global(.dark) .pengaduan {
+  background-color: #f87171;
+}
+
+:global(.dark) .pengaduanSelesai {
+  background-color: #c084fc;
+}
+
+:global(.dark) .kebocoran {
+  background-color: #f87171;
+}

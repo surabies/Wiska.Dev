@@ -1,0 +1,12 @@
+-- Asal-usul per kolom untuk data pelanggan.
+--
+-- Menyimpan peta {kolom -> sumber} bagi kolom yang diperebutkan banyak
+-- berkas luar (nama, alamat, rt, rw, notelp, tarifGolonganId), supaya sumber
+-- berperingkat rendah tidak bisa lagi menimpa nilai dari sumber yang lebih
+-- tepercaya semata karena impornya dijalankan belakangan. Aturan & peringkat
+-- ada di packages/db/asal-usul.ts.
+--
+-- NULL untuk seluruh baris yang sudah ada: baris warisan, asal-usulnya tidak
+-- diketahui, dan sengaja BOLEH ditimpa sumber mana pun yang berhak — kalau
+-- tidak, 22.619 baris lama akan membeku selamanya.
+ALTER TABLE "pelanggan" ADD COLUMN "sumberKolom" JSONB;

@@ -1,0 +1,1671 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@layer utilities {
+  /* ─────────────────────────────────────────────────────────────────────
+     HALAMAN PUBLIK — beranda, masuk, daftar, kebijakan.
+     Terpisah dari design system aplikasi (Frappe Espresso) karena
+     kepadatannya memang beda: layar kerja berisi 40 baris tabel butuh
+     kontrol 28px dan teks 13px, halaman beranda tidak. Yang dipakai di sini
+     skala Geist — kontrol 32/40/48px, teks 14px, radius 6px.
+     Setiap animasi di bawah WAJIB punya baris kembar di blok
+     prefers-reduced-motion di kaki blok ini.
+     ───────────────────────────────────────────────────────────────────── */
+  /* ── PALET HALAMAN PUBLIK — GEIST, IKUT TEMA ─────────────────────────────
+     Nilainya dibaca langsung dari vercel.com/geist/colors, kedua skala:
+
+       terang  background-100 #fff · background-200 #fafafa · gray-200 #ebebeb
+               gray-700 #8f8f8f · gray-1000 #171717
+       gelap   background-200 #000 · background-100 #0a0a0a · gray-400 #2e2e2e
+               gray-700 #8f8f8f · gray-1000 #ededed
+
+     SEMUANYA lewat variabel, tidak satu pun hex ditulis di kelasnya. Itu
+     syarat supaya halaman publik ikut tombol ganti tema: sebelumnya seluruh
+     nilainya dipatok gelap (#080b10), jadi halaman ini SATU-SATUNYA bagian
+   aplikasi yang mengabaikan pilihan tema toast.
+
+     Yang membuat halaman ini dulu tidak terasa seperti Vercel bukan satu
+     kesalahan besar melainkan KOSAKATA yang berbeda: aurora ungu-biru, kartu
+     kaca ber-blur, bayangan menyala, teks bergradien. Vercel tidak memakai
+     satu pun dari itu — yang dipakainya monokrom, garis setipis rambut, dan
+     ruang kosong. Kemewahannya datang dari apa yang TIDAK ada di layar.
+
+     Langkah pertama cuma menukar NILAI warnanya. Itu belum cukup dan memang
+     tidak pernah cukup: yang membuat sebuah halaman terbaca sebagai Vercel
+     bukan paletnya melainkan GEOMETRINYA — radius 6px pada kontrol dan 12px
+     pada kartu (bukan `rounded-full` dan `rounded-2xl`), tinggi tombol 40px,
+     teks 14px/500, dan halaman yang dibagi garis rambut alih-alih ditumpuk
+     dari kotak-kotak melayang. Nilai geometri itu ada di bawah, dan komponen
+     marketing-nya ditulis ulang memakainya. */
+  .landing-shell {
+    --lp-bg: #ffffff;
+    --lp-panel: #fafafa;
+    --lp-panel-hover: #f2f2f2;
+    --lp-border: #ebebeb;
+    --lp-border-strong: #d4d4d4;
+    --lp-ink: #171717;
+    --lp-ink-soft: #4d4d4d;
+    --lp-muted: #666666;
+    --lp-accent: #0072f5;
+    --lp-danger: #e5484d;
+    --lp-grid: rgba(0, 0, 0, 0.045);
+    /* CTA selalu KEBALIKAN latarnya — bidang paling kontras di halaman.
+       Itu cara Vercel membuat tombol utamanya menonjol: kontras, bukan warna. */
+      --lp-cta-bg: #171717;
+    --lp-cta-fg: #ffffff;
+    --lp-cta-bg-hover: #333333;
+
+    /* Status — Geist green-700 / amber-700. Dipakai HANYA untuk arti (naik,
+       turun, tercentang), tidak pernah sebagai hiasan. */
+    --lp-success: #45a557;
+    --lp-warning: #a35200;
+    /* Batang grafik di mockup: MONOKROM, dua tingkat. Bulan terakhir memakai
+       tingkat pekat supaya "yang terbaru" terbaca tanpa warna kedua. Mockup
+       Vercel tidak memakai biru & merah — itu warna yang membawa arti di
+       aplikasi ini (info & gagal), dan meminjamnya di grafik pendapatan
+       memberi tahu pembaca bahwa kuartal terakhir adalah sebuah kegagalan. */
+    --lp-bar: #d4d4d4;
+    --lp-bar-strong: #171717;
+
+    /* ── GEOMETRI ────────────────────────────────────────────────────────
+       Angkanya dari Geist, bukan dari skala Tailwind:
+         radius kontrol  6px   (tombol, input, badge persegi)
+         radius kartu   12px
+         tinggi tombol  32 / 40 / 48px
+       `rounded-full` di Geist HANYA untuk badge/pil kecil — bukan untuk
+       tombol utama, dan itu perbedaan bentuk yang paling cepat terlihat
+       antara halaman ini dan vercel.com. */
+    --lp-radius: 6px;
+    --lp-radius-card: 12px;
+
+    background-color: var(--lp-bg);
+    color: var(--lp-ink);
+  }
+
+  /* ── TOKEN APLIKASI DIPETAKAN ULANG DI DALAM HALAMAN PUBLIK ──────────────
+     Halaman masuk, daftar, undangan, dan pembayaran memakai primitif shadcn
+     yang sama dengan seluruh aplikasi (`Input`, `Button`, `Alert`, `Card`),
+     dan primitif itu membaca token APLIKASI. Tanpa pemetaan ini, satu panel
+     berpalet Geist berisi isian berpalet Espresso — dua abu-abu berbeda
+     bertemu di dalam kotak yang sama.
+
+     Menulis ulang keempat form supaya memakai `--lp-*` langsung adalah
+     jalan yang salah: form-nya tidak berubah, PERMUKAANNYA yang berubah.
+     Jadi yang dipetakan permukaannya. Pola yang sama sudah dipakai
+     `chrome-surface` (memetakan `--muted` jadi `--chrome-accent`) — lihat
+     §"TIGA TINGKAT PERMUKAAN" di CLAUDE.md.
+
+     Berlaku otomatis di kedua tema: nilai `--lp-*` di bawah sudah ikut
+     `.dark`, jadi pemetaan ini tidak perlu diulang di sana. */
+  .landing-shell {
+    --background: var(--lp-bg);
+    --foreground: var(--lp-ink);
+    --card: var(--lp-panel);
+    --card-foreground: var(--lp-ink);
+    --popover: var(--lp-panel);
+    --popover-foreground: var(--lp-ink);
+    --primary: var(--lp-cta-bg);
+    --primary-foreground: var(--lp-cta-fg);
+    --secondary: var(--lp-panel-hover);
+    --secondary-foreground: var(--lp-ink);
+    --muted: var(--lp-panel-hover);
+    --muted-foreground: var(--lp-muted);
+    --accent: var(--lp-panel-hover);
+    --accent-foreground: var(--lp-ink);
+    --border: var(--lp-border);
+    --input: var(--lp-border);
+    --ring: var(--lp-ink);
+  }
+
+  .dark .landing-shell,
+  .landing-shell:where(.dark, .dark *) {
+    --lp-bg: #000000;
+    --lp-panel: #0a0a0a;
+    --lp-panel-hover: #111111;
+    --lp-border: #2e2e2e;
+    --lp-border-strong: #4d4d4d;
+    --lp-ink: #ededed;
+    --lp-ink-soft: #a1a1a1;
+    --lp-muted: #8f8f8f;
+    --lp-accent: #52a8ff;
+    --lp-danger: #e5484d;
+    --lp-grid: rgba(255, 255, 255, 0.035);
+    --lp-cta-bg: #ffffff;
+    --lp-cta-fg: #000000;
+    --lp-cta-bg-hover: #ededed;
+
+    --lp-success: #62c073;
+    --lp-warning: #f1a10d;
+    --lp-bar: #2e2e2e;
+    --lp-bar-strong: #ededed;
+  }
+
+  /* ── KARTU ──────────────────────────────────────────────────────────────
+     Permukaan RATA: satu warna, satu garis rambut, radius 12px, TANPA
+     bayangan. Yang memisahkannya dari latar cuma selisih beberapa persen
+     terang, dan justru ketipisan itu yang membuatnya terbaca mahal.
+
+     Sebelumnya `.landing-glass`: latar putih 4,5%, blur 20px, dan bayangan
+     TIGA lapis termasuk cahaya inset di tepi atas — bahasa Glassmorphism.
+     Namanya ikut diganti supaya tidak ada lagi berkas yang memanggil "glass"
+     untuk sesuatu yang justru tidak boleh terlihat seperti kaca. */
+  .lp-card {
+    background-color: var(--lp-panel);
+    border: 1px solid var(--lp-border);
+    border-radius: var(--lp-radius-card);
+  }
+  /* Hover MENAIKKAN GARIS, bukan mengangkat kartunya. Translate + glow adalah
+     gerakan yang menarik perhatian ke kartunya sendiri; garis yang menyala
+     menjawab "yang mana yang sedang saya tunjuk" tanpa memindahkan apa pun. */
+  .lp-card-hover {
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease;
+  }
+  .lp-card-hover:hover {
+    border-color: var(--lp-border-strong);
+    background-color: var(--lp-panel-hover);
+  }
+
+  /* ── KERANGKA BERGARIS ──────────────────────────────────────────────────
+     Ciri paling khas tata letak vercel.com, dan yang paling sering luput
+     ditiru: isinya tidak sekadar dipusatkan pada lebar maksimum — kolom
+     isinya punya GARIS VERTIKAL di kiri dan kanan yang berjalan menembus
+     seluruh halaman, dan tiap bagian dipisahkan garis mendatar yang membentang
+     selebar layar. Halaman jadi terbaca sebagai satu lembar yang dibagi, bukan
+     sebagai tumpukan kotak yang mengambang di atas latar.
+
+     Dikerjakan dengan pseudo-element, bukan `border-x` pada wadahnya: garisnya
+     harus berdiri di tepi KOLOM ISI (1200px) sementara latar bagiannya tetap
+     selebar layar. */
+  .lp-frame {
+    position: relative;
+    margin-inline: auto;
+    width: 100%;
+    max-width: 1200px;
+    padding-inline: 1.5rem;
+  }
+  .lp-frame::before,
+  .lp-frame::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-color: var(--lp-border);
+    pointer-events: none;
+  }
+  .lp-frame::before {
+    left: 0;
+  }
+  .lp-frame::after {
+    right: 0;
+  }
+  /* Di bawah 1200px garis tepinya berimpit dengan tepi layar dan cuma jadi
+     dua goresan di pinggir. */
+  @media (max-width: 1200px) {
+    .lp-frame::before,
+    .lp-frame::after {
+      display: none;
+    }
+  }
+
+  .lp-divider-y {
+    border-top: 1px solid var(--lp-border);
+  }
+
+  /* Sel grid yang dipisahkan garis, BUKAN kartu berbingkai sendiri-sendiri.
+     Enam kartu berbingkai berjajar menghasilkan garis ganda di tiap
+     pertemuan; satu kisi menghasilkan satu garis. */
+  .lp-grid-cells {
+    border-top: 1px solid var(--lp-border);
+    border-left: 1px solid var(--lp-border);
+  }
+  .lp-grid-cells > * {
+    border-right: 1px solid var(--lp-border);
+    border-bottom: 1px solid var(--lp-border);
+  }
+
+  /* Kisi latar — dipertahankan, tapi tipis dan tanpa warna. Pada nilai lama
+     (slate 9%) ia terbaca sebagai kertas grafik. */
+  .landing-grid {
+    background-image:
+      linear-gradient(var(--lp-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--lp-grid) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(
+      ellipse 70% 55% at 50% 0%,
+      black 30%,
+      transparent 100%
+    );
+  }
+
+  /* TIPOGRAFI DOKUMEN — Kebijakan Privasi & Ketentuan Layanan.
+     Keduanya sempat memakai `prose prose-slate dark:prose-invert`, dan kelas
+     itu TIDAK MELAKUKAN APA PUN di proyek ini: `@tailwindcss/typography`
+     tidak terpasang. Preflight Tailwind sendiri sudah menyeragamkan h1–h6 ke
+     ukuran teks biasa, jadi yang benar-benar tampil di layar adalah satu
+     dinding paragraf tanpa judul yang bisa dibedakan.
+
+     Diselesaikan dengan CSS di sini, bukan dengan memasang plugin: yang
+     dibutuhkan cuma empat elemen, dan pluginnya membawa paletnya sendiri
+     (`prose-slate`) yang harus ditimpa habis supaya ikut `--lp-*`. */
+  .landing-prose {
+    color: var(--lp-ink-soft);
+    font-size: 0.875rem;
+    line-height: 1.75;
+  }
+  .landing-prose h1 {
+    color: var(--lp-ink);
+    font-size: 1.875rem;
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    line-height: 1.2;
+  }
+  .landing-prose h2 {
+    color: var(--lp-ink);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-top: 2.5rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--lp-border);
+  }
+  .landing-prose h2:first-of-type {
+    margin-top: 2rem;
+  }
+  .landing-prose p {
+    margin-top: 0.75rem;
+    max-width: 65ch;
+  }
+
+  .landing-pulse-dot {
+    animation: landing-pulse-dot 2.4s ease-in-out infinite;
+  }
+
+  @keyframes landing-pulse-dot {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .landing-pulse-dot {
+      animation: none !important;
+    }
+  }
+}
+
+@custom-variant dark (&:is(.dark *));
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   @theme inline — bridge CSS vars → Tailwind color utilities
+   Urutan: shadcn core → chart series → sidebar → semantic
+───────────────────────────────────────────────────────────────────────────── */
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-sans);
+
+  /* Skala huruf Espresso (frappe/public/css/espresso/typography.css), bukan
+     bawaan Tailwind. Bedanya satu tingkat di kelas yang paling sering dipakai:
+     text-sm 14px → 13px, text-base 16px → 14px. Kelihatannya sepele, tapi
+     itulah selisih yang membuat satu layar ERPNext memuat ~20 baris sementara
+     aplikasi shadcn biasa memuat ~14. Tinggi baris dilonggarkan dari 1.15
+     milik Espresso — angka itu untuk label, terlalu rapat untuk kalimat. */
+  --text-xs: 0.75rem; /*    12px/16 — `text-label-12` */
+  --text-xs--line-height: 1.3333;
+  --text-sm: 0.875rem; /*   14px/20 — `text-label-14`, gaya teks PALING sering
+                            dipakai di Geist: baris menu, sel tabel, tombol */
+  --text-sm--line-height: 1.4286;
+  --text-base: 1rem; /*     16px/24 — `text-copy-16` */
+  --text-base--line-height: 1.5;
+  --text-lg: 1.125rem; /*   18px/28 — `text-copy-18` */
+  --text-lg--line-height: 1.5556;
+  --text-xl: 1.25rem; /*    20px/26 — `text-heading-20` */
+  --text-xl--line-height: 1.3;
+  --text-2xl: 1.5rem; /*    24px/32 — `text-heading-24`, judul halaman */
+  --text-2xl--line-height: 1.3333;
+  --text-3xl: 2rem; /*      32px/40 — `text-heading-32`, ANGKA ringkasan */
+  --text-3xl--line-height: 1.25;
+
+  /* Geist merapatkan tracking makin besar hurufnya, dan angkanya bukan
+     kira-kira — ia dibaca dari `text-heading-*` di vercel.com/geist:
+     32px → -1.28px, 24px → -0.96px, 20px → -0.4px, 16px → -0.32px,
+     14px → -0.28px. Dipakai `--tracking-heading-*` di bawah. */
+  --tracking-heading-32: -0.04em;
+  --tracking-heading-24: -0.04em;
+  --tracking-heading-20: -0.02em;
+  --tracking-heading-16: -0.02em;
+  --tracking-heading-14: -0.02em;
+
+  /* Buka-tutup accordion. Tingginya dianimasikan dari
+     `--radix-accordion-content-height` yang diukur Radix sendiri — tanpa itu
+     `height: auto` tidak bisa ditransisikan dan isinya muncul memotong. */
+  --animate-accordion-down: accordion-down 150ms ease-out;
+  --animate-accordion-up: accordion-up 150ms ease-out;
+
+  /* Radius */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* shadcn core */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-brand-ink: var(--brand-ink);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* shadcn chart series */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Aksen per DOMAIN — dipakai kartu navigasi & ringkasan (katalog Laporan,
+     widget Ringkasan, Panduan, ubin KPI). Bukan slot seri grafik: grafik tetap
+     memakai --chart-1..5 secara berurutan. */
+  --color-domain-keuangan: var(--domain-keuangan);
+  --color-domain-penjualan: var(--domain-penjualan);
+  --color-domain-pembelian: var(--domain-pembelian);
+  --color-domain-persediaan: var(--domain-persediaan);
+  --color-domain-kas: var(--domain-kas);
+  --color-domain-aset: var(--domain-aset);
+  --color-domain-pajak: var(--domain-pajak);
+  --color-domain-biaya: var(--domain-biaya);
+  --color-domain-netral: var(--domain-netral);
+
+  /* Tint permukaan per domain — DUA tingkat dalam satu warna. Lihat catatan
+     "PERMUKAAN BERTINT" di bawah. */
+
+  --color-domain-keuangan-lembut: var(--domain-keuangan-lembut);
+  --color-domain-penjualan-lembut: var(--domain-penjualan-lembut);
+  --color-domain-pembelian-lembut: var(--domain-pembelian-lembut);
+  --color-domain-persediaan-lembut: var(--domain-persediaan-lembut);
+  --color-domain-kas-lembut: var(--domain-kas-lembut);
+  --color-domain-aset-lembut: var(--domain-aset-lembut);
+  --color-domain-pajak-lembut: var(--domain-pajak-lembut);
+  --color-domain-biaya-lembut: var(--domain-biaya-lembut);
+  --color-domain-netral-lembut: var(--domain-netral-lembut);
+  --color-domain-keuangan-kepala: var(--domain-keuangan-kepala);
+  --color-domain-penjualan-kepala: var(--domain-penjualan-kepala);
+  --color-domain-pembelian-kepala: var(--domain-pembelian-kepala);
+  --color-domain-persediaan-kepala: var(--domain-persediaan-kepala);
+  --color-domain-kas-kepala: var(--domain-kas-kepala);
+  --color-domain-aset-kepala: var(--domain-aset-kepala);
+  --color-domain-pajak-kepala: var(--domain-pajak-kepala);
+  --color-domain-biaya-kepala: var(--domain-biaya-kepala);
+  --color-domain-netral-kepala: var(--domain-netral-kepala);
+
+  /* Sidebar */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Garis pemisah DI DALAM sebuah panel — lebih terang daripada garis luarnya.
+     Bedanya cuma satu langkah abu-abu, dan justru itu yang membuat panel
+     terbaca sebagai satu benda berisi bagian-bagian, bukan sebagai kumpulan
+     kotak yang kebetulan berdempetan. */
+  --color-border-subtle: var(--border-subtle);
+
+  /* Bayangan BERLAPIS, bukan satu blur besar.
+     Satu bayangan lebar beropasitas tinggi adalah ciri paling cepat dikenali
+     dari antarmuka yang dibuat cepat: ia menempel seperti stiker. Bayangan
+     yang terbaca mahal selalu dua sampai tiga lapis — satu garis kontak yang
+     nyaris tak terlihat tepat di bawah benda, lalu satu lapis lebar yang
+     sangat samar. Nilainya di :root. */
+  --shadow-panel: var(--panel-shadow);
+  --shadow-overlay: var(--overlay-shadow);
+
+  /* Chrome (navbar, sidebar, subheader) dan permukaan tabel — keduanya
+     diturunkan dari `--slate`. Lihat catatan nilainya di :root. */
+  --color-chrome: var(--chrome);
+  --color-chrome-accent: var(--chrome-accent);
+  --color-table-accent: var(--table-accent);
+  --color-table-head: var(--table-head);
+  --color-table-stripe: var(--table-stripe);
+
+  /* Semantic */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-muted: var(--success-muted);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-muted: var(--warning-muted);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-muted: var(--info-muted);
+  --color-chart-scale-pattern-color: var(--chart-scale-pattern-color);
+  --color-chart-scale-05: var(--chart-scale-05);
+  --color-chart-scale-04: var(--chart-scale-04);
+  --color-chart-scale-03: var(--chart-scale-03);
+  --color-chart-scale-02: var(--chart-scale-02);
+  --color-chart-scale-01: var(--chart-scale-01);
+  --color-chart-label: var(--chart-label);
+  --color-chart-marker-foreground: var(--chart-marker-foreground);
+  --color-chart-marker-border: var(--chart-marker-border);
+  --color-chart-marker-background: var(--chart-marker-background);
+  --color-chart-tooltip-muted: var(--chart-tooltip-muted);
+  --color-chart-tooltip-foreground: var(--chart-tooltip-foreground);
+  --color-chart-tooltip-background: var(--chart-tooltip-background);
+  --chart-brush-border: var(--chart-brush-border);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-crosshair: var(--chart-crosshair);
+  --chart-line-secondary: var(--chart-line-secondary);
+  --chart-line-primary: var(--chart-line-primary);
+  --color-chart-foreground-muted: var(--chart-foreground-muted);
+  --color-chart-foreground: var(--chart-foreground);
+  --color-chart-background: var(--chart-background);
+  --color-legend-track: var(--legend-track);
+  --color-legend-muted-foreground: var(--legend-muted-foreground);
+  --color-legend-muted: var(--legend-muted);
+  --color-legend-foreground: var(--legend-foreground);
+  --color-legend: var(--legend);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Palet — Frappe "Espresso", design system yang dipakai ERPNext
+   https://github.com/frappe/frappe/blob/develop/frappe/public/css/espresso/colors.css
+
+   Ciri yang menentukan tampilan ERPNext, dan sengaja ditiru di sini:
+
+   • Warna primer adalah ABU-ABU NYARIS HITAM ($primary: $gray-900), bukan
+     warna merek. Layar ERP dipenuhi status, saldo, dan peringatan; kalau
+     tombol biasa ikut berwarna, tidak ada lagi yang menonjol saat memang
+     ada yang perlu ditonjolkan. Sebelumnya proyek ini memakai ungu.
+   • Netral dingin dengan langkah rapat di ujung terang (#f8f8f8 → #ededed),
+     supaya latar halaman, kartu, dan header tabel bisa dibedakan tanpa garis.
+   • Warna cuma dipakai untuk arti: hijau lunas, merah gagal, oranye
+     menunggu, biru sedang berjalan.
+───────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Skala abu-abu GEIST (design system Vercel), dibaca langsung dari
+     `--ds-gray-*` di vercel.com/geist — netral MURNI (hue 0, saturasi 0),
+     bukan netral dingin seperti Espresso maupun zinc. Itu keputusan yang
+     disengaja di sana: satu-satunya warna interaktif adalah biru, dan abu
+     yang punya hue akan diam-diam bersaing dengannya.
+
+       ds-gray-100  #f2f2f2   latar hover baris/menu
+       ds-gray-200  #ebebeb   garis, latar baris AKTIF
+       ds-gray-300  #e5e5e5   garis yang lebih tegas
+       ds-gray-500  #c9c9c9   garis kontrol
+       ds-gray-700  #8f8f8f   teks paling redup
+       ds-gray-900  #4d4d4d   teks sekunder (label menu, keterangan)
+       ds-gray-1000 #171717   teks utama DAN latar tombol primer
+
+     Nama lokal (--gray-50..900) dipertahankan supaya token turunan di bawah
+     tidak perlu ditulis ulang satu per satu. */
+  --gray-50: #fafafa; /*  ds-background-200 — kanvas halaman */
+  --gray-100: #f2f2f2; /* ds-gray-100 */
+  --gray-200: #ebebeb; /* ds-gray-200 */
+  --gray-300: #e5e5e5; /* ds-gray-300 */
+  --gray-400: #c9c9c9; /* ds-gray-500 */
+  --gray-500: #a8a8a8; /* ds-gray-600 */
+  --gray-600: #8f8f8f; /* ds-gray-700 */
+  --gray-700: #7d7d7d; /* ds-gray-800 */
+  --gray-800: #4d4d4d; /* ds-gray-900 */
+  --gray-900: #171717; /* ds-gray-1000 */
+  --toast-action-bg: #171717;
+  --toast-blue: #0070f3;
+
+  /* Skala ALPHA. Geist memakai ini — bukan abu solid — untuk garis dan latar
+     hover, supaya satu nilai yang sama benar di atas permukaan mana pun
+     (kanvas, kartu, menu melayang). `--ds-gray-alpha-200` adalah latar hover
+     tombol sekunder/hantu di seluruh dashboard Vercel. */
+  --gray-alpha-100: #0000000d;
+  --gray-alpha-200: #00000014;
+  --gray-alpha-300: #0000001a;
+  --gray-alpha-500: #00000036;
+
+  /* WARNA MEREK — menggantikan primer abu-abu-nyaris-hitam milik Espresso.
+     Dipakai tombol utama, cincin fokus, dan sorotan baris sidebar aktif.
+
+     `--brand` DIPAKAI APA ADANYA di semua tempat itu, termasuk permukaan
+     yang menanggung teks. Sempat ada tingkat kedua `--brand-solid` (L 0.58)
+     yang dipasang ke `--primary`, supaya teks PUTIH di atasnya mencapai
+     4,1:1. Akibatnya warna yang benar-benar terlihat di layar #0086bb —
+     biru kehijauan yang gelap dan kusam — sementara warna merek yang
+     sesungguhnya cuma muncul di cincin fokus. Itu ditolak: yang menentukan
+     rupa aplikasi adalah bidang tombol dan baris sidebar aktif, bukan
+     cincin fokus.
+
+     TEKSNYA PUTIH, dan ini keputusan pemilik yang diambil sadar. Putih di
+     atas #40c3ff cuma 1,84:1 — di bawah ambang WCAG mana pun. Teks gelap
+     (`--gray-900`) mencapai 8,94:1 dan sempat dipakai di sini, tapi tombol
+     berteks hitam terbaca sebagai tombol netral yang kebetulan diberi
+     latar, bukan sebagai tombol merek. Kalau keterbacaannya kelak jadi
+     masalah, yang diturunkan adalah TERANG `--brand` (L 0.60 → 3,78:1;
+     L 0.55 → 4,65:1), bukan warna teksnya.
+
+       --brand         warna merek, apa adanya. Tombol utama, baris sidebar
+                       aktif, cincin fokus, garis tab aktif.
+       --brand-hover   satu langkah lebih gelap untuk keadaan hover — arah
+                       yang sama dengan yang menaikkan kontras teks putih
+                       (1,84 → 2,51:1), jadi hover sekaligus menegaskan
+                       labelnya, bukan cuma bidangnya.
+                       `bg-primary/80` bawaan shadcn tidak terpakai di sini:
+                       menipiskan warna terang justru membuat tombol tampak
+                       MEMUDAR saat disentuh, bukan menegas. */
+  --brand: var(--gray-900); /* ds-gray-1000 #171717 */
+  /* hsl(0 0% 22%) — nilai hover tombol primer Geist, dibaca dari kelas
+     `data-hover:bg-[var(--themed-hover-bg,_hsl(0,_0%,_22%))]` di
+     vercel.com/geist/button. Ia MENERANG, bukan menggelap: #171717 sudah
+     nyaris hitam, jadi satu-satunya arah yang tersisa ke atas. */
+  --brand-hover: #383838;
+
+  /* Merek sebagai TEKS, bukan sebagai bidang. Kebutuhannya berlawanan: bidang
+     dibaca dari teks GELAP di atasnya, teks dibaca dari kanvas TERANG di
+     belakangnya — dan warna yang lolos 8,94:1 sebagai bidang cuma 2,01:1
+     sebagai teks. Jadi tautan, label tab aktif, dan ikon aksen memakai
+     `text-brand-ink` (4,65:1), bukan `text-primary`. Di tema gelap arahnya
+     berbalik: di sana `--brand` sendiri yang sudah 9,3:1 atas kanvas. */
+  --brand-ink: oklch(0.21 0.006 285.885);
+
+  /* Hue semantik Espresso */
+  --blue-500: #0d8ef8;
+  --green-500: #43ac79;
+  --red-500: #e03434;
+  --orange-500: #e86c13;
+  --amber-500: #df9311;
+
+  /* ── Peta ke token shadcn ── */
+
+  /* Latar halaman abu-abu paling terang, kartu putih. Beda tipis itu yang
+     membuat kartu "mengambang" tanpa perlu bayangan tebal. */
+  /* Kanvas SATU tingkat lebih redup daripada panel (zinc-50 vs putih). Preset
+     shadcn menulis putih untuk keduanya; di aplikasi yang isinya kartu di atas
+     kartu, itu berarti panel putih di atas latar putih — yang tersisa cuma
+     garis mengambang. Halaman contoh preset-nya sendiri memakai kanvas abu. */
+  /* Vercel: `<body>` = ds-background-200 (#fafafa), panel = ds-background-100
+     (#ffffff). Kanvas SATU tingkat lebih redup daripada panel — persis pola
+     yang sudah dipakai di sini, tinggal nilainya yang disamakan. */
+  --background: var(--gray-50);
+  --foreground: var(--gray-900);
+
+  --card: #ffffff;
+  --card-foreground: var(--gray-900);
+
+  /* ── CHROME — navbar, sidebar, subheader ────────────────────────────────
+   *
+   * Permukaan TERSENDIRI, dan sebelumnya ia tidak punya: ketiganya memakai
+   * `--card`, jadi navbar, sidebar, subheader, DAN setiap tabel/form sama-sama
+   * #ffffff. Empat peran, satu nilai — rasio 1,000:1. Yang memisahkan bingkai
+   * dari isinya cuma garis 1px di bawah navbar dan di kanan sidebar; subheader
+   * bahkan tidak punya garis sama sekali. Itu penyebab layarnya terbaca datar,
+   * dan itu bukan kekurangan WARNA melainkan kekurangan TINGKAT.
+   *
+   * Bukti bahwa ini cacat dan bukan selera: tema GELAP sudah menyelesaikannya
+   * sejak awal — kanvas #141414 → sidebar #171717 → panel #1c1c1c, tiga
+   * tingkat. Tema terang cuma punya dua. Kedua tema tidak sepakat soal
+   * "sidebar itu benda apa".
+   *
+   * ATURANNYA SATU, dan berlaku di kedua tema: CHROME SELALU LEBIH REDUP
+   * DARIPADA PANEL. Panel adalah benda yang diangkat; bingkai ada di
+   * belakangnya. Itu sebabnya persentase gelapnya jauh lebih kecil (3% vs 4%)
+   * — mencampur slate lebih banyak ke kanvas GELAP justru menaikkan
+   * terangnya, dan pada 9% chrome berakhir lebih terang daripada panel.
+   *
+   * Terukur:  terang  chrome #f2f2f3 — 1,119:1 dari panel, 1,053:1 dari kanvas
+   *           gelap   chrome #171818 — 1,044:1 dari panel, 1,035:1 dari kanvas
+   *
+   * `--chrome-accent` adalah latar hover/aktif DI ATAS chrome. Ia wajib ada:
+   * tombol navbar memakai `variant="ghost"` yang ber-`hover:bg-muted`, dan
+   * `--muted` (#f3f3f3) di atas chrome #f2f2f3 cuma 1,008:1 — hover-nya hilang
+   * sama sekali. Nilainya dipilih supaya umpan baliknya TIDAK mundur dari
+   * yang sekarang: 1,130:1, sementara putih + `--muted` hari ini 1,110:1. */
+  /* Di dashboard Vercel sidebar dan halaman BERWARNA SAMA (#fafafa); yang
+     memisahkannya cuma satu garis vertikal. Chrome karena itu tidak lagi
+     dicampur sendiri — ia kanvas, titik. Yang tetap perlu nilai sendiri cuma
+     latar hover-nya (ds-gray-100), karena `--muted` di atas chrome yang
+     sewarna kanvas hilang sama sekali. */
+  --chrome: var(--background);
+  --chrome-accent: var(--gray-100);
+
+  --popover: #ffffff;
+  --popover-foreground: var(--gray-900);
+
+  /* ds-gray-1000. Tombol primer Vercel #171717, teksnya putih penuh. */
+  --primary: var(--gray-900);
+  --primary-foreground: #ffffff;
+
+  --secondary: var(--gray-100);
+  --secondary-foreground: var(--gray-900);
+
+  /* ds-gray-900 (#4d4d4d) — warna teks sekunder Vercel, dan warna baris menu
+     sidebar-nya saat TIDAK aktif. Bukan ds-gray-700 (#8f8f8f): itu tingkat
+     paling redup, dipakai untuk placeholder dan keterangan, bukan untuk label
+     yang harus tetap terbaca sepanjang hari. */
+  --muted: var(--gray-100);
+  --muted-foreground: var(--gray-800);
+
+  --accent: var(--gray-100);
+  --accent-foreground: var(--gray-900);
+
+  /* ds-red-700 */
+  --destructive: oklch(0.6256 0.2524 23.03);
+
+  /* SATU LANGKAH LEBIH GELAP dari sebelumnya (gray-200 → gray-300), dan itu
+     perbaikan atas keluhan "garis border kiri, kanan, dan atas tidak
+     terlihat". Penyebabnya bukan garisnya tidak digambar — melainkan #ededed
+     di atas kanvas #f8f8f8 cuma berbeda 11 tingkat RGB. Garis yang tidak bisa
+     dilihat sama saja dengan garis yang tidak ada.
+
+     Dua langkah, dan jaraknya sekarang benar-benar terbaca:
+       --border         #e2e2e2  garis LUAR panel
+       --border-subtle  #ededed  garis DI DALAM panel (antarbaris, antarkolom) */
+  --border: var(--gray-200); /*  ds-gray-200 #ebebeb — garis LUAR panel */
+  --border-subtle: var(--gray-100); /* ds-gray-100 #f2f2f2 — garis DI DALAM */
+
+  /* ── TABEL: kepala slate, garis di bawahnya, baris selang-seling ──────────
+   *
+   * Ketiganya satu keputusan, jadi ditulis berdampingan, dan ketiganya
+   * diturunkan dari SATU hue supaya kerangka tabel terbaca sebagai satu benda.
+   *
+   * Ketiganya diturunkan dari `--slate`, hue yang SAMA dengan chrome di atas.
+   * Skala abu proyek ini netral murni (#f8f8f8, #f3f3f3, …); permukaan yang
+   * dibedakan dengan abu netral berhenti terbaca sebagai permukaan tersendiri
+   * begitu kanvasnya juga abu. Sedikit cast biru memisahkannya tanpa menambah
+   * satu pun garis — dan karena chrome memakai hue yang sama, kepala tabel dan
+   * bingkai aplikasi terbaca sebagai satu keluarga, bukan dua abu yang meleset.
+   *
+   * KEDUANYA OPAQUE, bukan warna ber-opasitas. Kepala tabel LENGKET dan baris
+   * tergulir lewat di belakangnya; latar 60% membuat teks baris terbaca
+   * menembus judul kolom. Itu bug yang sempat hidup lama justru karena
+   * komentarnya menyebut dirinya "opaque". `color-mix` menghasilkan warna
+   * PADAT, jadi tidak bisa terulang.
+   *
+   * Zebra 3% adalah batas bawah yang masih terlihat: tugasnya cuma memberi
+   * mata pegangan mendatar di tabel lebar, bukan menggambar kotak. Lebih dari
+   * itu dan ia mulai bersaing dengan badge status di dalam barisnya. */
+  /* Netral MURNI, bukan slate berhue biru. Geist tidak punya hue di
+     abu-abunya sama sekali (lihat catatan di skala abu di atas), dan kepala
+     tabel serta chrome yang diturunkan dari sini ikut netral. */
+  --slate: #8f8f8f;
+  --table-head: color-mix(in oklch, var(--slate) 6%, var(--card));
+  --table-stripe: color-mix(in oklch, var(--slate) 3%, var(--card));
+
+  /* GARIS DI BAWAH KEPALA TABEL — 2px, dan NETRAL di setiap halaman.
+   *
+   * Ia sempat berwarna per modul (hijau di Penjualan, oranye di Pembelian).
+   * Itu dibatalkan pemilik, dan alasan aslinya memang tidak pernah gugur:
+   * warna dipakai untuk ARTI. Garis berwarna di kepala SETIAP tabel tidak
+   * menyatakan apa-apa yang belum dikatakan sidebar dan judul halaman — modul
+   * mana yang sedang dibuka sudah terjawab dua kali sebelum mata sampai ke
+   * tabelnya. Yang dibayar untuk pengulangan ketiga itu mahal: begitu warna
+   * muncul di tempat yang tidak membawa arti, ia berhenti bisa dipercaya di
+   * tempat yang membawa arti — dan di layar ERP tempat itu adalah badge status
+   * di dalam barisnya.
+   *
+   * Nilainya diturunkan dari `--slate` yang sama dengan kepala dan
+   * zebranya, cuma jauh lebih pekat. Bukan `--gray-400` netral murni: kepala
+   * tabel sudah ber-cast biru, dan garis abu netral tepat di bawahnya terbaca
+   * sebagai warna yang meleset, bukan sebagai warna yang berbeda. */
+  --table-accent: color-mix(in oklch, var(--slate) 32%, var(--card));
+  --input: var(--gray-200);
+  /* Cincin fokus ikut warna merek — sebelumnya abu netral, dan cincin abu di
+     atas isian abu nyaris tidak terlihat sedang difokuskan. */
+  /* ds-blue-700 — SATU-SATUNYA warna interaktif di Geist. Cincin fokusnya
+     dua lapis: 2px sewarna latar lalu 4px biru (lihat --focus-ring). */
+  --ring: oklch(0.5761 0.2508 258.23);
+  --focus-ring: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
+
+  /* Dua lapis, opasitas sangat rendah, sebaran pendek. Angkanya sengaja jauh
+     lebih halus daripada `shadow-md` bawaan Tailwind (0 4px 6px -1px / 0.1):
+     di layar yang isinya panel bersebelahan, bayangan sekuat itu membuat tiap
+     panel terlihat melayang di ketinggian yang berbeda-beda. */
+  /* `--ds-shadow-small` Vercel. Lapis cincin 1px-nya SENGAJA tidak ikut:
+     panel di aplikasi ini menggambar `border` betulan, dan menambahkan
+     cincin bayangan di atasnya menghasilkan dua garis bertumpuk. */
+  --panel-shadow: 0px 2px 2px #0000000a;
+  /* `--ds-shadow-menu` Vercel, apa adanya. Tiga lapis dengan spread negatif —
+     satu garis kontak, satu bayangan dekat, satu bayangan jauh. */
+  --overlay-shadow:
+    0px 1px 1px #00000005, 0px 4px 8px -4px #0000000a,
+    0px 16px 24px -8px #0000000f;
+
+  /* Frappe memakai sudut kecil di mana-mana: cukup untuk melunakkan, tidak
+     sampai jadi bergaya. Sebelumnya --radius: 0 (semua bersudut tajam). */
+  --radius: 0.375rem; /* 6px — `--geist-radius`, dipakai tombol, input,
+                         kartu, dan menu di seluruh dashboard Vercel. */
+
+  /* Kepadatan. Angka-angka ini dari common/css_variables.scss milik Frappe;
+     itulah alasan ERPNext bisa memuat banyak baris di satu layar. */
+  --control-height: 2.25rem; /* 36px — `--geist-form-height`. Tangga Geist:
+                                32 (small) / 36 (default) / 40 (large), dan
+                                36px inilah tinggi tombol "Add New", kotak
+                                pencarian, DAN baris menu sidebar Vercel —
+                                terukur langsung di dashboard-nya. */
+  --header-height: 3.5rem; /*    56px — bilah atas dashboard Vercel */
+
+  /* Tinggi .page-head-content di Frappe: satu baris berisi judul dan tombol
+     aksi (padding 8px + tombol 28px + sisa). Dipakai dua kali — oleh page head
+     itu sendiri, dan oleh bilah filter yang menempel TEPAT di bawahnya. */
+  --page-head-height: 3.5rem; /* 56px — sebaris dengan navbar di atasnya */
+
+  /* Kaki aplikasi (<AppStatusBar>). Setinggi satu baris teks kecil dan tidak
+     lebih: isinya keterangan, bukan kontrol — begitu ia setinggi bilah lain,
+     ia mulai terbaca sebagai bilah ketiga yang bisa dipakai bekerja. Angkanya
+     ikut dibaca <FeedbackFab>, yang duduk tepat di atasnya. */
+  --status-bar-height: 1.75rem; /* 28px */
+
+  /* Lebar minimum tiap kontrol di bilah filter, dari
+     `.standard-filter-section .form-group { min-width: 150px }`. Ini yang
+     bikin filter ERPNext terlihat serapi satu deret, bukan campuran kotak
+     pendek dan panjang. */
+  --filter-min-width: 9.5rem; /* 152px */
+  --form-max-width: 56rem; /*  ~900px — --page-max-width        */
+
+  /* Form DOKUMEN — pesanan/faktur penjualan & pembelian.
+   *
+   * Lebih lebar daripada `--form-max-width`, dan itu bukan pengecualian atas
+   * aturan "form dibatasi lebarnya" melainkan penerapannya. Alasan batas 900px
+   * adalah JARAK LABEL KE ISIAN pada bagian dua kolom — dan alasan itu tidak
+   * berlaku untuk baris item, yang bentuknya GRID delapan kolom, bukan
+   * pasangan label-isian. Pada 900px kolom Produk cuma kebagian ~135px, jadi
+   * nama produk terpotong di dalam kotaknya sendiri — persis kegagalan yang
+   * dulu terjadi pada kolom Qty dan Harga Satuan di 1/12 lebar form.
+   *
+   * `FormSection` tetap membagi dua kolom, jadi satu kolom field di sini
+   * ~570px — masih di bawah lebar satu kolom penuh form 900px, dan label
+   * tetap berdekatan dengan isiannya. */
+  --document-max-width: 76rem; /* ~1216px */
+
+  /* ── LAPISAN (z-index) ────────────────────────────────────────────────────
+   *
+   * Tiga tingkat, dan urutannya membawa arti — jadi ditulis SEKALI di sini,
+   * bukan sebagai angka yang tersebar di sepuluh berkas.
+   *
+   *   --z-sheet    50  panel menu HP. SENGAJA di bawah navbar: ia turun tepat
+   *                    di bawahnya (`top-(--header-height)`), jadi navbar yang
+   *                    SUNGGUHAN tetap terlihat penuh — bukan ditutupi lalu
+   *                    direkonstruksi jadi baris kepala kecil di dalam panel.
+   *   --z-chrome   60  navbar dan pil navigasi mengambang di HP.
+   *   --z-overlay  70  dropdown, popover, select, tooltip, dialog.
+   *
+   * Yang paling mudah salah, dan memang pernah salah: overlay HARUS di atas
+   * chrome. Ketiganya di-portal ke <body>, jadi begitu navbar dinaikkan ke 60
+   * sementara overlay tertinggal di 50, setiap menu yang dibuka DARI navbar —
+   * notifikasi, avatar, tombol "+" — dilukis di BAWAH navbar itu sendiri dan
+   * terlihat terpotong. Menaikkan Sheet bukan jawabannya; yang perlu naik
+   * cuma overlay. */
+  --z-sheet: 50;
+  --z-chrome: 60;
+  --z-overlay: 70;
+
+  /* 220px, sama dengan --sidebar-width di frappe/public/scss/desk/sidebar.scss.
+     Bawaan shadcn 256px; selisih 36px itu terasa di laptop 13". Dipasang ke
+     <SidebarProvider> di (dashboard)/layout.tsx. */
+  --app-sidebar-width: 15.3125rem; /* 245px — sidebar dashboard Vercel */
+
+  /* ── Deret chart ────────────────────────────────────────────────────────
+     Urutan slotnya TETAP dan tidak boleh diputar: urutan itulah mekanisme
+     keamanan buta warna. Seri pertama selalu slot 1, kedua slot 2, dan
+     seterusnya — bukan "warna berikutnya yang masih tersisa".
+
+     Nilai-nilai ini bukan pilihan mata. Semuanya dihitung dan diperiksa
+     `scripts/validate-palette.mjs` (band lightness OKLCH, lantai chroma,
+     pemisahan protanopia/deuteranopia, lantai penglihatan normal, kontras
+     ≥3:1 atas permukaan kartu). Jalankan `node scripts/validate-palette.mjs`
+     setiap kali salah satu nilainya diubah — ΔE tidak bisa dikira-kira.
+
+     Terukur, SELURUH pasangan (bukan cuma yang bersebelahan):
+       terang → worst all-pair CVD ΔE 13,9 · semua kontras ≥3,39:1
+       gelap  → worst all-pair CVD ΔE 13,4 · semua kontras ≥4,68:1
+
+     DUA CACAT LAMA yang diperbaiki di sini, keduanya baru terlihat setelah
+     validatornya benar-benar ditulis:
+
+       • --chart-1 (#0d8ef8 biru) dan --chart-4 (#8b5cf0 ungu) praktis TIDAK
+         BISA DIBEDAKAN oleh penderita deuteranopia: ΔE 4,4 di mode terang
+         dan 1,4 di mode gelap. Catatan lama menyebut palet ini lolos, dan
+         itu benar menurut metode yang dipakai waktu itu — yang diuji hanya
+         pasangan slot BERSEBELAHAN, sementara biru dan ungu adalah slot 1
+         dan 4. Begitu sebuah grafik menampilkan kelimanya, keduanya
+         berdampingan di legenda. Sekarang seluruh pasangan diuji.
+       • --chart-1 lama IDENTIK dengan --info, dan --chart-2 lama identik
+         dengan --warning. Aturan "token status tidak boleh dipinjam jadi
+         warna seri" dilanggar oleh nilai yang mendokumentasikannya sendiri.
+         Nilai baru dijauhkan: chart-2 (#e14e00) berjarak ΔE 13,0 dari
+         --destructive, jadi Beban tidak lagi terbaca sebagai kegagalan.
+
+     Hue-nya berlabuh pada warna yang diminta pemilik (magenta 322°, pink
+     354°) dan pada hue chrome sidebar/navbar (257°, lihat --domain-aset).
+     Kuning aslinya oklch(90.5%) berkontras 1,32:1 — mustahil lolos sebagai
+     mark; ia turun ke L 0,62 dan pindah ke --domain-kas, tempat emas memang
+     sudah jadi artinya. */
+  /* DITULIS 8-DIGIT: #RRGGBBAA, dua digit terakhir ALPHA — bukan ARGB.
+     CSS menaruh alpha di BELAKANG; nilai ARGB (#AARRGGBB) yang ditempel apa
+     adanya akan terbaca sebagai warna lain dengan transparansi acak, dan
+     tidak ada galat apa pun yang muncul. `ff` = solid.
+
+     Lima seri, disusun ulang 5 Sep 2026 karena palet sebelumnya gagal diukur:
+     teal ↔ hijau cuma berjarak ΔE 11,5 (mudah tertukar), dan di mata buta
+     warna teal ↔ pink tinggal ΔE 5,2 — praktis warna yang sama. Magenta dan
+     pink pun bertetangga hue DAN dua-duanya nyaris neon, jadi lima seri itu
+     sebenarnya tiga kelompok yang berdesakan.
+
+     Yang menyelamatkan palet ini bukan hue-nya melainkan TANGGA TERANGNYA:
+     L 0,45 · 0,49 · 0,53 · 0,57 · 0,63. Hue boleh runtuh di mata buta warna —
+     terang tidak. Itu sebabnya angkanya naik dari ΔE-butawarna 5,2 jadi 10,1.
+
+     Arti tiap slot TIDAK berubah: 1 dingin (Pendapatan), 2 hangat (Beban),
+     3 hijau (Laba). Menukarnya akan membalik konvensi uang masuk/keluar yang
+     dipakai seluruh aplikasi. */
+  /* Lima seri = lima HUE Geist, di langkah 700 — langkah "solid" yang dipakai
+     Vercel untuk mark berwarna (ikon status, batang, garis). Semuanya dibaca
+     langsung dari `--ds-<hue>-700` di vercel.com/geist.
+
+     Urutan slotnya TETAP dan mengikuti arti, bukan peringkat:
+       1 biru   Pendapatan   — netral, "ini jumlahnya"
+       2 amber  Beban        — hangat, uang keluar
+       3 hijau  Laba         — hasil
+       4 ungu   seri keempat
+       5 teal   seri kelima
+
+     Merah SENGAJA tidak masuk: ia sudah berarti "gagal / menunggak" di badge
+     status, dan meminjamnya jadi warna seri memberi tahu pembaca bahwa Beban
+     adalah sebuah kegagalan. */
+  --chart-1: oklch(0.5761 0.2508 258.23); /* ds-blue-700   */
+  --chart-2: oklch(0.7721 0.1991 64.28); /*  ds-amber-800  */
+  --chart-3: oklch(0.6458 0.1746 147.27); /* ds-green-700  */
+  --chart-4: oklch(0.555 0.3008 306.12); /*  ds-purple-700 */
+  --chart-5: oklch(0.6492 0.1572 181.95); /* ds-teal-700   */
+
+  /* ── AKSEN DOMAIN ──────────────────────────────────────────────────────────
+     Identitas warna per wilayah kerja, dipakai HANYA pada kartu navigasi dan
+     ringkasan: katalog Laporan, widget Ringkasan, kartu Panduan, ubin KPI.
+     TIDAK dipakai di tabel daftar maupun FormSection — kalau semua kartu
+     berwarna, badge status (lunas/gagal/menunggu) kehilangan daya bedanya, dan
+     penanda itulah yang paling sering dibaca orang di layar ERP.
+
+     Lima yang pertama SENGAJA memakai token grafik yang sama, supaya sebuah
+     domain berwarna sama di kartunya maupun di grafiknya. Tiga sisanya nilai
+     baru, dan ketiganya ikut diperiksa `scripts/validate-palette.mjs`.
+
+     NILAINYA SEKARANG DARI PALET GEIST, bukan campuran sendiri. Geist punya
+     tujuh hue kromatik (biru, merah, amber, hijau, teal, ungu, pink) di
+     sepuluh langkah, dan langkah 700 adalah langkah "solid" — yang dipakai
+     Vercel untuk mark berwarna. Delapan domain dipetakan ke tujuh hue itu;
+     Biaya memakai amber DUA LANGKAH lebih gelap daripada Pembelian (900 vs
+     800, selisih L 0,24) supaya keduanya tetap terbedakan meski sehue.
+
+     Pemetaannya mengikuti ARTI yang sudah berlaku di seluruh aplikasi:
+     hijau uang masuk, amber uang keluar, merah kewajiban ke negara.
+
+     Kalau salah satu nilainya diubah, jalankan ulang
+     `scripts/validate-palette.mjs`. Jangan menilai dengan mata. */
+  --domain-keuangan: oklch(0.5761 0.2508 258.23); /*  ds-blue-700   */
+  --domain-penjualan: oklch(0.6458 0.1746 147.27); /* ds-green-700  */
+  --domain-pembelian: oklch(0.7721 0.1991 64.28); /*  ds-amber-800  */
+  --domain-persediaan: oklch(0.555 0.3008 306.12); /* ds-purple-700 */
+  --domain-kas: oklch(0.6492 0.1572 181.95); /*       ds-teal-700   */
+  --domain-aset: oklch(0.6352 0.238 1.01); /*         ds-pink-700   */
+  --domain-pajak: oklch(0.6256 0.2524 23.03); /*      ds-red-700    */
+  /* ds-amber-700, SAMA dengan mode gelap — bukan amber-900.
+     Amber-900 (L 0,53) dipilih dulu supaya masuk band lightness 0,48–0,67,
+     dan harganya terlihat langsung di layar: batang "Beban per Kategori"
+     terbaca COKLAT, bukan amber. Vercel memakai #ffb224 (≈ amber-700) untuk
+     mark ambernya, dan mode gelap di berkas ini sudah memakainya — jadi satu
+     token ini sebelumnya berarti dua warna yang berbeda jauh tergantung tema.
+     Konsekuensinya DISADARI dan diterima: L 0,82 di luar band 0,48–0,67 dan
+     kontrasnya 1,79:1 di atas kartu putih — validator palet melaporkannya, dan
+     memang seharusnya. Yang membuatnya boleh: satu-satunya tempat token ini
+     jadi bidang besar adalah batang "Beban per Kategori", dan batang itu
+     REDUNDAN — tiap barisnya sudah mencetak kode akun, nama, jumlah rupiah,
+     DAN persentasenya. Warna di sana tidak membawa informasi yang tidak ada di
+     tempat lain, jadi yang berlaku WCAG 1.4.1 (jangan bersandar pada warna),
+     bukan lantai kontras untuk kontrol. Kalau suatu saat token ini dipakai
+     sebagai penanda TUNGGAL, nilainya harus ditinjau ulang. */
+  --domain-biaya: oklch(0.8187 0.1969 76.46); /*      ds-amber-700  */
+  /* Kartu Ringkasan (dashboard) SENGAJA satu warna saja, bukan salah satu
+     dari ketujuh di atas — delapan tint berbeda di satu layar terbaca sebagai
+     kartu dari tujuh aplikasi berbeda, bukan satu wilayah kerja yang sama.
+     `--slate` di sini SENGAJA sama dengan hue `--chrome` (sidebar/navbar/
+     subheader) dan `--table-head`/`--table-accent` — supaya kartu widget
+     terasa senada dengan bingkai aplikasi, bukan hue baru yang kedelapan.
+     Tidak perlu didefinisikan ulang di .dark: `--slate` sudah punya nilai
+     sendiri per mode, dan `-lembut`/`-kepala` di bawah otomatis ikut lewat
+     `color-mix`, persis domain lain. */
+  --domain-netral: var(--brand);
+
+  /* ── PERMUKAAN BERTINT ──────────────────────────────────────────────────────
+     DUA anatomi kartu, dan tiap halaman memakai salah satunya dengan sadar:
+
+       BADAN BERTINT — `-lembut` di badan, `-kepala` di kepalanya, tanpa garis
+       tepi. Kartu yang isinya TEKS PENDEK dan dipindai sekilas: widget
+       Ringkasan, katalog laporan, daftar panduan.
+
+       BADAN PUTIH — `bg-card` di badan, `-kepala` di kepalanya, `garis`
+       berwarna di tepinya. Kartu yang isinya ANGKA: kartu KPI di kepala
+       halaman daftar. Angka rupiah di atas bidang bertint lebih sulit dibaca
+       daripada di atas putih, dan di sanalah angka justru jadi seluruh isi
+       kartunya.
+
+     Nilainya DIHITUNG dengan `color-mix`, bukan ditulis tangan per domain.
+     Sembilan domain × dua tingkat × dua mode = 36 hex yang harus dijaga
+     konsisten kalau ditulis manual, dan yang meleset satu tidak akan
+     menimbulkan galat apa pun — cuma satu kartu yang warnanya "hampir".
+
+     Dicampur dengan `--card`, jadi mode gelap ikut dengan sendirinya: di sana
+     `--card` #1c1c1c, sehingga 8% aksen di atasnya menghasilkan permukaan
+     gelap bernada, bukan pastel terang yang menyilaukan.
+
+     Persentasenya mengikuti contoh yang diberikan pemilik: badan ±8%
+     (#F5EEFF terhadap ungu), kepala ±22% (#E0D4FF). */
+
+  /* Tint kartu. Geist punya langkah 100/200 tersendiri per hue untuk
+     permukaan bertint; di sini dihitung dari warna solidnya lewat alpha —
+     hasilnya praktis sama (hue-100 ≈ solid 4% di atas putih, hue-200 ≈ 10%)
+     dan ia otomatis benar di atas kartu putih MAUPUN kartu gelap, tanpa dua
+     set nilai yang harus dijaga sinkron. */
+  --domain-keuangan-lembut: rgb(from var(--domain-keuangan) r g b / 0.04);
+  --domain-penjualan-lembut: rgb(from var(--domain-penjualan) r g b / 0.04);
+  --domain-pembelian-lembut: rgb(from var(--domain-pembelian) r g b / 0.04);
+  --domain-persediaan-lembut: rgb(from var(--domain-persediaan) r g b / 0.04);
+  --domain-kas-lembut: rgb(from var(--domain-kas) r g b / 0.04);
+  --domain-aset-lembut: rgb(from var(--domain-aset) r g b / 0.04);
+  --domain-pajak-lembut: rgb(from var(--domain-pajak) r g b / 0.04);
+  --domain-biaya-lembut: rgb(from var(--domain-biaya) r g b / 0.04);
+  --domain-netral-lembut: rgb(from var(--domain-netral) r g b / 0.04);
+
+  --domain-keuangan-kepala: rgb(from var(--domain-keuangan) r g b / 0.1);
+  --domain-penjualan-kepala: rgb(from var(--domain-penjualan) r g b / 0.1);
+  --domain-pembelian-kepala: rgb(from var(--domain-pembelian) r g b / 0.1);
+  --domain-persediaan-kepala: rgb(from var(--domain-persediaan) r g b / 0.1);
+  --domain-kas-kepala: rgb(from var(--domain-kas) r g b / 0.1);
+  --domain-aset-kepala: rgb(from var(--domain-aset) r g b / 0.1);
+  --domain-pajak-kepala: rgb(from var(--domain-pajak) r g b / 0.1);
+  --domain-biaya-kepala: rgb(from var(--domain-biaya) r g b / 0.1);
+  --domain-netral-kepala: rgb(from var(--domain-netral) r g b / 0.1);
+
+  /* Sidebar TIDAK punya warna sendiri — ia salah satu dari tiga permukaan
+     chrome, bersama navbar dan subheader, jadi nilainya datang dari sana.
+
+     Ia sempat PUTIH, dengan alasan "sidebar abu-abu akan melebur dengan kanvas
+     yang juga abu-abu". Alasan itu benar cuma kalau abu sidebar SAMA dengan
+     abu kanvas. Dengan chrome satu langkah lebih gelap DARIPADA kanvas
+     (#f2f2f3 vs #f8f8f8), yang terjadi kebalikannya — dan harga dari versi
+     putihnya baru terlihat sesudah panel juga putih: sidebar, navbar,
+     subheader, dan setiap tabel jadi satu bidang #ffffff tanpa tingkatan. */
+  /* Sidebar dashboard Vercel, terukur langsung: latar #fafafa (sama dengan
+     kanvas, dipisah satu garis), baris menu setinggi 36px ber-radius 6px,
+     teks #4d4d4d, hover latar ds-gray-100 (#f2f2f2), AKTIF latar ds-gray-200
+     (#ebebeb) dengan teks #171717. Jarak antarbaris 1px. */
+  --sidebar: var(--chrome);
+  --sidebar-foreground: var(--gray-800);
+  --sidebar-primary: var(--gray-900);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--gray-200);
+  --sidebar-accent-foreground: var(--gray-900);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+
+  /* Batang gulir. Tipis dan nyaris tak terlihat sampai dibutuhkan — bawaan
+     peramban di Windows/Linux setebal 15–17px dan berlatar abu-abu penuh, dan
+     di aplikasi seperti ini area gulirnya ada di mana-mana (halaman, panel
+     properti, tabel yang melebar, isi dialog). Delapan batang abu-abu tebal di
+     satu layar adalah delapan garis vertikal yang tidak memberi tahu apa pun.
+
+     Ibu jarinya SETENGAH TEMBUS supaya ia mengambil warna dari apa pun yang
+     dilewatinya, dan menguat saat kursor berada di atas area gulirnya —
+     terbaca saat dicari, tidak menuntut perhatian saat tidak. */
+  --scrollbar-size: 0.375rem; /*      6px */
+  --scrollbar-size-coarse: 0.25rem; /* 4px — layar sentuh: batangnya penanda
+                                        posisi, bukan sesuatu yang ditarik */
+  --scrollbar-thumb: oklch(0% 0 0 / 0.16);
+  --scrollbar-thumb-hover: oklch(0% 0 0 / 0.32);
+
+  /* Semantik */
+  --success: oklch(0.6458 0.1746 147.27); /* ds-green-700 */
+  --success-foreground: #ffffff;
+  --success-muted: #eaf6f0;
+  --warning: oklch(0.7721 0.1991 64.28); /*  ds-amber-800 */
+  --warning-foreground: #ffffff;
+  --warning-muted: #fdf0e7;
+  --info: oklch(0.5761 0.2508 258.23); /*   ds-blue-700  */
+  --info-foreground: #ffffff;
+  --info-muted: #e7f3fe;
+  /* ── NETRAL GRAFIK — skala abu GEIST, bukan zinc bawaan bklit ────────────
+     Kanvas bklit datang dengan netralnya sendiri: hue 260–286 (zinc/indigo)
+     untuk label sumbu, tooltip, dan legenda, plus crosshair indigo di tema
+     terang. Di aplikasi yang seluruh abunya netral MURNI (skala di puncak
+     :root), teks di dalam grafik jadi satu-satunya abu yang bernada biru —
+     bedanya tidak terlihat sebagai warna, tapi terbaca sebagai grafik yang
+     ditempel dari tempat lain.
+
+     Sekarang semuanya MENUNJUK token yang sudah berganti sendiri per tema
+     (`--gray-*`, `--popover`, `--card`), jadi blok `.dark` tidak mengulangnya:
+
+       pemuat, teks utama   --gray-800  ds-gray-900 (#4d4d4d · #a1a1a1)
+       label sumbu          --gray-800
+       teks redup, sorot    --gray-600  ds-gray-700 (#8f8f8f)
+       kisi                 --gray-200  ds-gray-200
+       crosshair            --gray-500  ds-gray-600 */
+  --chart-background: var(--card);
+  --chart-foreground: var(--gray-800);
+  --chart-foreground-muted: var(--gray-600);
+  --chart-line-primary: var(--chart-1);
+  --chart-line-secondary: var(--chart-2);
+  --chart-crosshair: var(--gray-500);
+  --chart-grid: var(--gray-200);
+  --chart-brush-border: var(--chart-grid);
+  /* Nilainya dulu SAMA di kedua tema (disalin dari palet gelap `--legend`
+     — bandingkan 0.21 0.006 285 di sini dengan --legend mode gelap di bawah,
+     0.21 0.006 285.885, nyaris identik). Efeknya: tooltip grafik selalu
+     berupa panel HITAM apa pun temanya — benar secara kebetulan di mode
+     gelap, tapi di mode TERANG ia menampilkan warna mode gelap: satu-satunya
+     panel hitam di tengah UI yang serba terang. Sekarang mengikuti
+     `--legend`/`--legend-foreground`/`--legend-muted-foreground` — panel
+     mengambang yang sama perannya (tooltip chart & legend chart) memang
+     seharusnya satu bahasa warna, dan itu sudah teruji lolos tema gelap. */
+  --chart-tooltip-background: rgb(from var(--popover) r g b / 0.92);
+  --chart-tooltip-foreground: var(--gray-900);
+  --chart-tooltip-muted: var(--gray-800);
+  --chart-marker-background: var(--gray-100);
+  --chart-marker-border: var(--gray-400);
+  --chart-marker-foreground: var(--gray-900);
+  --chart-label: var(--gray-800);
+  /* Skala BERURUTAN — satu hue (`--chart-1`, biru Geist) dicampur ke kartu,
+     jadi pucat→pekat di terang dan redup→menyala di gelap tanpa nilai kedua.
+     Sebelumnya hue 106 (zaitun) di terang dan 270 di gelap: dua skala yang
+     bahkan tidak sehue satu sama lain. */
+  --chart-scale-01: color-mix(in oklch, var(--chart-1) 10%, var(--card));
+  --chart-scale-02: color-mix(in oklch, var(--chart-1) 28%, var(--card));
+  --chart-scale-03: color-mix(in oklch, var(--chart-1) 48%, var(--card));
+  --chart-scale-04: color-mix(in oklch, var(--chart-1) 72%, var(--card));
+  --chart-scale-05: var(--chart-1);
+  --chart-scale-pattern-color: var(--gray-100);
+  --legend: var(--popover);
+  --legend-foreground: var(--gray-900);
+  --legend-muted: var(--gray-100);
+  --legend-muted-foreground: var(--gray-800);
+  --legend-track: var(--gray-200);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Mode gelap — sisi gelap Espresso: permukaan #171717, tinta dibalik
+───────────────────────────────────────────────────────────────────────────── */
+.dark {
+  /* Sisi gelap GEIST, dibaca dari `--ds-*` dengan `.dark` dipasang di
+     vercel.com/geist. Perhatikan arahnya: ds-background-100 (#0a0a0a) adalah
+     PANEL, ds-background-200 (#000000) kanvasnya — jadi di gelap kanvas lebih
+     GELAP daripada panel, kebalikan dari tema terang. Yang dipakai di sini
+     kanvas #0a0a0a dan panel #141414 supaya hitam pekat tidak jadi latar
+     seluruh layar di monitor OLED. */
+  --gray-50: #0a0a0a;
+  --gray-100: #1a1a1a; /* ds-gray-100 — latar hover baris/menu */
+  --gray-200: #1f1f1f; /* ds-gray-200 — garis, latar baris AKTIF */
+  --gray-300: #292929; /* ds-gray-300 */
+  --gray-400: #454545; /* ds-gray-500 */
+  --gray-500: #878787; /* ds-gray-600 */
+  --gray-600: #8f8f8f; /* ds-gray-700 */
+  --gray-700: #7d7d7d; /* ds-gray-800 */
+  --gray-800: #a1a1a1; /* ds-gray-900  — teks sekunder */
+  --gray-900: #ededed; /* ds-gray-1000 — teks utama */
+  --toast-action-bg: #171717;
+  --toast-blue: #0070f3;
+
+  --gray-alpha-100: #ffffff0f;
+  --gray-alpha-200: #ffffff17;
+  --gray-alpha-300: #ffffff21;
+  --gray-alpha-500: #ffffff3d;
+
+  --background: var(--gray-50);
+  --foreground: var(--gray-900);
+
+  --card: #141414;
+  --card-foreground: var(--gray-900);
+
+  --popover: #141414;
+  --popover-foreground: var(--gray-900);
+
+  /* Porsi slate-nya JAUH lebih kecil daripada di tema terang (3% vs 4%), dan
+     itu bukan penyetelan halus melainkan arah yang berbeda. Mencampur slate
+     terang ke kanvas GELAP menaikkan terangnya; pada 9% chrome berakhir
+     #1e1f20 — LEBIH TERANG daripada panel #1c1c1c, persis kebalikan dari
+     aturannya. Pada 3% hasilnya #171818, praktis sama dengan nilai sidebar
+     lama (#171717) yang sudah benar sejak awal. */
+  --chrome: var(--background);
+  --chrome-accent: var(--gray-100);
+
+  /* Warna merek yang sama di kedua mode: terangnya (L 0.77) sudah cukup
+     menonjol di latar gelap, jadi tidak perlu dibalik seperti primer
+     abu-abu dulu. Teksnya putih di kedua mode — lihat catatan di `--brand`. */
+  /* DIBALIK, sama seperti Geist: tombol primer di tema gelap berlatar TERANG
+     dengan tinta gelap (`bg-gray-1000` yang di gelap bernilai #ededed). */
+  --primary: var(--gray-900);
+  --primary-foreground: #0a0a0a;
+  --brand-ink: var(--gray-900);
+
+  --secondary: var(--gray-100);
+  --secondary-foreground: var(--gray-900);
+
+  --muted: var(--gray-100);
+  --muted-foreground: var(--gray-800);
+
+  --accent: var(--gray-100);
+  --accent-foreground: var(--gray-900);
+
+  /* ds-red-700 versi gelap */
+  --destructive: oklch(0.6994 0.1907 23.19);
+
+  --border: var(--gray-300);
+  --border-subtle: var(--gray-200);
+
+  /* Slate-nya lebih TERANG daripada di tema terang (#94a3b8, bukan #64748b),
+     dan porsinya lebih besar. Di latar gelap yang memisahkan permukaan adalah
+     cahaya, bukan bayangan: mencampurkan slate gelap ke kartu gelap
+     menghasilkan dua warna yang sama-sama gelap dan tidak terbedakan. */
+  --slate: #878787;
+  --table-head: color-mix(in oklch, var(--slate) 9%, var(--card));
+  --table-stripe: color-mix(in oklch, var(--slate) 4%, var(--card));
+
+  /* Di latar gelap, "lebih tegas" berarti lebih TERANG daripada garis
+     antarbaris, bukan lebih gelap — jadi porsi slate-nya lebih besar. */
+  --table-accent: color-mix(in oklch, var(--slate) 40%, var(--card));
+  --input: var(--gray-300);
+  /* ds-focus-color versi gelap — lebih terang supaya cincinnya tetap terbaca
+     di atas latar #0a0a0a. */
+  --ring: oklch(0.717 0.1648 250.794);
+  --focus-ring: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
+
+  /* Di latar gelap bayangan hampir tidak terbaca — yang memisahkan permukaan
+     justru CAHAYA di tepi atasnya, cara yang sama dipakai macOS dan iOS gelap.
+     Jadi lapis pertamanya inset putih 5%, bukan hitam. */
+  --panel-shadow: 0px 1px 2px #00000029;
+  --overlay-shadow:
+    0px 1px 1px #0000000a, 0px 4px 8px -4px #00000029,
+    0px 16px 24px -8px #00000052;
+
+  /* Mode gelap adalah langkah yang DIPILIH dari ramp yang sama, bukan
+     pembalikan otomatis: band lightness gelap (0.48–0.67) lebih sempit dan
+     lebih rendah daripada band terang, dan permukaannya --card #1c1c1c. */
+  /* Hue dan chroma SAMA PERSIS dengan tema terang; yang naik cuma terangnya
+     (+0,19), karena yang memisahkan warna dari latar gelap adalah cahaya.
+     Menyusunnya sebagai palet terpisah berarti dua palet yang harus dijaga
+     seimbang satu sama lain — dan yang meleset tidak menimbulkan galat, cuma
+     grafik yang "warnanya beda kalau tema diganti". */
+  /* Langkah 900 di sisi gelap — Geist menaikkan terangnya di tema gelap,
+     bukan memakai nilai yang sama. */
+  --chart-1: oklch(0.717 0.1648 250.794); /* ds-blue-900   */
+  --chart-2: oklch(0.7721 0.1991 64.28); /*  ds-amber-900  */
+  --chart-3: oklch(0.731 0.2158 148.29); /*  ds-green-900  */
+  --chart-4: oklch(0.6987 0.2037 309.51); /* ds-purple-900 */
+  --chart-5: oklch(0.7456 0.1765 182.8); /*  ds-teal-900   */
+
+  /* Aksen domain — langkah gelap yang DIPILIH, bukan pembalikan otomatis.
+     Yang memakai var(--chart-*) ikut dengan sendirinya; tiga nilai mentah di
+     bawah ini yang perlu langkahnya sendiri untuk band 0,48–0,67. */
+  /* Sisi gelap Geist menaikkan terang tiap hue, jadi nilainya bukan yang sama
+     dengan tema terang — langkah 900-nya sendiri. */
+  --domain-keuangan: oklch(0.717 0.1648 250.794); /*  ds-blue-900   */
+  --domain-penjualan: oklch(0.731 0.2158 148.29); /*  ds-green-900  */
+  --domain-pembelian: oklch(0.7721 0.1991 64.28); /*  ds-amber-900  */
+  --domain-persediaan: oklch(0.6987 0.2037 309.51); /* ds-purple-900 */
+  --domain-kas: oklch(0.7456 0.1765 182.8); /*        ds-teal-900   */
+  --domain-aset: oklch(0.6936 0.2223 3.91); /*        ds-pink-900   */
+  --domain-pajak: oklch(0.6996 0.2136 22.03); /*      ds-red-900    */
+  --domain-biaya: oklch(0.8187 0.1969 76.46); /*      ds-amber-700  */
+
+  /* Di latar gelap ibu jari batang gulir jadi terang, bukan gelap — dan
+     opasitasnya sedikit lebih tinggi: putih 16% di atas #141414 lebih redup
+     daripada hitam 16% di atas putih. */
+  --scrollbar-thumb: oklch(100% 0 0 / 0.2);
+  --scrollbar-thumb-hover: oklch(100% 0 0 / 0.38);
+
+  --sidebar: var(--chrome);
+  --sidebar-foreground: var(--gray-800);
+  --sidebar-primary: var(--gray-900);
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: var(--gray-200);
+  --sidebar-accent-foreground: var(--gray-900);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+
+  --success: oklch(0.731 0.2158 148.29); /*  ds-green-900 */
+  --success-foreground: #10241b;
+  --success-muted: #16281f;
+  --warning: oklch(0.7721 0.1991 64.28); /*  ds-amber-900 */
+  --warning-foreground: #2a1608;
+  --warning-muted: #2c1c0e;
+  --info: oklch(0.717 0.1648 250.794); /*    ds-blue-900  */
+  --info-foreground: #0b1c2b;
+  --info-muted: #12212e;
+  /* Netral grafik (label sumbu, tooltip, legenda, kisi, skala berurutan)
+     SENGAJA tidak diulang di sini. Di :root nilainya `var(--gray-*)`,
+     `var(--popover)`, dan `var(--card)` — token yang sudah berganti di atas.
+     Nilai oklch mentah yang sempat ada di sini ber-hue 260–286 (zinc), satu-
+     satunya abu bernada biru di tema gelap. */
+  --brand: var(--gray-900); /* #ededed — primer DIBALIK di tema gelap */
+  --brand-hover: #cccccc; /* hsl(0 0% 80%), padanan Geist di tema gelap */
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Base layer
+───────────────────────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    /* text-sm = 13px, ukuran teks desk ERPNext. Tanpa baris ini teks yang
+       tidak menyebut kelas ukuran ikut 16px bawaan peramban dan berdiri
+       sendiri lebih besar dari segala yang mengelilinginya. */
+    @apply bg-background text-sm text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+
+  /* ── Batang gulir ────────────────────────────────────────────────────────
+     Dua sintaks, karena tidak ada satu pun yang didukung semuanya:
+
+       • `scrollbar-width` / `scrollbar-color` — standar, dipakai Firefox.
+       • `::-webkit-scrollbar` — Chrome, Edge, Safari.
+
+     Keduanya ditulis dengan nilai yang sama supaya hasilnya tidak berbeda
+     tergantung peramban. Track dibiarkan TRANSPARAN, bukan diberi warna: di
+     panel yang berlatar abu-abu, track putih akan tampak sebagai garis terang
+     memanjang yang justru lebih mencolok daripada batangnya sendiri. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: var(--scrollbar-size);
+    height: var(--scrollbar-size);
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border-radius: 9999px;
+  }
+
+  /* Hanya di perangkat berkursor. Pada layar sentuh tidak ada keadaan "kursor
+     di atasnya", dan `:hover` di sana justru menempel setelah disentuh —
+     batangnya jadi gelap permanen sampai ada sentuhan di tempat lain. */
+  @media (hover: hover) {
+    ::-webkit-scrollbar-thumb:hover {
+      background-color: var(--scrollbar-thumb-hover);
+    }
+  }
+
+  /* Layar sentuh: lebih tipis lagi. Di sana batang gulir tidak pernah ditarik
+     dengan jari — yang dipakai orang adalah menggulir isinya langsung — jadi
+     ia cuma perlu cukup terlihat untuk memberi tahu posisi. */
+  @media (pointer: coarse) {
+    ::-webkit-scrollbar {
+      width: var(--scrollbar-size-coarse);
+      height: var(--scrollbar-size-coarse);
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ANGKA — satu tempat yang memutuskan bagaimana bilangan diset
+─────────────────────────────────────────────────────────────────────────────
+
+   INI PERUBAHAN YANG PALING TERASA, dan penjelasannya perlu panjang karena ia
+   membalik kebiasaan yang tampak benar.
+
+   Sebelum ini, setiap angka uang diset `font-mono tabular-nums` — 106 tempat.
+   Alasannya masuk akal di permukaan: monospace membuat digit sejajar. Tapi
+   `tabular-nums` SUDAH melakukan itu sendiri, dan ia melakukannya dengan lebar
+   yang dirancang perancang hurufnya, bukan dengan lebar seragam yang dipaksakan
+   ke huruf yang tidak dirancang untuknya.
+
+   Yang tersisa dari monospace cuma kerugiannya:
+
+     • Digitnya renggang dan bertangkai — "1" jadi kurus dengan ruang kosong di
+       kiri-kanannya, "8" jadi sempit dipaksakan. Deret Rp yang panjang terbaca
+       seperti keluaran terminal.
+     • Titik pemisah ribuan dan koma desimal ikut selebar digit, jadi
+       "1.250.000,00" punya jeda besar di setiap pemisah — persis di tempat
+       mata seharusnya mengelompokkan, bukan memisahkan.
+     • Ia adalah keluarga huruf KEDUA di layar yang sama. Dua keluarga huruf
+       untuk isi yang sama tingkatnya adalah ciri paling cepat dikenali dari
+       antarmuka yang tidak diputuskan siapa-siapa.
+
+   Perangkat lunak keuangan yang terlihat mahal — Stripe, Mercury, terminal
+   perdagangan — semuanya memakai huruf proporsional dengan ANGKA TABULAR.
+   Monospace disimpan untuk hal yang memang kode: nomor dokumen, SKU, hash.
+   Itu pembagian yang dipakai di sini juga.
+
+   `lining-nums` ikut dinyalakan supaya tidak ada digit yang menggantung di
+   bawah garis dasar, dan `-0.01em` mengencangkan deret digit yang secara alami
+   terbaca lebih renggang daripada huruf. */
+
+@utility num {
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Permukaan chrome — navbar dan subheader
+─────────────────────────────────────────────────────────────────────────────
+
+   Selain memberi latarnya, ia MEMETAKAN ULANG `--muted` di dalam dirinya.
+
+   Itu bagian yang penting, dan tanpanya perubahan ini akan jadi kemunduran.
+   Tombol di navbar dan subheader memakai `<Button variant="ghost">`, yang
+   ber-`hover:bg-muted`. `--muted` bernilai `gray-100` (#f3f3f3) — dipilih dulu
+   untuk hover di atas permukaan PUTIH, dan di atas chrome #f2f2f3 selisihnya
+   tinggal 1,008:1. Hover-nya hilang sama sekali, di setiap tombol ikon di
+   kedua bilah itu.
+
+   Memperbaikinya satu per satu berarti menyentuh belasan berkas — tombol tema,
+   lonceng notifikasi, menu "+", menu akun, pengalih perusahaan, tombol
+   toolbar, tombol kembali — dan setiap tombol yang ditambahkan nanti harus
+   ingat melakukannya lagi. Mendefinisikan ulang tokennya di sini mengurus
+   semuanya sekaligus, termasuk yang belum ditulis: `@theme inline` membuat
+   `bg-muted` menghasilkan `var(--muted)` apa adanya, jadi menimpanya di elemen
+   induk ikut turun ke seluruh isinya.
+
+   SIDEBAR tidak memakai ini. Ia sudah punya keluarga tokennya sendiri
+   (`--sidebar-accent`), yang di atas sudah diarahkan ke `--chrome-accent`. */
+@utility chrome-surface {
+  background-color: var(--chrome);
+  --muted: var(--chrome-accent);
+}
+
+/* Toast bergaya dashboard Vercel: panel tetap netral, warna hanya menjadi
+    penanda status pada ikon agar notifikasi tidak mendominasi isi layar. */
+.cn-toast {
+  width: min(420px, calc(100vw - 32px));
+  min-height: 56px;
+  gap: 10px;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: var(--toast-blue) !important;
+  color: #ffffff !important;
+  box-shadow: var(--overlay-shadow) !important;
+  font-family: var(--font-sans);
+}
+
+.cn-toast-title {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.cn-toast-description {
+  color: #ffffffd9 !important;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.cn-toast > [data-icon] {
+  color: #ffffff;
+}
+
+.cn-toast-action {
+  border-radius: 6px !important;
+  background: var(--toast-action-bg) !important;
+  color: #ffffff !important;
+  font-size: 12px !important;
+}
+
+.cn-toast-cancel {
+  border-radius: 6px !important;
+  background: var(--muted) !important;
+  color: var(--foreground) !important;
+  font-size: 12px !important;
+}
+
+/* Tombol tutup DI DALAM kartu, di sudut kanan atas.
+
+   Toast menaruhnya lewat TIGA variabel, bukan lewat `top`/`right` saja:
+     left:      var(--toast-close-button-start)      bawaan 0
+     right:     var(--toast-close-button-end)        bawaan unset
+     transform: var(--toast-close-button-transform)  bawaan translate(-35%,-35%)
+   Versi sebelumnya cuma menimpa `top` dan `right`. `left: 0` dan geseran
+   -35% ke luar tetap berlaku — jadi "×" duduk di tepi KIRI dan menjorok keluar
+   kartu, sementara `right` tidak berpengaruh apa pun karena lebar tombolnya
+   tetap. Yang ditimpa sekarang variabelnya sendiri, sehingga aturan RTL dan
+   varian tema milik toast ikut membaca nilai yang benar; properti eksplisit
+   di bawah cuma cadangan kalau kelak nama variabelnya berubah. */
+.cn-toast {
+  --toast-close-button-start: auto;
+  --toast-close-button-end: 8px;
+  --toast-close-button-transform: none;
+}
+
+.cn-toast-close {
+  top: 8px !important;
+  right: 8px !important;
+  left: auto !important;
+  transform: none !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #ffffff !important;
+}
+
+/* Ruang untuk "×" HANYA pada toast yang memang punya tombol tutup — tanpa
+   ini judul yang panjang berjalan di BAWAH tombolnya dan terpotong olehnya. */
+.cn-toast:has([data-close-button]) {
+  padding-right: 36px !important;
+}
+
+/* Pengecualian tersengaja — lihat CLAUDE.md § "Pengecualian: Faktur
+   Penjualan & Faktur Pembelian bergaya Kledo". Kedua halaman (list & detail)
+   meniru tampilan Kledo secara sadar: primary biru, bukan abu-abu gelap
+   seperti sisa aplikasi. Dipasang HANYA oleh <RouteThemeScope>
+   (components/core/layout/pages/route-theme-scope.tsx) untuk route
+   /sales/invoices dan /purchase/invoices — jangan pasang
+   [data-scope="kledo"] di tempat lain tanpa alasan produk yang sama.
+
+   --blue-500 dipakai apa adanya (bukan hex baru) supaya tetap satu sumber
+   warna biru di seluruh app; ia belum punya varian dark-mode terpisah, jadi
+   nilainya sama di kedua tema. */
+/* DIKOSONGKAN. Pengecualian ini ada waktu primer seluruh aplikasi masih
+   abu-abu-nyaris-hitam: dua halaman faktur sengaja dibiru-kan meniru Kledo.
+   Sejak `--primary` global menjadi `--brand` (biru), memaksakan biru KEDUA
+   di sini justru membuat dua halaman itu satu-satunya yang berbeda dari
+   sisanya — kebalikan dari maksud aslinya. <RouteThemeScope> dibiarkan
+   terpasang: ia tidak berbiaya, dan menjadi tempat yang sudah siap kalau
+   kelak sebuah route memang butuh skema warnanya sendiri. */
+
+/* Angka berukuran BESAR — nilai KPI dan ringkasan kepala laporan.
+   Dua hal yang membedakannya dari `num`, dan keduanya berlawanan dengan naluri:
+
+     BOBOTNYA LEBIH RINGAN, bukan lebih tebal. Pada 20px, `font-semibold`
+     membuat angka jadi gempal dan menuntut; 500 membuatnya terbaca sebagai
+     DATA yang kebetulan besar. Ukuran yang sudah menaikkan tingkat kepentingan
+     tidak perlu dibantu ketebalan — memakai keduanya sekaligus adalah cara
+     paling umum sebuah tampilan terlihat murah.
+
+     TRACKING-nya lebih rapat. Jarak antarhuruf yang pas pada 13px jadi
+     terlihat longgar pada 20px; setiap huruf besar butuh pengencangan optis.
+     Itu satu-satunya alasan judul di majalah terbaca padat sementara judul di
+     antarmuka biasa terbaca renggang. */
+@utility num-display {
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.022em;
+  font-weight: 500;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Label mikro — penanda KELOMPOK
+─────────────────────────────────────────────────────────────────────────────
+
+   Huruf besar ber-tracking dipakai HANYA untuk penanda struktur: judul
+   `FormSection`, kepala widget, kepala rail. TIDAK untuk label sebuah nilai.
+
+   Sebelumnya keduanya memakai gaya yang sama, dan akibatnya seluruh layar
+   berteriak dengan volume yang persis sama — judul bagian, label KPI, label
+   ringkasan laporan. Tampilan yang setiap elemennya ditekankan adalah tampilan
+   yang tidak menekankan apa pun, dan itulah yang membuat halaman terasa datar
+   walau isinya tidak. */
+@utility label-micro {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ── ISIAN FORM BERGAYA FRAPPE: DIISI, BUKAN DIBINGKAI ─────────────────────
+
+   Diminta pemilik setelah membandingkan form dokumen ini dengan form pesanan
+   pembelian ERPNext. Di sana kontrol form TIDAK punya garis sama sekali — ia
+   kotak abu (`#f3f3f3`) beradius, dan yang membedakan "sedang diisi" dari
+   "sedang dibaca" cuma kursornya.
+
+   Yang dimenangkan bukan kemiripan. Form dokumen di aplikasi ini memuat 8–10
+   kontrol per section; dengan garis, tiap kontrol menyumbang satu persegi
+   panjang bergaris ke layar yang SUDAH penuh garis (garis section, garis panel,
+   garis kolom tabel item tepat di bawahnya). Isian abu memisahkan kontrol dari
+   labelnya dengan BIDANG, bukan dengan garis kesekian — dan bidang tidak
+   bertabrakan dengan garis yang sudah ada.
+
+   Konsekuensi yang membuatnya layak: halaman DETAIL dokumen sudah menggambar
+   nilainya sebagai kotak `bg-muted` tanpa garis (lihat `<DocumentField>`).
+   Dengan ini, satu faktur terlihat sama saat diisi dan saat dibaca — yang
+   berpindah cuma kemampuannya diketik, dan itu memang satu-satunya yang
+   berubah.
+
+   DIPASANG PER-LINGKUP, bukan di primitifnya. `<Input>`, `<Textarea>`, dan
+   `<SelectTrigger>` tetap bergaris di mana pun ia berdiri — bilah filter,
+   dialog, halaman pengaturan. Yang berubah cuma yang berdiri DI DALAM sebuah
+   `<FormPage>`. Mengubah primitifnya berarti mengubah setiap layar sekaligus,
+   dan bilah filter yang isiannya abu di atas chrome yang juga abu kehilangan
+   batas kontrolnya sama sekali.
+
+   Menargetkan ATRIBUT, bukan nama elemen: pemilih di form ini bukan `<select>`
+   melainkan `<button>` Radix (`<Combobox>`, `<SimpleSelect>`, `<DatePicker>`).
+   `<SimpleSelect>` membawa `data-slot="select-trigger"` dari shadcn; dua yang
+   lain adalah `<Button>` biasa dan karena itu diberi `data-field-control`
+   sendiri — tanpa penanda itu satu-satunya selektor yang menjangkaunya adalah
+   `[data-slot="button"]`, yang juga menangkap Simpan dan Batal di form yang
+   sama. */
+.field-filled
+  :is(
+    [data-slot="input"],
+    [data-slot="textarea"],
+    [data-slot="select-trigger"],
+    [data-field-control]
+  ) {
+  border-color: transparent;
+  background-color: var(--muted);
+}
+
+/* Fokus mengembalikan garisnya DAN memutihkan latarnya. Tanpa itu, satu-satunya
+   penanda "kotak ini yang sedang saya ketik" adalah ring di sekeliling bidang
+   yang warnanya nyaris sama dengan bidang di sebelahnya. */
+.field-filled
+  :is(
+    [data-slot="input"],
+    [data-slot="textarea"],
+    [data-slot="select-trigger"],
+    [data-field-control]
+  ):focus-visible {
+  background-color: var(--card);
+}
+
+/* WAJIB TAPI KOSONG → garis merah, persis ERPNext.
+   `:user-invalid`, bukan `:invalid`: yang kedua menyala sejak form dibuka, jadi
+   setiap form baru dimulai dengan enam kotak merah sebelum satu tombol pun
+   ditekan. `:user-invalid` baru menyala sesudah orangnya menyentuh field itu
+   atau menekan Simpan — persis kapan ERPNext menyalakannya. */
+.field-filled :is([data-slot="input"], [data-slot="textarea"]):user-invalid {
+  border-color: var(--destructive);
+}
+
+/* ── ISIAN DI DALAM SEL TABEL ──────────────────────────────────────────────
+
+   Sel `<DocumentItemGrid>` sudah punya garis kolomnya sendiri. Kontrol
+   bergaris di dalamnya menghasilkan DUA bingkai berjarak beberapa piksel di
+   tiap sel, dan pada grid 8 kolom × 10 baris itu 80 bingkai ganda. Jadi di
+   sini kontrolnya benar-benar telanjang: tanpa garis, tanpa latar, mengisi
+   selnya, dan yang menandai fokus tinggal ring-nya. */
+.field-grid
+  :is([data-slot="input"], [data-slot="select-trigger"], [data-field-control]) {
+  border-color: transparent;
+  background-color: transparent;
+  border-radius: var(--radius-sm);
+  height: 2rem;
+}
+
+.field-grid
+  :is(
+    [data-slot="input"],
+    [data-slot="select-trigger"],
+    [data-field-control]
+  ):focus-visible {
+  background-color: var(--card);
+}
+
+/* ── KEPALA KOLOM LAPORAN YANG SEDANG MENEMPEL ─────────────────────────────
+
+   `data-lengket` dipasang `DataGrid` (lihat efek `kepalaLengket`) begitu
+   kepala kolom tergeser mengikuti gulir halaman. Bayangan tipis di bawahnya
+   yang memberi tahu "baris-baris ini lewat DI BAWAH judul kolom" — tanpa itu
+   kepala yang menempel terbaca seperti baris tabel biasa yang kebetulan
+   berwarna lain, dan baris yang tergulir di belakangnya tampak terpotong. */
+.ag-grid-pinned-top-rows[data-lengket] {
+  box-shadow: 0 6px 8px -6px rgb(0 0 0 / 0.14);
+}
+
+/* ── BADAN GRID `domLayout="autoHeight"` TANPA TINGGI MINIMUM ──────────────
+
+   AG Grid memberi badan grid ber-tinggi-otomatis `min-height: 150px` — ruang
+   untuk overlay "memuat"/"tidak ada baris" bawaannya. <DataGrid> tidak memakai
+   overlay itu (keadaan memuat dan kosong digambar sendiri di bawah kepala
+   kolom), jadi yang tersisa hanya kotak kosong setinggi ~110px di bawah tabel
+   satu baris — paling kentara di baris item form dan tabel halaman detail. */
+.ag-grid-scrolling-rows.ag-layout-auto-height {
+  min-height: 0 !important;
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}

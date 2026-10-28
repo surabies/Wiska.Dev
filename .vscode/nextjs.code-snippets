@@ -1,0 +1,537 @@
+{
+  // ============================================================
+  // NEXT.JS SNIPPETS (App Router, TypeScript, Next.js 15/16)
+  // Cara pakai: ketik prefix lalu tekan Tab atau Enter
+  // ============================================================
+
+  // ---------- PAGE ----------
+  "Next Page (Server Component)": {
+    "prefix": "npage",
+    "scope": "typescriptreact,javascriptreact",
+    "description": "page.tsx server component sederhana",
+    "body": [
+      "export default function ${1:Home}Page() {",
+      "  return (",
+      "    <div>",
+      "      <h1>${1:Home}</h1>",
+      "      $0",
+      "    </div>",
+      "  );",
+      "}"
+    ]
+  },
+
+  "Next Page (Client Component)": {
+    "prefix": "npagec",
+    "scope": "typescriptreact,javascriptreact",
+    "description": "page.tsx client component dengan useState",
+    "body": [
+      "'use client';",
+      "",
+      "import { useState } from 'react';",
+      "",
+      "export default function ${1:Home}Page() {",
+      "  const [${2:value}, set${2/(.*)/${1:/capitalize}/}] = useState(${3:''});",
+      "",
+      "  return (",
+      "    <main>",
+      "      <h1>${1:Home}</h1>",
+      "      $0",
+      "    </main>",
+      "  );",
+      "}"
+    ]
+  },
+
+  "Next Page (Async + Fetch Data)": {
+    "prefix": "npagea",
+    "scope": "typescriptreact,javascriptreact",
+    "description": "page.tsx async server component dengan fetch data",
+    "body": [
+      "async function getData() {",
+      "  const res = await fetch('${1:https://api.example.com/data}', { cache: 'no-store' });",
+      "",
+      "  if (!res.ok) {",
+      "    throw new Error('Gagal mengambil data');",
+      "  }",
+      "",
+      "  return res.json();",
+      "}",
+      "",
+      "export default async function ${2:Home}Page() {",
+      "  const data = await getData();",
+      "",
+      "  return (",
+      "    <main>",
+      "      <h1>${2:Home}</h1>",
+      "      <pre>{JSON.stringify(data, null, 2)}</pre>",
+      "      $0",
+      "    </main>",
+      "  );",
+      "}"
+    ]
+  },
+
+  "Next Dynamic Page ([slug])": {
+    "prefix": "npaged",
+    "scope": "typescriptreact,javascriptreact",
+    "description": "page.tsx dynamic route (params berupa Promise)",
+    "body": [
+      "type Props = {",
+      "  params: Promise<{ ${1:slug}: string }>;",
+      "};",
+      "",
+      "export default async function ${2:Detail}Page({ params }: Props) {",
+      "  const { ${1:slug} } = await params;",
+      "",
+      "  return (",
+      "    <main>",
+      "      <h1>{${1:slug}}</h1>",
+      "      $0",
+      "    </main>",
+      "  );",
+      "}"
+    ]
+  },
+
+  // ---------- LAYOUT ----------
+  "Next Root Layout": {
+    "prefix": "nrootlayout",
+    "scope": "typescriptreact,javascriptreact",
+    "description": "app/layout.tsx root layout dengan metadata",
+    "body": [
+      "import type { Metadata } from 'next';",
+      "import type { ReactNode } from 'react';",
+      "import './globals.css';",
+      "",
+      "export const metadata: Metadata = {",
+      "  title: '${1:Nama Aplikasi}',",
+      "  description: '${2:Deskripsi aplikasi}',",
+      "};",
+      "",
+      "export default function RootLayout({ children }: { children: ReactNode }) {",
+      "  return (",
+      "    <html lang=\"${3:id}\">",
+      "      <body>{children}</body>",
+      "    </html>",
+      "  );",
+      "}"
+    ]
+  },
+
+  "Next Nested Layout": {
+    "prefix": "nlayout",
+    "scope": "typescriptreact,javascriptreact",
+    "description": "layout.tsx untuk segmen/folder tertentu",
+    "body": [
+      "import type { ReactNode } from 'react';",
+      "",
+      "export default function ${1:Dashboard}Layout({ children }: { children: ReactNode }) {",
+      "  return (",
+      "    <section>",
+      "      $0",
+      "      {children}",
+      "    </section>",
+      "  );",
+      "}"
+    ]
+  },
+
+  "Next Template": {
+    "prefix": "ntemplate",
+    "scope": "typescriptreact,javascriptreact",
+    "description": "template.tsx (re-render setiap navigasi)",
+    "body": [
+      "import type { ReactNode } from 'react';",
+      "",
+      "export default function Template({ children }: { children: ReactNode }) {",
+      "  return <div>{children}</div>;",
+      "}"
+    ]
+  },
+
+  // ---------- SPECIAL FILES ----------
+  "Next Loading": {
+    "prefix": "nloading",
+    "scope": "typescriptreact,javascriptreact",
+    "description": "loading.tsx",
+    "body": [
+      "export default function Loading() {",
+      "  return (",
+      "    <div>",
+      "      <p>${1:Memuat...}</p>",
+      "    </div>",
+      "  );",
+      "}"
+    ]
+  },
+
+  "Next Error Boundary": {
+    "prefix": "nerror",
+    "scope": "typescriptreact,javascriptreact",
+    "description": "error.tsx (client component)",
+    "body": [
+      "'use client';",
+      "",
+      "import { useEffect } from 'react';",
+      "",
+      "export default function Error({",
+      "  error,",
+      "  reset,",
+      "}: {",
+      "  error: Error & { digest?: string };",
+      "  reset: () => void;",
+      "}) {",
+      "  useEffect(() => {",
+      "    console.error(error);",
+      "  }, [error]);",
+      "",
+      "  return (",
+      "    <div>",
+      "      <h2>Terjadi kesalahan</h2>",
+      "      <button onClick={() => reset()}>Coba lagi</button>",
+      "    </div>",
+      "  );",
+      "}"
+    ]
+  },
+
+  "Next Global Error": {
+    "prefix": "nglobalerror",
+    "scope": "typescriptreact,javascriptreact",
+    "description": "global-error.tsx",
+    "body": [
+      "'use client';",
+      "",
+      "export default function GlobalError({",
+      "  reset,",
+      "}: {",
+      "  error: Error & { digest?: string };",
+      "  reset: () => void;",
+      "}) {",
+      "  return (",
+      "    <html lang=\"${1:id}\">",
+      "      <body>",
+      "        <h2>Terjadi kesalahan pada aplikasi</h2>",
+      "        <button onClick={() => reset()}>Coba lagi</button>",
+      "      </body>",
+      "    </html>",
+      "  );",
+      "}"
+    ]
+  },
+
+  "Next Not Found": {
+    "prefix": "nnotfound",
+    "scope": "typescriptreact,javascriptreact",
+    "description": "not-found.tsx",
+    "body": [
+      "import Link from 'next/link';",
+      "",
+      "export default function NotFound() {",
+      "  return (",
+      "    <div>",
+      "      <h2>404 - Halaman tidak ditemukan</h2>",
+      "      <Link href=\"/\">Kembali ke beranda</Link>",
+      "    </div>",
+      "  );",
+      "}"
+    ]
+  },
+
+  // ---------- METADATA ----------
+  "Next Static Metadata": {
+    "prefix": "nmeta",
+    "scope": "typescriptreact,javascriptreact,typescript",
+    "description": "export const metadata",
+    "body": [
+      "import type { Metadata } from 'next';",
+      "",
+      "export const metadata: Metadata = {",
+      "  title: '${1:Judul Halaman}',",
+      "  description: '${2:Deskripsi halaman}',",
+      "};"
+    ]
+  },
+
+  "Next generateMetadata": {
+    "prefix": "ngenmeta",
+    "scope": "typescriptreact,javascriptreact,typescript",
+    "description": "generateMetadata untuk dynamic route",
+    "body": [
+      "import type { Metadata } from 'next';",
+      "",
+      "type Props = {",
+      "  params: Promise<{ ${1:slug}: string }>;",
+      "};",
+      "",
+      "export async function generateMetadata({ params }: Props): Promise<Metadata> {",
+      "  const { ${1:slug} } = await params;",
+      "",
+      "  return {",
+      "    title: ${1:slug},",
+      "  };",
+      "}"
+    ]
+  },
+
+  "Next generateStaticParams": {
+    "prefix": "ngsp",
+    "scope": "typescriptreact,javascriptreact,typescript",
+    "description": "generateStaticParams",
+    "body": [
+      "export async function generateStaticParams() {",
+      "  const items: { ${1:slug}: string }[] = await fetch('${2:https://api.example.com/items}').then((res) => res.json());",
+      "",
+      "  return items.map((item) => ({ ${1:slug}: item.${1:slug} }));",
+      "}"
+    ]
+  },
+
+  // ---------- API / ROUTE HANDLER ----------
+  "Next Route Handler": {
+    "prefix": "nroute",
+    "scope": "typescript,javascript",
+    "description": "app/api/.../route.ts (GET + POST)",
+    "body": [
+      "import { NextResponse } from 'next/server';",
+      "",
+      "export async function GET(request: Request) {",
+      "  return NextResponse.json({ message: '${1:OK}' });",
+      "}",
+      "",
+      "export async function POST(request: Request) {",
+      "  const body = await request.json();",
+      "",
+      "  return NextResponse.json({ data: body }, { status: 201 });",
+      "}"
+    ]
+  },
+
+  "Next Route Handler (Dynamic)": {
+    "prefix": "nrouted",
+    "scope": "typescript,javascript",
+    "description": "app/api/[id]/route.ts (GET + PUT + DELETE)",
+    "body": [
+      "import { NextResponse } from 'next/server';",
+      "",
+      "type Context = {",
+      "  params: Promise<{ ${1:id}: string }>;",
+      "};",
+      "",
+      "export async function GET(request: Request, { params }: Context) {",
+      "  const { ${1:id} } = await params;",
+      "",
+      "  return NextResponse.json({ ${1:id} });",
+      "}",
+      "",
+      "export async function PUT(request: Request, { params }: Context) {",
+      "  const { ${1:id} } = await params;",
+      "  const body = await request.json();",
+      "",
+      "  return NextResponse.json({ ${1:id}, data: body });",
+      "}",
+      "",
+      "export async function DELETE(request: Request, { params }: Context) {",
+      "  const { ${1:id} } = await params;",
+      "",
+      "  return NextResponse.json({ deleted: ${1:id} });",
+      "}"
+    ]
+  },
+
+  "Next Server Action": {
+    "prefix": "nactions",
+    "scope": "typescript,javascript",
+    "description": "File server actions ('use server')",
+    "body": [
+      "'use server';",
+      "",
+      "import { revalidatePath } from 'next/cache';",
+      "",
+      "export async function ${1:createItem}(formData: FormData) {",
+      "  const ${2:name} = formData.get('${2:name}') as string;",
+      "",
+      "  $0",
+      "",
+      "  revalidatePath('${3:/}');",
+      "}"
+    ]
+  },
+
+  // ---------- MIDDLEWARE / PROXY ----------
+  "Next Middleware (Next 15)": {
+    "prefix": "nmiddleware",
+    "scope": "typescript,javascript",
+    "description": "middleware.ts (Next.js 15 ke bawah)",
+    "body": [
+      "import { NextResponse } from 'next/server';",
+      "import type { NextRequest } from 'next/server';",
+      "",
+      "export function middleware(request: NextRequest) {",
+      "  $0",
+      "  return NextResponse.next();",
+      "}",
+      "",
+      "export const config = {",
+      "  matcher: ['${1:/dashboard/:path*}'],",
+      "};"
+    ]
+  },
+
+  "Next Proxy (Next 16)": {
+    "prefix": "nproxy",
+    "scope": "typescript,javascript",
+    "description": "proxy.ts (pengganti middleware di Next.js 16)",
+    "body": [
+      "import { NextResponse } from 'next/server';",
+      "import type { NextRequest } from 'next/server';",
+      "",
+      "export function proxy(request: NextRequest) {",
+      "  $0",
+      "  return NextResponse.next();",
+      "}",
+      "",
+      "export const config = {",
+      "  matcher: ['${1:/dashboard/:path*}'],",
+      "};"
+    ]
+  },
+
+  // ---------- COMPONENT / HOOK / CONTEXT ----------
+  "Next Component (Server)": {
+    "prefix": "ncomp",
+    "scope": "typescriptreact,javascriptreact",
+    "description": "Komponen dengan props bertipe",
+    "body": [
+      "type ${1:Component}Props = {",
+      "  ${2:title}: string;",
+      "};",
+      "",
+      "export default function ${1:Component}({ ${2:title} }: ${1:Component}Props) {",
+      "  return (",
+      "    <div>",
+      "      {${2:title}}",
+      "      $0",
+      "    </div>",
+      "  );",
+      "}"
+    ]
+  },
+
+  "Next Component (Client)": {
+    "prefix": "ncompc",
+    "scope": "typescriptreact,javascriptreact",
+    "description": "Client component dengan props bertipe",
+    "body": [
+      "'use client';",
+      "",
+      "type ${1:Component}Props = {",
+      "  ${2:title}: string;",
+      "};",
+      "",
+      "export default function ${1:Component}({ ${2:title} }: ${1:Component}Props) {",
+      "  return (",
+      "    <div>",
+      "      {${2:title}}",
+      "      $0",
+      "    </div>",
+      "  );",
+      "}"
+    ]
+  },
+
+  "Next Custom Hook": {
+    "prefix": "nhook",
+    "scope": "typescriptreact,javascriptreact,typescript,javascript",
+    "description": "Custom hook",
+    "body": [
+      "'use client';",
+      "",
+      "import { useEffect, useState } from 'react';",
+      "",
+      "export function use${1:Something}() {",
+      "  const [${2:data}, set${2/(.*)/${1:/capitalize}/}] = useState<${3:unknown}>(null);",
+      "",
+      "  useEffect(() => {",
+      "    $0",
+      "  }, []);",
+      "",
+      "  return { ${2:data} };",
+      "}"
+    ]
+  },
+
+  "Next Context Provider": {
+    "prefix": "nctx",
+    "scope": "typescriptreact,javascriptreact",
+    "description": "Context + Provider + hook (client)",
+    "body": [
+      "'use client';",
+      "",
+      "import { createContext, useContext, useState, type ReactNode } from 'react';",
+      "",
+      "type ${1:App}ContextValue = {",
+      "  ${2:value}: string;",
+      "  set${2/(.*)/${1:/capitalize}/}: (value: string) => void;",
+      "};",
+      "",
+      "const ${1:App}Context = createContext<${1:App}ContextValue | null>(null);",
+      "",
+      "export function ${1:App}Provider({ children }: { children: ReactNode }) {",
+      "  const [${2:value}, set${2/(.*)/${1:/capitalize}/}] = useState('');",
+      "",
+      "  return (",
+      "    <${1:App}Context.Provider value={{ ${2:value}, set${2/(.*)/${1:/capitalize}/} }}>",
+      "      {children}",
+      "    </${1:App}Context.Provider>",
+      "  );",
+      "}",
+      "",
+      "export function use${1:App}() {",
+      "  const context = useContext(${1:App}Context);",
+      "",
+      "  if (!context) {",
+      "    throw new Error('use${1:App} harus dipakai di dalam ${1:App}Provider');",
+      "  }",
+      "",
+      "  return context;",
+      "}"
+    ]
+  },
+
+  // ---------- IMPORT HELPERS ----------
+  "Next Link": {
+    "prefix": "nlink",
+    "scope": "typescriptreact,javascriptreact",
+    "description": "Import + pemakaian next/link",
+    "body": [
+      "import Link from 'next/link';",
+      "",
+      "<Link href=\"${1:/}\">${2:Teks}</Link>"
+    ]
+  },
+
+  "Next Image": {
+    "prefix": "nimg",
+    "scope": "typescriptreact,javascriptreact",
+    "description": "Import + pemakaian next/image",
+    "body": [
+      "import Image from 'next/image';",
+      "",
+      "<Image src=\"${1:/gambar.png}\" alt=\"${2:deskripsi}\" width={${3:400}} height={${4:300}} />"
+    ]
+  },
+
+  "Next useRouter": {
+    "prefix": "nrouter",
+    "scope": "typescriptreact,javascriptreact",
+    "description": "useRouter dari next/navigation (client)",
+    "body": [
+      "import { useRouter } from 'next/navigation';",
+      "",
+      "const router = useRouter();",
+      "router.push('${1:/}');"
+    ]
+  }
+}
