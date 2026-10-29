@@ -3,14 +3,17 @@ import {
   DropletsIcon,
   GaugeIcon,
   ReceiptIcon,
-  TriangleAlertIcon,
+  UserGroupIcon,
 } from "@hugeicons/core-free-icons"
 import { ambilTren, ambilPerluTindakan, periodeTersedia } from "@/features/dashboard/lib/queries"
 import {
   ambilCapaian,
   ambilProgresPetugas,
+  ambilStatPeriode,
   ambilTrenAnomali,
+  geserPeriode,
   periodeKerja,
+  type StatPeriode,
 } from "@/features/dashboard/lib/queries-meter"
 import { PageContainer } from "@/components/layout"
 import { StatPanel, StatPanelGrid } from "@/features/dashboard/components/stat-panel"
@@ -23,14 +26,18 @@ import { formatPeriode, formatRupiah, formatRupiahRingkas } from "@/features/pub
 
 export const metadata: Metadata = { title: "Ringkasan" }
 
-const AMBANG_ANOMALI_PERSEN = 5
+const angka = (n: number, digit = 0) =>
+  n.toLocaleString("id-ID", { maximumFractionDigits: digit })
 
-function selisih(sekarang: number, lalu: number | undefined): string | undefined {
+function selisih(sekarang: number, lalu: number | undefined | null): string | undefined {
   if (!lalu) return undefined
   const p = ((sekarang - lalu) / lalu) * 100
   const tanda = p >= 0 ? "▲" : "▼"
   return `${tanda} ${Math.abs(p).toLocaleString("id-ID", { maximumFractionDigits: 1 })}% vs periode lalu`
 }
+
+/** Rata-rata pemakaian per SL — pembanding yang adil antara periode berjalan (sebagian) dan periode lalu (penuh). */
+const rataPerSL = (s: StatPeriode) => (s.sl > 0 ? s.kubikasi / s.sl : 0)
 
 export default async function DashboardPage({
   searchParams,
@@ -49,25 +56,58 @@ export default async function DashboardPage({
   const diminta = Number(periodeParam)
   const kerja = daftarPeriode.includes(diminta) ? diminta : kerjaTerbaru
 
-  // 2. Ambil data spesifik berdasarkan periode `kerja` dan `tren` secara efisien
-  const [capaian, trenAnomali, petugas, tren] = kerja
+  // 2. Data spesifik periode terpilih (`kerja`) dan periode sebelumnya.
+  //    `tren` (grafik 6 bulan tagihan) tetap berbasis periode yang sudah terbit.
+  const [capaian, trenAnomali, petugas, tren, statIni, statLalu] = kerja
     ? await Promise.all([
         ambilCapaian(kerja),
         ambilTrenAnomali(kerja),
         ambilProgresPetugas(kerja),
-        ambilTren(), // Dipindah ke sini agar tidak membebani jika tidak diperlukan
+        ambilTren(),
+        ambilStatPeriode(kerja),
+        ambilStatPeriode(geserPeriode(kerja, -1)),
       ])
-    : [null, [], [], []]
-
-  // Sinkronkan indeks berdasarkan periode aktif (`kerja`) agar StatPanel dan Tren sejalan
-  const idx = tren.findIndex((t: { periode: number; pemakaianM3: number; nilai: number }) => t.periode === kerja)
-  const terakhir = idx >= 0 ? tren[idx] : tren.at(-1)
-  const sebelumnya = idx >= 0 ? tren[idx - 1] : tren.at(-2)
+    : [null, [], [], [], null, null]
 
   const opsiPeriode: OpsiPeriode[] = daftarPeriode.map((p: number) => ({
     value: String(p),
     label: formatPeriode(p),
   }))
+
+  const berjalan = statIni?.status === "berjalan"
+  const adaLalu = !!statLalu && statLalu.sl > 0
+
+  // --- Keterangan tiap kartu -------------------------------------------------
+  // SL tercatat: selalu tampilkan angka periode lalu sebagai pembanding.
+  const ketSL = statIni
+    ? adaLalu
+      ? `${formatPeriode(statLalu!.periode)}: ${angka(statLalu!.sl)} SL`
+      : "Belum ada pembanding periode lalu"
+    : undefined
+
+  // Kubikasi: periode berjalan hanya sebagian SL, jadi dibandingkan per SL;
+  // periode terbit dibandingkan total.
+  const ketKubikasi = statIni
+    ? berjalan
+      ? adaLalu
+        ? `${angka(rataPerSL(statIni), 1)} m³/SL · ${formatPeriode(statLalu!.periode)}: ${angka(rataPerSL(statLalu!), 1)}`
+        : `${angka(rataPerSL(statIni), 1)} m³ per SL`
+      : selisih(statIni.kubikasi, statLalu?.kubikasi)
+    : undefined
+
+  // Tagihan: periode berjalan belum punya tagihan → tampilkan periode lalu sebagai acuan.
+  const tagihanTampil = statIni
+    ? statIni.nilai !== null
+      ? { nilai: formatRupiahRingkas(statIni.nilai), penuh: formatRupiah(statIni.nilai) }
+      : { nilai: "Belum terbit", penuh: undefined }
+    : { nilai: "–", penuh: undefined }
+  const ketTagihan = statIni
+    ? statIni.nilai !== null
+      ? selisih(statIni.nilai, statLalu?.nilai)
+      : statLalu?.nilai != null
+        ? `${formatPeriode(statLalu.periode)}: ${formatRupiahRingkas(statLalu.nilai)}`
+        : undefined
+    : undefined
 
   return (
     <PageContainer tanpaHeader className="flex min-h-0 flex-1 flex-col">
@@ -87,39 +127,32 @@ export default async function DashboardPage({
         <StatPanelGrid>
           <StatPanel
             label="Capaian baca meter"
-            nilai={capaian ? `${capaian.persen.toLocaleString("id-ID", { maximumFractionDigits: 1 })}%` : "–"}
+            nilai={capaian ? `${angka(capaian.persen, 1)}%` : "–"}
             keterangan={
-              capaian
-                ? `${capaian.dicatat.toLocaleString("id-ID")} dari ${capaian.total.toLocaleString("id-ID")} sambungan`
-                : undefined
+              capaian ? `${angka(capaian.dicatat)} dari ${angka(capaian.total)} sambungan` : undefined
             }
             icon={GaugeIcon}
             progres={capaian?.persen}
             nada="info"
           />
           <StatPanel
-            label={terakhir ? `Kubikasi ${formatPeriode(terakhir.periode)}` : "Kubikasi"}
-            nilai={terakhir ? `${terakhir.pemakaianM3.toLocaleString("id-ID")} m³` : "–"}
-            keterangan={terakhir ? selisih(terakhir.pemakaianM3, sebelumnya?.pemakaianM3) : undefined}
+            label={kerja ? `SL tercatat ${formatPeriode(kerja)}` : "SL tercatat"}
+            nilai={statIni ? angka(statIni.sl) : "–"}
+            keterangan={ketSL}
+            icon={UserGroupIcon}
+          />
+          <StatPanel
+            label={kerja ? `Kubikasi ${formatPeriode(kerja)}${berjalan ? " (berjalan)" : ""}` : "Kubikasi"}
+            nilai={statIni ? `${angka(statIni.kubikasi)} m³` : "–"}
+            keterangan={ketKubikasi}
             icon={DropletsIcon}
           />
           <StatPanel
-            label={terakhir ? `Tagihan ${formatPeriode(terakhir.periode)}` : "Tagihan"}
-            nilai={terakhir ? formatRupiahRingkas(terakhir.nilai) : "–"}
-            judulLengkap={terakhir ? formatRupiah(terakhir.nilai) : undefined}
-            keterangan={terakhir ? selisih(terakhir.nilai, sebelumnya?.nilai) : undefined}
+            label={kerja ? `Tagihan ${formatPeriode(kerja)}` : "Tagihan"}
+            nilai={tagihanTampil.nilai}
+            judulLengkap={tagihanTampil.penuh}
+            keterangan={ketTagihan}
             icon={ReceiptIcon}
-          />
-          <StatPanel
-            label="Anomali periode ini"
-            nilai={capaian ? capaian.anomali.toLocaleString("id-ID") : "–"}
-            keterangan={
-              capaian
-                ? `${capaian.persenAnomali.toLocaleString("id-ID", { maximumFractionDigits: 1 })}% dari yang dilaporkan`
-                : undefined
-            }
-            icon={TriangleAlertIcon}
-            nada={capaian && capaian.persenAnomali > AMBANG_ANOMALI_PERSEN ? "peringatan" : "netral"}
           />
         </StatPanelGrid>
 

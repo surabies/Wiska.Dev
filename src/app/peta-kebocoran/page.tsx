@@ -1,8 +1,7 @@
 import { 
   ringkasanLaporanPeta, 
   ringkasanAsetPeta, 
-  daftarKebocoranAktifPeta,
-  getGeoJsonKelurahanDariDb 
+  daftarKebocoranAktifPeta 
 } from "@/features/dashboard/lib/peta-queries";
 import { PetaKecamatan } from "@/features/dashboard/components/peta-kecamatan";
 
@@ -11,13 +10,14 @@ export const metadata = {
 };
 
 export default async function PetaKebocoranPage() {
-  const [ringkasan, _aset, _kebocoranAktif, geoJsonData] = await Promise.all([
+  // Mengambil data dari query yang sudah ada (aset diberi prefix _ karena belum dipakai di tampilan)
+  const [ringkasan, _aset, _kebocoranAktif] = await Promise.all([
     ringkasanLaporanPeta(),
     ringkasanAsetPeta(),
     daftarKebocoranAktifPeta(),
-    getGeoJsonKelurahanDariDb(),
   ]);
 
+  // Format data hotspot dengan tipe eksplisit agar tidak error implicit any
   const hotspotData = ringkasan.hotspot.map((item: { kelurahan: string; jumlah: number }) => ({
     name: item.kelurahan,
     value: item.jumlah,
@@ -32,7 +32,7 @@ export default async function PetaKebocoranPage() {
         </p>
       </div>
 
-      <PetaKecamatan data={hotspotData} geoJsonData={geoJsonData} />
+      <PetaKecamatan data={hotspotData} />
     </div>
   );
 }

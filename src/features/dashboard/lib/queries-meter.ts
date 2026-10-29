@@ -36,12 +36,17 @@ export async function periodeKerja(): Promise<number | null> {
 /** KPI capaian baca + jumlah anomali untuk satu periode. */
 export async function ambilCapaian(periode: number) {
   // Tahap 1: ambil sekaligus — semua lewat agregasi database.
-  const [perStatus, laporanTotal, anomali, pelangganAktif] = await Promise.all([
+  const [perStatus, laporanMasuk, pembacaanResmi, anomali, pelangganAktif] = await Promise.all([
     prisma.daftarCatat.groupBy({ by: ["status"], where: { periode }, _count: true }),
     prisma.laporanHarianPetugas.count({ where: { periode } }),
+    prisma.pembacaanMeter.count({ where: { periode: periodeKeTanggal(periode) } }),
     prisma.laporanHarianPetugas.count({ where: { periode, kondisi: { not: "NORMAL" } } }),
     prisma.pelanggan.count({ where: { deletedAt: null, status: "AKTIF" } }),
   ])
+  // Laporan harian dan PembacaanMeter merekam bacaan yang SAMA pada tahap
+  // berbeda: periode berjalan → laporan lebih banyak (belum diverifikasi),
+  // periode lama/closing → pembacaan resmi (laporan harian mungkin tak ada).
+  const laporanTotal = Math.max(laporanMasuk, pembacaanResmi)
 
   const hitung = (s: string) => perStatus.find((x) => x.status === s)?._count ?? 0
   const adaDaftar = perStatus.length > 0
@@ -232,4 +237,65 @@ export async function ambilProgresPetugas(periode: number): Promise<BarisPetugas
     })
     // Yang paling banyak membaca di atas; seri → beban kerja lebih besar dulu.
     .sort((a, b) => b.persen - a.persen || b.dicatat - a.dicatat || b.total - a.total)
+}
+
+export interface StatPeriode {
+  periode: number
+  /** "terbit" = tagihan sudah ada; "berjalan" = masih pencatatan/verifikasi. */
+  status: "terbit" | "berjalan"
+  /** Jumlah SL (sambungan langganan) yang sudah tercatat pada periode ini. */
+  sl: number
+  /** Total pemakaian (m³): ditagihkan bila terbit, terbaca sementara bila berjalan. */
+  kubikasi: number
+  /** Total tagihan (Rp); null selama periode berjalan karena tagihan belum terbit. */
+  nilai: number | null
+}
+
+/**
+ * Angka kartu ringkasan untuk SATU periode, apa adanya pada periode itu:
+ *  - sudah ada Tagihan → angka resmi dari Tagihan (sama dengan grafik tren);
+ *  - belum ada Tagihan (periode berjalan) → angka sementara dari bacaan yang
+ *    sudah masuk. Sumbernya yang lebih lengkap antara laporan harian dan
+ *    PembacaanMeter, karena pembacaan resmi baru terbentuk saat verifikasi.
+ */
+export async function ambilStatPeriode(periode: number): Promise<StatPeriode> {
+  const tanggal = periodeKeTanggal(periode)
+  const [tagihan, laporan, pembacaan] = await Promise.all([
+    prisma.tagihan.aggregate({
+      where: { periode: tanggal },
+      _count: true,
+      _sum: { totalTagihan: true, pemakaianM3: true },
+    }),
+    prisma.laporanHarianPetugas.aggregate({
+      where: { periode },
+      _count: true,
+      // Di LaporanHarianPetugas kolom "Pakai" bernama `pemakaian` (bukan
+      // `pemakaianM3` seperti di PembacaanMeter/Tagihan).
+      _sum: { pemakaian: true },
+    }),
+    prisma.pembacaanMeter.aggregate({
+      where: { periode: tanggal },
+      _count: true,
+      _sum: { pemakaianM3: true },
+    }),
+  ])
+
+  if (tagihan._count > 0) {
+    return {
+      periode,
+      status: "terbit",
+      sl: tagihan._count,
+      kubikasi: tagihan._sum.pemakaianM3 ?? 0,
+      nilai: tagihan._sum.totalTagihan ?? 0,
+    }
+  }
+
+  const pakaiLaporan = laporan._count >= pembacaan._count
+  return {
+    periode,
+    status: "berjalan",
+    sl: pakaiLaporan ? laporan._count : pembacaan._count,
+    kubikasi: (pakaiLaporan ? laporan._sum.pemakaian : pembacaan._sum.pemakaianM3) ?? 0,
+    nilai: null,
+  }
 }
