@@ -247,7 +247,7 @@ function opsiPopup(
     const jenis = propertiTeks(properties, "jenis");
     return {
       jenis: "pengaduan",
-      label: "Pengaduan masyarakat",
+      label: "Pengaduan Pelanggan",
       judul:
         propertiTeks(properties, "tiket") ||
         propertiTeks(properties, "judul") ||
