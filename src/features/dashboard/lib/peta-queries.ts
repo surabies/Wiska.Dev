@@ -155,3 +155,24 @@ export async function daftarKebocoranAktifPeta() {
      LIMIT 100`,
   );
 }
+export async function getGeoJsonKelurahanDariDb() {
+  const result = await prisma.$queryRawUnsafe<Array<{ geojson: unknown }>>(
+    `SELECT json_build_object(
+      'type', 'FeatureCollection',
+      'features', json_agg(
+        json_build_object(
+          'type', 'Feature',
+          'geometry', ST_AsGeoJSON(area)::json,
+          'properties', json_build_object(
+            'id', id,
+            'nama', nama
+          )
+        )
+      )
+    ) AS geojson
+    FROM kelurahan
+    WHERE area IS NOT NULL`
+  );
+  
+  return result[0]?.geojson ?? { type: 'FeatureCollection', features: [] };
+}

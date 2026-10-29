@@ -55,6 +55,7 @@
     "cn": "^0.4.0",
     "date-fns": "^4.4.0",
     "echarts": "^6.1.0",
+    "echarts-for-react": "^3.0.6",
     "embla-carousel-react": "^8.6.0",
     "geojson": "^0.5.0",
     "hono": "^4.13.13",
@@ -90,12 +91,12 @@
     "@types/react-dom": "^19",
     "csv-parse": "^7.0.3",
     "dotenv": "^18.0.8",
-    "eslint": "^9",
+    "eslint": "^10.13.0",
     "eslint-config-next": "16.3.5",
     "prettier": "^3.9.10",
     "prisma": "7.10.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
-    "typescript": "^5"
+    "typescript": "^7.0.2"
   }
 }
