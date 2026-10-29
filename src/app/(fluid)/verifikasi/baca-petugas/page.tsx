@@ -14,7 +14,7 @@ export default async function VerifikasiLapanganPage() {
   return <PageContainer
   className="flex min-h-0 flex-1 flex-col"
       breadcrumbs={[
-        { label: "Pengolahan Data", href: "/pengolahan-data/dpm" },
+        { label: "Dashboard", href: "/dashboard" },
         { label: "Daftar Pencatatan Meter" },
       ]}
     >

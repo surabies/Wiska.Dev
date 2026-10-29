@@ -88,6 +88,7 @@ function labelBulan(bulan: string) {
 }
 
 async function eksporLaporan(ringkasan: RingkasanLaporanPeta) {
+  if (typeof window === "undefined") return;
   const XLSX = await import("xlsx");
   const buku = XLSX.utils.book_new();
   const ringkas = [
