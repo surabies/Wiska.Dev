@@ -1,6 +1,6 @@
 "use client"
 
-// Grid /dashboard/laporan-mandiri — endpoint GET /api/v1/laporan-mandiri
+// Grid /verifikasi/baca-pelanggan — endpoint GET /api/v1/laporan-mandiri
 // (laporan meter yang dikirim pelanggan dari halaman publik /lapor-meter).
 //
 // BILAH PENYARINGNYA LENGKAP, DAN ITU DISENGAJA. Halaman ini adalah daftar

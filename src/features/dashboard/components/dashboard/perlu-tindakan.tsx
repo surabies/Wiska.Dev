@@ -133,7 +133,7 @@ export function PerluTindakan({
             {laporanMandiri.map((l, i) => (
               <Link
                 key={l.id}
-                href={`/dashboard/laporan-mandiri?id=${l.id}`}
+                href={`/verifikasi/baca-pelanggan?id=${l.id}`}
                 className={
                   "flex items-start justify-between gap-3 px-3 py-2.5 transition-colors hover:bg-accent " +
                   (i < laporanMandiri.length - 1
@@ -167,7 +167,7 @@ export function PerluTindakan({
               size="sm"
               className="mt-2 justify-start text-muted-foreground"
             >
-              <Link href="/dashboard/laporan-mandiri">
+              <Link href="/verifikasi/baca-pelanggan">
                 Lihat semua laporan <HugeiconsIcon icon={ArrowRight01Icon} />
               </Link>
             </Button>
