@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout";
-import { PetaWilayah } from "@/features/dashboard/components/peta-wilayah/peta-wilayah";
+import { PetaClientWrapper } from "@/features/dashboard/components/peta-wilayah/PetaClientWrapper";
 import {
   batasKecamatanFC,
   batasKelurahanFC,
@@ -47,8 +47,6 @@ export default async function WilayahPage() {
   ]);
 
   return (
-    // Tinggi tidak lagi dihitung manual: layout fluid sudah membatasi ruang
-    // (layar - navbar - footer), jadi cukup mengisi ruang itu dengan flex-1.
     <PageContainer
       className="flex min-h-0 flex-1 flex-col overflow-hidden pt-3 sm:pt-3 [&>header]:hidden sm:[&>header]:flex"
       breadcrumbs={[
@@ -56,7 +54,7 @@ export default async function WilayahPage() {
         { label: "Peta Wilayah" },
       ]}
     >
-      <PetaWilayah
+      <PetaClientWrapper
         kelurahan={kelurahan}
         kecamatan={kecamatan}
         rute={rute}
