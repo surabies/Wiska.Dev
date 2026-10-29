@@ -72,7 +72,7 @@ export function PerluTindakan({
             {pengaduan.map((p, i) => (
               <Link
                 key={p.id}
-                href={`/dashboard/pengaduan?q=${p.nomorTiket}`}
+                href={`/pengaduan?q=${p.nomorTiket}`}
                 className={
                   "flex items-start justify-between gap-3 px-3 py-2.5 transition-colors hover:bg-accent " +
                   (i < pengaduan.length - 1
@@ -108,7 +108,7 @@ export function PerluTindakan({
               size="sm"
               className="mt-2 justify-start text-muted-foreground"
             >
-              <Link href="/dashboard/pengaduan">
+              <Link href="/pengaduan">
                 Lihat semua pengaduan <HugeiconsIcon icon={ArrowRight01Icon} />
               </Link>
             </Button>

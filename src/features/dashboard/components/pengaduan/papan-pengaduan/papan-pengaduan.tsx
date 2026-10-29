@@ -40,7 +40,7 @@ export function PapanPengaduan({ initialQ }: { initialQ?: string }) {
           // tahu bentuk data tiap endpoint) — `id` dibaca langsung, bukan
           // lewat cast ke PengaduanBaris yang cuma menipu pemeriksa tipe.
           onRowClicked={(row) => {
-            if (typeof row.id === "string") router.push(`/dashboard/pengaduan/${row.id}`);
+            if (typeof row.id === "string") router.push(`/pengaduan/${row.id}`);
           }}
           filters={FILTER_PENGADUAN}
         />

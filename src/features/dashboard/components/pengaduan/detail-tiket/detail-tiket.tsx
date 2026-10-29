@@ -1,7 +1,7 @@
 "use client";
 
 // features/dashboard/components/pengaduan/detail-tiket/detail-tiket.tsx —
-// HALAMAN detail satu tiket (/dashboard/pengaduan/[id]). File ini cuma
+// HALAMAN detail satu tiket (/pengaduan/[id]). File ini cuma
 // perakit tata letak; isi tiap blok ada di berkas masing-masing:
 //
 //   use-detail-tiket.ts  data + pembungkus aksi

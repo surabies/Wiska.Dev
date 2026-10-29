@@ -1,4 +1,4 @@
-// app/(dashboard)/dashboard/pengaduan/[id]/page.tsx — /dashboard/pengaduan/:id
+// app/(dashboard)/pengaduan/[id]/page.tsx — /pengaduan/:id
 //
 // HALAMAN detail satu tiket (menggantikan sheet samping di daftar — detail
 // tiket terlalu kompleks untuk lebar sheet: duduk perkara, wilayah, chat,
