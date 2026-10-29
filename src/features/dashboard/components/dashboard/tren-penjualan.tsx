@@ -1,21 +1,22 @@
 "use client"
 
 // features/dashboard/components/dashboard/tren-penjualan.tsx — tren kubikasi
-// (m³) dan nilai tagihan (Rp) per periode dalam SATU panel dengan toggle.
+// (m³) dan nilai tagihan (Rp) per periode, satu panel dengan toggle.
 // Data dari ambilTren() tanpa perubahan.
 //
-// Grafik memakai EvilAreaChart (EvilCharts). Header dibuat ringkas:
-//   baris 1: angka utama + selisih, toggle m³/Rupiah di kanan
-//   baris 2: periode terakhir · rata-rata
-//
-// Judul tooltip: EvilCharts memakai nilai sumbu-X sebagai label tooltip, jadi
-// sumbu-X memakai kolom `label` (periode terformat), bukan `periode` mentah.
-import { useMemo, useState } from "react"
-import { EvilAreaChart } from "@/components/evilcharts/charts/recharts-area-chart"
-import { type ChartConfig } from "@/components/evilcharts/ui/recharts-chart"
+// Grafik SVG ringan (tanpa pustaka grafik) supaya tata letaknya terkendali:
+//   - label sumbu-Y diletakkan DI DALAM area, di atas garis bantu → tidak ada
+//     kolom kosong di kiri, jadi margin kiri = kanan = padding panel
+//   - label sumbu-X hanya periode awal (rata kiri) dan akhir (rata kanan) →
+//     tidak pernah meluber
+//   - tooltip memakai TooltipGrafik bersama, mengikuti ujung kursor (berbalik
+//     dan dijepit bila tidak muat) sehingga tidak keluar dari panel
+import { useId, useMemo, useState } from "react"
 import { cn } from "@/lib/utils"
 import { formatPeriode } from "@/features/public/lib/format"
 import { Panel } from "../panel"
+import { TooltipGrafik, type SeriTooltip } from "./tooltip-grafik"
+import { jalurHalus, ringkasAngka, skalaRapi, useTooltipKursor, useUkuran } from "./grafik-util"
 
 interface Titik {
   periode: number
@@ -26,38 +27,171 @@ interface Titik {
 
 type Mode = "m3" | "rupiah"
 
-// Key config = key data (pemakaianM3 / nilai), bukan nama mode.
-const config = {
-  pemakaianM3: {
+const MODE = {
+  m3: {
+    tombol: "m³",
+    kunci: "pemakaianM3",
     label: "Kubikasi (m³)",
-    colors: { light: ["var(--chart-1)"], dark: ["var(--chart-1)"] },
+    warna: "var(--chart-1)",
+    penuh: (n: number) => `${n.toLocaleString("id-ID")} m³`,
+    ringkas: (n: number) => `${ringkasAngka(n)} m³`,
   },
-  nilai: {
+  rupiah: {
+    tombol: "Rupiah",
+    kunci: "nilai",
     label: "Nilai tagihan",
-    colors: { light: ["var(--chart-2)"], dark: ["var(--chart-2)"] },
+    warna: "var(--chart-2)",
+    penuh: (n: number) => `Rp ${n.toLocaleString("id-ID")}`,
+    ringkas: (n: number) => `Rp ${ringkasAngka(n)}`,
   },
-} satisfies ChartConfig
+} as const
 
-// Mode → kunci data pada Titik.
-const KUNCI = { m3: "pemakaianM3", rupiah: "nilai" } as const
+const ATAS = 16 // ruang untuk label teratas
+const BAWAH = 24 // ruang untuk label sumbu-X
 
-function ringkasRupiah(n: number): string {
-  if (n >= 1_000_000_000) return `Rp ${(n / 1_000_000_000).toFixed(1)} M`
-  if (n >= 1_000_000) return `Rp ${(n / 1_000_000).toFixed(0)} jt`
-  if (n >= 1_000) return `Rp ${(n / 1_000).toFixed(0)} rb`
-  return `Rp ${n}`
-}
+const teksSumbu = {
+  fill: "var(--muted-foreground)",
+  paintOrder: "stroke",
+  stroke: "var(--card)",
+  strokeWidth: 3,
+} as const
 
-function ringkasM3(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} jt`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)} rb`
-  return String(n)
+function GrafikGaris({
+  titik,
+  kunci,
+  warna,
+  formatNilai,
+  seri,
+}: {
+  titik: { label: string; nilai: number }[]
+  kunci: string
+  warna: string
+  formatNilai: (n: number) => string
+  seri: Record<string, SeriTooltip>
+}) {
+  const { pasang: pasangWadah, w, h } = useUkuran<HTMLDivElement>()
+  const [aktif, setAktif] = useState<number | null>(null)
+  const [kursor, setKursor] = useState<{ x: number; y: number } | null>(null)
+  const { pasang: pasangTip, style: gayaTip } = useTooltipKursor<HTMLDivElement>({ w, h }, kursor)
+  const gid = useId().replace(/:/g, "")
+
+  const n = titik.length
+  const tinggi = Math.max(h - ATAS - BAWAH, 0)
+  const { puncak, ticks } = skalaRapi(Math.max(...titik.map((t) => t.nilai)))
+
+  const x = (i: number) => (n > 1 ? (i / (n - 1)) * w : w / 2)
+  const y = (v: number) => ATAS + tinggi - (v / puncak) * tinggi
+  const dasar = ATAS + tinggi
+
+  const garis = w > 0 ? jalurHalus(titik.map((t, i) => [x(i), y(t.nilai)] as const)) : ""
+
+  function geser(e: React.PointerEvent<SVGSVGElement>) {
+    const r = e.currentTarget.getBoundingClientRect()
+    const i = Math.round(((e.clientX - r.left) / w) * (n - 1))
+    setKursor({ x: e.clientX - r.left, y: e.clientY - r.top })
+    setAktif(Math.min(n - 1, Math.max(0, i)))
+  }
+
+  const titikAktif = aktif !== null ? titik[aktif] : null
+
+  return (
+    <div ref={pasangWadah} className="relative min-h-44 flex-1">
+      {w > 0 && h > 0 && (
+        <>
+          <svg
+            width={w}
+            height={h}
+            role="img"
+            aria-label="Grafik tren per periode"
+            className="absolute inset-0 touch-pan-y overflow-visible"
+            onPointerMove={geser}
+            onPointerDown={geser}
+            onPointerLeave={() => setAktif(null)}
+          >
+            <defs>
+              <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={warna} stopOpacity={0.2} />
+                <stop offset="100%" stopColor={warna} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+
+            {ticks.map((t) => (
+              <line
+                key={t}
+                x1={0}
+                x2={w}
+                y1={y(t)}
+                y2={y(t)}
+                style={{ stroke: "var(--border)" }}
+                strokeDasharray={t === 0 ? undefined : "3 3"}
+              />
+            ))}
+
+            <path d={`${garis}L${w},${dasar}L0,${dasar}Z`} fill={`url(#${gid})`} />
+            <path
+              d={garis}
+              fill="none"
+              style={{ stroke: warna }}
+              strokeWidth={1.75}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+
+            {aktif !== null && titikAktif && (
+              <g>
+                <line
+                  x1={x(aktif)}
+                  x2={x(aktif)}
+                  y1={ATAS}
+                  y2={dasar}
+                  style={{ stroke: "var(--border)" }}
+                />
+                <circle
+                  cx={x(aktif)}
+                  cy={y(titikAktif.nilai)}
+                  r={4}
+                  style={{ fill: warna, stroke: "var(--card)" }}
+                  strokeWidth={2}
+                />
+              </g>
+            )}
+
+            {/* Label sumbu-Y di dalam area, di atas garis bantu masing-masing. */}
+            {ticks.map((t) => (
+              <text key={t} x={0} y={y(t) - 4} fontSize={10} style={teksSumbu}>
+                {ringkasAngka(t)}
+              </text>
+            ))}
+
+            {/* Sumbu-X: awal rata kiri, akhir rata kanan. */}
+            <text x={0} y={h - 6} fontSize={11} textAnchor="start" style={{ fill: "var(--muted-foreground)" }}>
+              {titik[0].label}
+            </text>
+            <text x={w} y={h - 6} fontSize={11} textAnchor="end" style={{ fill: "var(--muted-foreground)" }}>
+              {titik[n - 1].label}
+            </text>
+          </svg>
+
+          {titikAktif && (
+            <div ref={pasangTip} className="pointer-events-none absolute w-max" style={gayaTip}>
+              <TooltipGrafik
+                active
+                payload={[{ dataKey: kunci, value: titikAktif.nilai }]}
+                label={titikAktif.label}
+                seri={seri}
+                format={(v) => formatNilai(v)}
+              />
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
 }
 
 export function TrenPenjualan({ data }: { data: Titik[] }) {
   const [mode, setMode] = useState<Mode>("m3")
 
-  // Hook harus dipanggil sebelum early return di bawah.
   const dataGrafik = useMemo(
     () => data.map((t) => ({ ...t, label: formatPeriode(t.periode) })),
     [data]
@@ -66,7 +200,6 @@ export function TrenPenjualan({ data }: { data: Titik[] }) {
   const terakhir = data.at(-1)
   const sebelumnya = data.at(-2)
 
-  // Kurang dari dua periode: belum ada tren yang layak digambar.
   if (!terakhir || !sebelumnya) {
     return (
       <Panel label="Tren Kubikasi & Tagihan" deskripsi="Butuh minimal dua periode.">
@@ -79,91 +212,66 @@ export function TrenPenjualan({ data }: { data: Titik[] }) {
     )
   }
 
-  const kunci = KUNCI[mode]
-  const ringkas = mode === "m3" ? ringkasM3 : ringkasRupiah
-
+  const m = MODE[mode]
+  const kunci = m.kunci
   const nilaiTerakhir = terakhir[kunci]
   const nilaiLalu = sebelumnya[kunci]
   const rata = data.reduce((a, t) => a + t[kunci], 0) / data.length
   const delta = nilaiLalu > 0 ? ((nilaiTerakhir - nilaiLalu) / nilaiLalu) * 100 : undefined
 
-  const angkaUtama =
-    mode === "m3" ? `${nilaiTerakhir.toLocaleString("id-ID")} m³` : ringkasRupiah(nilaiTerakhir)
-  const angkaPenuh =
-    mode === "m3"
-      ? `${nilaiTerakhir.toLocaleString("id-ID")} m³`
-      : `Rp ${nilaiTerakhir.toLocaleString("id-ID")}`
-  const rataTeks = mode === "m3" ? `${ringkasM3(Math.round(rata))} m³` : ringkasRupiah(Math.round(rata))
+  const titik = dataGrafik.map((t) => ({ label: t.label, nilai: t[kunci] }))
 
   return (
     <Panel label="Tren Kubikasi & Tagihan" deskripsi="Per periode.">
-      {/* Header ringkas: angka utama + selisih (kiri), toggle (kanan) */}
-      <div className="mb-1 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-baseline gap-2">
-            <span title={angkaPenuh} className="num-display text-2xl leading-8">
-              {angkaUtama}
-            </span>
-            {delta !== undefined && (
-              <span className="num text-muted-foreground text-xs">
-                {delta >= 0 ? "▲" : "▼"}{" "}
-                {Math.abs(delta).toLocaleString("id-ID", { maximumFractionDigits: 1 })}%
+      <div className="flex flex-1 flex-col gap-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-baseline gap-2">
+              <span title={m.penuh(nilaiTerakhir)} className="num-display truncate text-2xl leading-8">
+                {m.ringkas(nilaiTerakhir)}
               </span>
-            )}
-          </div>
-          <p className="text-muted-foreground text-xs">
-            {formatPeriode(terakhir.periode)} · rata-rata{" "}
-            <span className="num text-foreground/80">{rataTeks}</span>
-          </p>
-        </div>
-
-        {/* Segmented tanpa garis: latar muted, tombol aktif terangkat */}
-        <div className="bg-muted inline-flex h-7 shrink-0 items-center rounded-md p-0.5 text-xs">
-          {(["m3", "rupiah"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMode(m)}
-              aria-pressed={mode === m}
-              className={cn(
-                "h-full rounded-sm px-2.5 font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                mode === m
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+              {delta !== undefined && (
+                <span className="num text-muted-foreground shrink-0 text-xs">
+                  {delta >= 0 ? "▲" : "▼"}{" "}
+                  {Math.abs(delta).toLocaleString("id-ID", { maximumFractionDigits: 1 })}%
+                </span>
               )}
-            >
-              {m === "m3" ? "m³" : "Rupiah"}
-            </button>
-          ))}
-        </div>
-      </div>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              {formatPeriode(terakhir.periode)} · rata-rata{" "}
+              <span className="num text-foreground/80">{m.ringkas(Math.round(rata))}</span>
+            </p>
+          </div>
 
-      {/* `key` memaksa animasi intro diulang saat mode berganti.
-          Hanya satu <Area> dirender, sesuai mode aktif. */}
-      <EvilAreaChart
-        key={mode}
-        data={dataGrafik}
-        config={config}
-        className="h-55 max-sm:h-44 w-full"
-        curveType="monotone"
-      >
-        <EvilAreaChart.Grid />
-        {/* Gaya Vercel: hanya periode awal dan akhir yang diberi label. */}
-        <EvilAreaChart.XAxis
-          dataKey="label"
-          ticks={[dataGrafik[0].label, dataGrafik[dataGrafik.length - 1].label]}
+          <div className="bg-muted inline-flex h-7 shrink-0 items-center rounded-md p-0.5 text-xs">
+            {(["m3", "rupiah"] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setMode(k)}
+                aria-pressed={mode === k}
+                className={cn(
+                  "focus-visible:ring-ring h-full rounded-sm px-2.5 font-medium transition-colors outline-none focus-visible:ring-2",
+                  mode === k
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {MODE[k].tombol}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <GrafikGaris
+          key={mode}
+          titik={titik}
+          kunci={kunci}
+          warna={m.warna}
+          formatNilai={m.penuh}
+          seri={{ [kunci]: { label: m.label, warna: m.warna } }}
         />
-        <EvilAreaChart.YAxis
-          tickCount={4}
-          width={mode === "m3" ? 44 : 56}
-          tickFormatter={(v: number) => ringkas(v)}
-        />
-        <EvilAreaChart.Tooltip />
-        {/* Bawaan stroke-nya putus-putus (0.8px); dibuat solid seperti sebelumnya. */}
-        <EvilAreaChart.Area dataKey={kunci} variant="gradient" strokeVariant="solid" strokeWidth={1.75}>
-          <EvilAreaChart.ActiveDot variant="default" />
-        </EvilAreaChart.Area>
-      </EvilAreaChart>
+      </div>
     </Panel>
   )
 }

@@ -14,6 +14,7 @@ import "server-only"
 // Bandingkan dengan features/publik: di sana komponen memang client dan
 // memanggil /api/public lewat fetch — karena rate limit-nya berbasis IP
 // pemakai, bukan IP server.
+import { unstable_cache } from "next/cache"
 import { prisma } from "@db"
 import { dateToPeriode } from "@/lib/domain/periode"
 // Impor STATIS, bukan `await import()` di dalam fungsi: impor dinamis membuat
@@ -30,6 +31,67 @@ async function periodeTerakhir(): Promise<Date | null> {
   const baris = await prisma.tagihan.findFirst({ orderBy: { periode: "desc" }, select: { periode: true } })
   return baris?.periode ?? null
 }
+
+/// Menghitung daftar periode untuk filter. Semua lewat GROUP BY di database.
+///
+/// JANGAN pakai `findMany({ distinct, take })`: di Prisma, `distinct` pada
+/// findMany dikerjakan di MEMORI — baris dibaca dulu lalu duplikatnya
+/// dibuang. Dengan ±22.000 tagihan per periode, mengambil 24 periode unik
+/// bisa membaca ratusan ribu baris dan membuat halaman hang. `groupBy`
+/// menjadi `GROUP BY` sungguhan di database dan memakai index periode.
+///
+/// Sumbernya sengaja LEBIH dari tabel yang sudah closing: periode yang
+/// masih BERJALAN (belum ada Tagihan & belum ada baris PeriodePenagihan)
+/// tapi sudah punya daftar catat / laporan petugas harus tetap bisa
+/// dipilih — itu yang sebelumnya membuat periode terbaru "hilang" dari
+/// filter. Sumber ini sama dengan yang dipakai periodeKerja().
+async function hitungPeriodeTersedia(): Promise<number[]> {
+  const [closing, tagihan, daftar, laporan] = await Promise.all([
+    prisma.periodePenagihan.findMany({
+      select: { periode: true },
+      orderBy: { periode: "desc" },
+      take: 36,
+    }),
+    prisma.tagihan.groupBy({
+      by: ["periode"],
+      orderBy: { periode: "desc" },
+      take: 24,
+    }),
+    prisma.daftarCatat.groupBy({
+      by: ["periode"],
+      orderBy: { periode: "desc" },
+      take: 24,
+    }),
+    prisma.laporanHarianPetugas.groupBy({
+      by: ["periode"],
+      orderBy: { periode: "desc" },
+      take: 24,
+    }),
+  ])
+
+  const gabungan = [
+    ...closing.map((r) => r.periode),
+    ...tagihan.map((t) => dateToPeriode(t.periode)),
+    ...daftar.map((d) => d.periode),
+    ...laporan.map((l) => l.periode),
+  ].filter((p): p is number => typeof p === "number" && Number.isFinite(p))
+
+  // Unik, terbaru ke terlama.
+  return Array.from(new Set(gabungan)).sort((a, b) => b - a)
+}
+
+/**
+ * Daftar seluruh periode yang tersedia untuk filter (angka YYYYMM, terbaru
+ * dulu). Di-cache 5 menit: setiap ganti filter halaman server dirender
+ * ulang, dan daftar ini nyaris tidak berubah antar-render. Setelah
+ * closing/buka periode, panggil `revalidateTag("periode-tersedia")` supaya
+ * langsung segar.
+ */
+export const periodeTersedia = unstable_cache(
+  hitungPeriodeTersedia,
+  ["dashboard-periode-tersedia"],
+  { revalidate: 300, tags: ["periode-tersedia"] }
+)
 
 /// Semua lewat agregasi database — tabel pelanggan & tagihan >22.000 baris,
 /// menariknya ke JS lalu menghitung di sana akan menyeret puluhan ribu baris

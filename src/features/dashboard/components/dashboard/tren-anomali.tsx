@@ -1,33 +1,27 @@
 "use client"
 
-// features/dashboard/components/dashboard/tren-anomali.tsx — jumlah anomali
-// per periode, ditumpuk per kode kondisi (DK, TTB, BMK_BMB, MTA, lainnya).
+// features/dashboard/components/dashboard/tren-anomali.tsx — jumlah anomali per
+// periode, batang ditumpuk per kode kondisi (DK, TTB, BMK_BMB, MTA, lainnya).
 //
-// Grafik memakai EvilBarChart (EvilCharts), tata letak ala Vercel:
-//   - header: total periode terakhir (kiri), legenda berisi jumlah per kode (kanan)
-//   - legenda bisa diklik untuk menyembunyikan/menampilkan kode (minimal satu
-//     tampil). <Legend isClickable> bawaan EvilCharts berfungsi sebagai
-//     "pilih/sorot", bukan sembunyikan, jadi legenda kustom dipertahankan.
-//     Kode tersembunyi cukup tidak dirender sebagai <Bar>.
-//   - sumbu-X hanya berlabel di periode awal dan akhir
-//
-// PERLU DIVERIFIKASI terhadap dokumentasi EvilBarChart (ditandai [VERIFIKASI]):
-//   1. path import komponen
-//   2. nama sub-komponen <EvilBarChart.Bar>
-//   3. prop `stackType="stacked"` untuk menumpuk (meniru EvilAreaChart)
-import { useId, useMemo, useState } from "react"
-// [VERIFIKASI 1] sesuaikan path dengan hasil instalasi EvilCharts.
-import { EvilBarChart } from "@/components/evilcharts/charts/recharts-bar-chart"
-import { type ChartConfig } from "@/components/evilcharts/ui/recharts-chart"
+// Grafik SVG ringan (tanpa pustaka grafik):
+//   - batang tumpuk: jumlah per periode terbaca langsung, kode kecil tetap
+//     terlihat walau satu kode (mis. "Lainnya") jauh lebih besar
+//   - label sumbu-Y di dalam area → margin kiri = kanan = padding panel
+//   - label sumbu-X disingkat ("Mar 26") dan dijarangkan sesuai lebar, selalu
+//     memuat periode terakhir → tidak pernah meluber
+//   - legenda bisa diklik untuk menyembunyikan/menampilkan kode (minimal satu)
+//   - tooltip memakai TooltipGrafik bersama, mengikuti ujung kursor
+import { useMemo, useState } from "react"
 import { cn } from "@/lib/utils"
 import { formatPeriode } from "@/features/public/lib/format"
 import type { TitikAnomali } from "../../lib/queries-meter"
 import { Panel } from "../panel"
+import { TooltipGrafik, type SeriTooltip } from "./tooltip-grafik"
+import { ringkasAngka, singkatPeriode, skalaRapi, useTooltipKursor, useUkuran } from "./grafik-util"
 
 const KUNCI = ["DK", "TTB", "BMK_BMB", "MTA", "lainnya"] as const
 type Kunci = (typeof KUNCI)[number]
 
-// Satu warna per kode, urutan slot --chart-* tetap.
 const WARNA: Record<Kunci, string> = {
   DK: "var(--chart-1)",
   TTB: "var(--chart-2)",
@@ -39,29 +33,164 @@ const WARNA: Record<Kunci, string> = {
 const LABEL: Record<Kunci, string> = {
   DK: "DK",
   TTB: "TTB",
-  BMK_BMB: "BMK/BMB",
+  BMK_BMB: "BMB",
   MTA: "MTA",
   lainnya: "Lainnya",
 }
 
-const config = {
-  DK: { label: LABEL.DK, colors: { light: [WARNA.DK], dark: [WARNA.DK] } },
-  TTB: { label: LABEL.TTB, colors: { light: [WARNA.TTB], dark: [WARNA.TTB] } },
-  BMK_BMB: { label: LABEL.BMK_BMB, colors: { light: [WARNA.BMK_BMB], dark: [WARNA.BMK_BMB] } },
-  MTA: { label: LABEL.MTA, colors: { light: [WARNA.MTA], dark: [WARNA.MTA] } },
-  lainnya: { label: LABEL.lainnya, colors: { light: [WARNA.lainnya], dark: [WARNA.lainnya] } },
-} satisfies ChartConfig
+const SERI: Record<string, SeriTooltip> = Object.fromEntries(
+  KUNCI.map((k) => [k, { label: LABEL[k], warna: WARNA[k] }])
+)
 
 const jumlah = (t: TitikAnomali) => t.DK + t.TTB + t.BMK_BMB + t.MTA + t.lainnya
 
-export function TrenAnomali({ data }: { data: TitikAnomali[] }) {
-  // Kode yang sedang disembunyikan lewat legenda.
-  const [tersembunyi, setTersembunyi] = useState<Kunci[]>([])
-  // Dipakai untuk remount grafik saat set kode berubah (animasi diulang bersih).
-  const idGrafik = useId()
+const ATAS = 16
+const BAWAH = 24
+const LEBAR_LABEL = 44 // perkiraan lebar label sumbu-X ("Mar 26")
 
-  // Sumbu-X dan judul tooltip memakai `label` (periode terformat).
-  const dataGrafik = useMemo(
+const teksSumbu = {
+  fill: "var(--muted-foreground)",
+  paintOrder: "stroke",
+  stroke: "var(--card)",
+  strokeWidth: 3,
+} as const
+
+type Baris = TitikAnomali & { label: string }
+
+function GrafikBatang({ baris, tampil }: { baris: Baris[]; tampil: Kunci[] }) {
+  const { pasang: pasangWadah, w, h } = useUkuran<HTMLDivElement>()
+  const [aktif, setAktif] = useState<number | null>(null)
+  const [kursor, setKursor] = useState<{ x: number; y: number } | null>(null)
+  const { pasang: pasangTip, style: gayaTip } = useTooltipKursor<HTMLDivElement>({ w, h }, kursor)
+
+  const n = baris.length
+  const tinggi = Math.max(h - ATAS - BAWAH, 0)
+  const total = (b: Baris) => tampil.reduce((a, k) => a + b[k], 0)
+  const { puncak, ticks } = skalaRapi(Math.max(...baris.map(total), 0), true)
+
+  const slot = n > 0 ? w / n : 0
+  const lebar = Math.min(slot * 0.5, 44)
+  const y = (v: number) => ATAS + tinggi - (v / puncak) * tinggi
+  const segmen = baris.map((b, i) => {
+    let kumulatif = 0
+    return tampil.flatMap((k) => {
+      const v = b[k]
+      if (v <= 0) return []
+      const y0 = y(kumulatif)
+      kumulatif += v
+      const y1 = y(kumulatif)
+      return [{ k, x: slot * i + (slot - lebar) / 2, y: y1, tinggi: y0 - y1 }]
+    })
+  })
+
+  // Label sumbu-X dari periode terakhir mundur, selang sesuai lebar slot.
+  const langkah = Math.max(1, Math.ceil(LEBAR_LABEL / Math.max(slot, 1)))
+  const indeksLabel: number[] = []
+  for (let i = n - 1; i >= 0; i -= langkah) indeksLabel.push(i)
+
+  function geser(e: React.PointerEvent<SVGSVGElement>) {
+    const r = e.currentTarget.getBoundingClientRect()
+    const i = Math.floor((e.clientX - r.left) / slot)
+    setKursor({ x: e.clientX - r.left, y: e.clientY - r.top })
+    setAktif(Math.min(n - 1, Math.max(0, i)))
+  }
+
+  const barisAktif = aktif !== null ? baris[aktif] : null
+
+  return (
+    <div ref={pasangWadah} className="relative min-h-44 flex-1">
+      {w > 0 && h > 0 && (
+        <>
+          <svg
+            width={w}
+            height={h}
+            role="img"
+            aria-label="Grafik batang anomali per periode"
+            className="absolute inset-0 touch-pan-y overflow-visible"
+            onPointerMove={geser}
+            onPointerDown={geser}
+            onPointerLeave={() => setAktif(null)}
+          >
+            {ticks.map((t) => (
+              <line
+                key={t}
+                x1={0}
+                x2={w}
+                y1={y(t)}
+                y2={y(t)}
+                style={{ stroke: "var(--border)" }}
+                strokeDasharray={t === 0 ? undefined : "3 3"}
+              />
+            ))}
+
+            {aktif !== null && (
+              <rect
+                x={slot * aktif}
+                y={ATAS}
+                width={slot}
+                height={tinggi}
+                rx={4}
+                style={{ fill: "var(--muted)" }}
+                opacity={0.6}
+              />
+            )}
+
+            {segmen.map((satu, i) =>
+              satu.map((s) => (
+                <rect
+                  key={`${i}-${s.k}`}
+                  x={s.x}
+                  y={s.y}
+                  width={lebar}
+                  height={Math.max(s.tinggi, 0)}
+                  style={{ fill: WARNA[s.k], stroke: "var(--card)" }}
+                  strokeWidth={1}
+                />
+              ))
+            )}
+
+            {ticks.map((t) => (
+              <text key={t} x={0} y={y(t) - 4} fontSize={10} style={teksSumbu}>
+                {ringkasAngka(t)}
+              </text>
+            ))}
+
+            {indeksLabel.map((i) => (
+              <text
+                key={i}
+                x={slot * i + slot / 2}
+                y={h - 6}
+                fontSize={11}
+                textAnchor="middle"
+                style={{ fill: "var(--muted-foreground)" }}
+              >
+                {singkatPeriode(baris[i].label)}
+              </text>
+            ))}
+          </svg>
+
+          {barisAktif && (
+            <div ref={pasangTip} className="pointer-events-none absolute w-max" style={gayaTip}>
+              <TooltipGrafik
+                active
+                payload={tampil.map((k) => ({ dataKey: k, value: barisAktif[k] }))}
+                label={barisAktif.label}
+                seri={SERI}
+                tampilkanTotal
+                sembunyikanNol
+              />
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+export function TrenAnomali({ data }: { data: TitikAnomali[] }) {
+  const [tersembunyi, setTersembunyi] = useState<Kunci[]>([])
+
+  const baris = useMemo<Baris[]>(
     () => data.map((t) => ({ ...t, label: formatPeriode(t.periode) })),
     [data]
   )
@@ -78,34 +207,29 @@ export function TrenAnomali({ data }: { data: TitikAnomali[] }) {
 
   const terakhir = data.at(-1)
   const totalTerakhir = terakhir ? jumlah(terakhir) : 0
-  // Kode terbesar pada periode terakhir (hanya bila ada anomali).
   const dominan =
     terakhir && totalTerakhir > 0
       ? [...KUNCI].sort((a, b) => terakhir[b] - terakhir[a])[0]
       : undefined
-
-  const totalKode = Object.fromEntries(
-    KUNCI.map((k) => [k, data.reduce((a, t) => a + t[k], 0)])
-  ) as Record<Kunci, number>
 
   const tampil = KUNCI.filter((k) => !tersembunyi.includes(k))
 
   function ganti(k: Kunci) {
     setTersembunyi((lama) => {
       if (lama.includes(k)) return lama.filter((x) => x !== k)
-      // Jangan biarkan semua kode tersembunyi: grafik jadi kosong.
-      if (lama.length >= KUNCI.length - 1) return lama
+      if (lama.length >= KUNCI.length - 1) return lama // minimal satu tampil
       return [...lama, k]
     })
   }
 
   return (
     <Panel label="Tren Anomali" deskripsi="Per kode kondisi.">
-      {/* Header ala Vercel: angka utama (kiri), legenda + jumlah per kode (kanan) */}
-      <div className="mb-1 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+      <div className="flex flex-1 flex-col gap-4">
         <div className="min-w-0">
           <div className="flex items-baseline gap-2">
-            <span className="num-display text-2xl leading-8">{totalTerakhir.toLocaleString("id-ID")}</span>
+            <span className="num-display text-2xl leading-8">
+              {totalTerakhir.toLocaleString("id-ID")}
+            </span>
             <span className="text-muted-foreground text-xs">anomali</span>
           </div>
           <p className="text-muted-foreground text-xs">
@@ -114,7 +238,8 @@ export function TrenAnomali({ data }: { data: TitikAnomali[] }) {
           </p>
         </div>
 
-        <div className="flex flex-wrap justify-end gap-x-1">
+        {/* Legenda: klik untuk sembunyikan/tampilkan. Angka = periode terakhir. */}
+        <div className="-mx-2 -my-1 flex flex-wrap gap-x-1">
           {KUNCI.map((k) => {
             const sembunyi = tersembunyi.includes(k)
             return (
@@ -124,47 +249,28 @@ export function TrenAnomali({ data }: { data: TitikAnomali[] }) {
                 onClick={() => ganti(k)}
                 aria-pressed={!sembunyi}
                 className={cn(
-                  "hover:bg-hover flex flex-col items-start gap-0.5 rounded-md px-2 py-1 text-xs transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "hover:bg-hover focus-visible:ring-ring flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors outline-none focus-visible:ring-2",
                   sembunyi && "opacity-40"
                 )}
               >
+                <span
+                  aria-hidden
+                  className="size-2 shrink-0 rounded-xs"
+                  style={{ background: WARNA[k] }}
+                />
                 <span className={cn("text-muted-foreground", sembunyi && "line-through")}>
                   {LABEL[k]}
                 </span>
-                <span className="flex items-center gap-1.5">
-                  <span aria-hidden className="size-1.5 rounded-full" style={{ background: WARNA[k] }} />
-                  <span className="num text-foreground font-medium">
-                    {totalKode[k].toLocaleString("id-ID")}
-                  </span>
+                <span className="num text-foreground font-medium">
+                  {(terakhir?.[k] ?? 0).toLocaleString("id-ID")}
                 </span>
               </button>
             )
           })}
         </div>
-      </div>
 
-      {/* [VERIFIKASI 3] stackType: batang ditumpuk seperti pada EvilAreaChart. */}
-      <EvilBarChart
-        key={idGrafik + tersembunyi.join(",")}
-        xDataKey="label"
-        data={dataGrafik}
-        config={config}
-        className="h-55 max-sm:h-44 w-full"
-        stackType="stacked"
-      >
-        <EvilBarChart.Grid />
-        {/* Gaya Vercel: hanya periode awal dan akhir yang diberi label. */}
-        <EvilBarChart.XAxis
-          dataKey="label"
-          ticks={[dataGrafik[0].label, dataGrafik[dataGrafik.length - 1].label]}
-        />
-        <EvilBarChart.YAxis tickCount={4} width={40} allowDecimals={false} />
-        <EvilBarChart.Tooltip />
-        {/* [VERIFIKASI 2] hanya kode yang tampil yang dirender. */}
-        {tampil.map((k) => (
-          <EvilBarChart.Bar key={k} dataKey={k} />
-        ))}
-      </EvilBarChart>
+        <GrafikBatang baris={baris} tampil={tampil} />
+      </div>
     </Panel>
   )
 }

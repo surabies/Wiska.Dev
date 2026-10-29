@@ -4,6 +4,7 @@ import "server-only"
 // dashboard. Berdampingan dengan queries.ts (ambilTren & ambilPerluTindakan
 // tetap dipakai apa adanya).
 import { prisma } from "@db"
+import { dateToPeriode } from "@/lib/domain/periode"
 
 // Kode kondisi yang ditampilkan sendiri-sendiri di grafik anomali; sisanya
 // digabung ke "lainnya" supaya warna grafik tetap 5 (--chart-1..5).
@@ -15,6 +16,11 @@ export type KodeAnomali = (typeof KODE_ANOMALI_UTAMA)[number] | "lainnya"
 export function geserPeriode(periode: number, n: number): number {
   const total = Math.floor(periode / 100) * 12 + ((periode % 100) - 1) + n
   return Math.floor(total / 12) * 100 + (total % 12) + 1
+}
+
+/** YYYYMM → tanggal 1 bulan itu (UTC), sesuai cara PembacaanMeter.periode disimpan. */
+function periodeKeTanggal(periode: number): Date {
+  return new Date(Date.UTC(Math.floor(periode / 100), (periode % 100) - 1, 1))
 }
 
 /** Periode kerja = periode terbaru yang sudah punya daftar catat / laporan. */
@@ -47,7 +53,10 @@ export async function ambilCapaian(periode: number) {
   const total = adaDaftar
     ? perStatus.reduce((a, x) => a + x._count, 0) - dicabut
     : pelangganAktif
-  const dicatat = adaDaftar ? hitung("DICATAT") : laporanTotal
+  // "Dicatat" = laporan harian yang SUDAH MASUK. DaftarCatat.status baru
+  // berubah jadi DICATAT saat laporan diverifikasi, jadi memakainya di sini
+  // membuat capaian tampak ~0% padahal ribuan meter sudah terbaca.
+  const dicatat = laporanTotal
   const tidakTercatat = hitung("TIDAK_TERCATAT")
 
   return {
@@ -72,15 +81,39 @@ export interface TitikAnomali {
   lainnya: number
 }
 
-/** Jumlah anomali per periode (6 periode terakhir), dipecah per kode kondisi. */
+/**
+ * Jumlah anomali per periode (6 periode berakhir di `periode`), dipecah per
+ * kode kondisi.
+ *
+ * DUA SUMBER, dipilih per periode:
+ *  - LaporanHarianPetugas: hanya ada untuk periode sejak aplikasi lapangan
+ *    dipakai. Dipakai bila periode itu punya laporan.
+ *  - PembacaanMeter: riwayat lengkap termasuk hasil impor data lama
+ *    (kondisi dipetakan dari ketcatat/Nm_Kel). Dipakai untuk periode yang
+ *    belum punya laporan harian.
+ * Dulu hanya sumber pertama dipakai, sehingga memilih periode lama membuat
+ * grafik kosong padahal tren tagihan (yang bersumber dari Tagihan) terisi.
+ */
 export async function ambilTrenAnomali(periode: number): Promise<TitikAnomali[]> {
   const mulai = geserPeriode(periode, -5)
 
-  const baris = await prisma.laporanHarianPetugas.groupBy({
-    by: ["periode", "kondisi"],
-    where: { periode: { gte: mulai, lte: periode }, kondisi: { not: "NORMAL" } },
-    _count: true,
-  })
+  const [laporan, pembacaan] = await Promise.all([
+    // Tanpa filter NORMAL: baris NORMAL dibutuhkan hanya untuk tahu bahwa
+    // periode itu memang punya laporan (agar tidak jatuh ke cadangan).
+    prisma.laporanHarianPetugas.groupBy({
+      by: ["periode", "kondisi"],
+      where: { periode: { gte: mulai, lte: periode } },
+      _count: true,
+    }),
+    prisma.pembacaanMeter.groupBy({
+      by: ["periode", "kondisi"],
+      where: {
+        periode: { gte: periodeKeTanggal(mulai), lte: periodeKeTanggal(periode) },
+        kondisi: { not: "NORMAL" },
+      },
+      _count: true,
+    }),
+  ])
 
   // Isi semua 6 periode (nol bila kosong) supaya sumbu X tidak bolong.
   const peta = new Map<number, TitikAnomali>()
@@ -89,13 +122,25 @@ export async function ambilTrenAnomali(periode: number): Promise<TitikAnomali[]>
     peta.set(p, { periode: p, DK: 0, TTB: 0, BMK_BMB: 0, MTA: 0, lainnya: 0 })
   }
 
-  for (const b of baris) {
-    const titik = peta.get(b.periode)
-    if (!titik) continue
-    const kunci = (KODE_ANOMALI_UTAMA as readonly string[]).includes(b.kondisi)
-      ? (b.kondisi as (typeof KODE_ANOMALI_UTAMA)[number])
+  const tambah = (p: number, kondisi: string, jumlah: number) => {
+    const titik = peta.get(p)
+    if (!titik) return
+    const kunci = (KODE_ANOMALI_UTAMA as readonly string[]).includes(kondisi)
+      ? (kondisi as (typeof KODE_ANOMALI_UTAMA)[number])
       : "lainnya"
-    titik[kunci] += b._count
+    titik[kunci] += jumlah
+  }
+
+  const periodeAdaLaporan = new Set(laporan.map((b) => b.periode))
+
+  for (const b of laporan) {
+    if (b.kondisi === "NORMAL") continue
+    tambah(b.periode, b.kondisi, b._count)
+  }
+  for (const b of pembacaan) {
+    const p = dateToPeriode(b.periode)
+    if (periodeAdaLaporan.has(p)) continue // sudah dihitung dari laporan harian
+    tambah(p, b.kondisi, b._count)
   }
 
   return [...peta.values()]
@@ -110,41 +155,81 @@ export interface BarisPetugas {
   persen: number
 }
 
-/** Progres baca per petugas, yang paling tertinggal di atas. */
+/**
+ * Progres baca per petugas, yang paling banyak membaca di atas.
+ *
+ * - total   = beban kerja petugas di DaftarCatat (tanpa yang DICABUT)
+ * - dicatat = laporan harian yang sudah masuk dari petugas itu. BUKAN dari
+ *   DaftarCatat.status === "DICATAT": status itu baru berubah saat laporan
+ *   diverifikasi, sehingga hampir semua petugas tampak 0% padahal sudah
+ *   membaca ribuan meter.
+ */
 export async function ambilProgresPetugas(periode: number): Promise<BarisPetugas[]> {
-  const baris = await prisma.daftarCatat.groupBy({
-    by: ["pencatatId", "status"],
-    where: { periode, status: { not: "DICABUT" } },
-    _count: true,
-  })
-  if (baris.length === 0) return []
+  const [beban, laporan] = await Promise.all([
+    prisma.daftarCatat.groupBy({
+      by: ["pencatatId", "status"],
+      where: { periode, status: { not: "DICABUT" } },
+      _count: true,
+    }),
+    prisma.laporanHarianPetugas.groupBy({
+      by: ["pencatatId"],
+      where: { periode },
+      _count: true,
+    }),
+  ])
+  if (beban.length === 0) return []
 
-  const ids = [...new Set(baris.map((b) => b.pencatatId).filter((x): x is string => x != null))]
+  const ids = [
+    ...new Set(
+      [...beban.map((b) => b.pencatatId), ...laporan.map((l) => l.pencatatId)].filter(
+        (x): x is string => x != null
+      )
+    ),
+  ]
   const pencatat = await prisma.pencatat.findMany({
     where: { id: { in: ids } },
     select: { id: true, namaLapangan: true },
   })
   const nama = new Map(pencatat.map((p) => [p.id, p.namaLapangan]))
 
+  const baru = (pencatatId: string | null): BarisPetugas => ({
+    id: pencatatId ?? "-",
+    nama: pencatatId ? (nama.get(pencatatId) ?? "Tidak dikenal") : "Belum ada petugas",
+    total: 0,
+    dicatat: 0,
+    tidakTercatat: 0,
+    persen: 0,
+  })
+
   // Kelompokkan per petugas (null = baris tanpa petugas).
   const peta = new Map<string, BarisPetugas>()
-  for (const b of baris) {
-    const id = b.pencatatId ?? "-"
-    const r = peta.get(id) ?? {
-      id,
-      nama: b.pencatatId ? (nama.get(b.pencatatId) ?? "Tidak dikenal") : "Belum ada petugas",
-      total: 0,
-      dicatat: 0,
-      tidakTercatat: 0,
-      persen: 0,
+  const ambil = (pencatatId: string | null) => {
+    const id = pencatatId ?? "-"
+    let r = peta.get(id)
+    if (!r) {
+      r = baru(pencatatId)
+      peta.set(id, r)
     }
+    return r
+  }
+
+  for (const b of beban) {
+    const r = ambil(b.pencatatId)
     r.total += b._count
-    if (b.status === "DICATAT") r.dicatat += b._count
     if (b.status === "TIDAK_TERCATAT") r.tidakTercatat += b._count
-    peta.set(id, r)
+  }
+  for (const l of laporan) {
+    ambil(l.pencatatId).dicatat += l._count
   }
 
   return [...peta.values()]
-    .map((r) => ({ ...r, persen: r.total > 0 ? (r.dicatat / r.total) * 100 : 0 }))
-    .sort((a, b) => a.persen - b.persen)
+    .map((r) => {
+      // Laporan bisa datang dari petugas yang bukan pemilik daftar (rute
+      // dipindah) → jangan sampai melewati 100% atau total lebih kecil dari
+      // yang dicatat.
+      const total = Math.max(r.total, r.dicatat)
+      return { ...r, total, persen: total > 0 ? (r.dicatat / total) * 100 : 0 }
+    })
+    // Yang paling banyak membaca di atas; seri → beban kerja lebih besar dulu.
+    .sort((a, b) => b.persen - a.persen || b.dicatat - a.dicatat || b.total - a.total)
 }

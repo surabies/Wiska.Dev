@@ -5,7 +5,7 @@ import {
   ReceiptIcon,
   TriangleAlertIcon,
 } from "@hugeicons/core-free-icons"
-import { ambilTren, ambilPerluTindakan } from "@/features/dashboard/lib/queries"
+import { ambilTren, ambilPerluTindakan, periodeTersedia } from "@/features/dashboard/lib/queries"
 import {
   ambilCapaian,
   ambilProgresPetugas,
@@ -13,7 +13,8 @@ import {
   periodeKerja,
 } from "@/features/dashboard/lib/queries-meter"
 import { PageContainer } from "@/components/layout"
-import { StatCard, StatGrid } from "@/features/dashboard/components/stat-card"
+import { StatPanel, StatPanelGrid } from "@/features/dashboard/components/stat-panel"
+import { FilterPeriode, type OpsiPeriode } from "@/features/dashboard/components/filter-periode"
 import { PerluTindakan } from "@/features/dashboard/components/dashboard/perlu-tindakan"
 import { TrenPenjualan } from "@/features/dashboard/components/dashboard/tren-penjualan"
 import { TrenAnomali } from "@/features/dashboard/components/dashboard/tren-anomali"
@@ -22,10 +23,8 @@ import { formatPeriode, formatRupiah, formatRupiahRingkas } from "@/features/pub
 
 export const metadata: Metadata = { title: "Ringkasan" }
 
-// Anomali di atas persen ini diberi tanda kuning. Sesuaikan dengan kebijakan.
 const AMBANG_ANOMALI_PERSEN = 5
 
-/** "▲ 2,3% vs periode lalu" — null bila tidak ada pembanding. */
 function selisih(sekarang: number, lalu: number | undefined): string | undefined {
   if (!lalu) return undefined
   const p = ((sekarang - lalu) / lalu) * 100
@@ -33,41 +32,60 @@ function selisih(sekarang: number, lalu: number | undefined): string | undefined
   return `${tanda} ${Math.abs(p).toLocaleString("id-ID", { maximumFractionDigits: 1 })}% vs periode lalu`
 }
 
-export default async function DashboardPage() {
-  // Tahap 1: query yang tidak bergantung periode kerja berjalan paralel.
-  const [kerja, tren, tindakan] = await Promise.all([
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ periode?: string }>
+}) {
+  const { periode: periodeParam } = await searchParams
+
+  // 1. Ambil data dasar yang ringan terlebih dahulu secara paralel
+  const [kerjaTerbaru, daftarPeriode, tindakan] = await Promise.all([
     periodeKerja(),
-    ambilTren(),
+    periodeTersedia(),
     ambilPerluTindakan(),
   ])
 
-  // Tahap 2: query yang butuh periode kerja, juga paralel.
-  const [capaian, trenAnomali, petugas] = kerja
-    ? await Promise.all([ambilCapaian(kerja), ambilTrenAnomali(kerja), ambilProgresPetugas(kerja)])
-    : [null, [], []]
+  const diminta = Number(periodeParam)
+  const kerja = daftarPeriode.includes(diminta) ? diminta : kerjaTerbaru
 
-  // Kubikasi & tagihan memakai periode tagihan TERAKHIR, bisa berbeda dari
-  // periode kerja (tagihan baru terbit setelah closing).
-  const terakhir = tren.at(-1)
-  const sebelumnya = tren.at(-2)
+  // 2. Ambil data spesifik berdasarkan periode `kerja` dan `tren` secara efisien
+  const [capaian, trenAnomali, petugas, tren] = kerja
+    ? await Promise.all([
+        ambilCapaian(kerja),
+        ambilTrenAnomali(kerja),
+        ambilProgresPetugas(kerja),
+        ambilTren(), // Dipindah ke sini agar tidak membebani jika tidak diperlukan
+      ])
+    : [null, [], [], []]
+
+  // Sinkronkan indeks berdasarkan periode aktif (`kerja`) agar StatPanel dan Tren sejalan
+  const idx = tren.findIndex((t: { periode: number; pemakaianM3: number; nilai: number }) => t.periode === kerja)
+  const terakhir = idx >= 0 ? tren[idx] : tren.at(-1)
+  const sebelumnya = idx >= 0 ? tren[idx - 1] : tren.at(-2)
+
+  const opsiPeriode: OpsiPeriode[] = daftarPeriode.map((p: number) => ({
+    value: String(p),
+    label: formatPeriode(p),
+  }))
 
   return (
-    <PageContainer
-      className="flex min-h-0 flex-1 flex-col"
-      breadcrumbs={[{ label: "Ringkasan" }]}
-    >
-      <div className="flex flex-col gap-4 sm:gap-6">
-        {kerja && (
-          <div className="flex sm:justify-end">
-            <span className="label-micro w-fit rounded-md border border-border bg-card px-2.5 py-1 text-muted-foreground">
-              Periode · {formatPeriode(kerja)}
-            </span>
+    <PageContainer tanpaHeader className="flex min-h-0 flex-1 flex-col">
+      <div className="flex flex-col gap-3 sm:gap-4">
+        <header className="border-border/70 bg-background sticky top-0 z-30 -mt-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b pt-3 pb-3">
+          <div className="min-w-0">
+            <h1 className="text-foreground text-2xl leading-tight font-semibold tracking-tight">
+              Dashboard
+            </h1>
+            <p className="text-muted-foreground mt-1 text-[13px]">
+              Capaian baca meter, tagihan, dan anomali pelanggan dalam satu tampilan.
+            </p>
           </div>
-        )}
+          {kerja && <FilterPeriode opsi={opsiPeriode} nilai={String(kerja)} />}
+        </header>
 
-        {/* Baris KPI */}
-        <StatGrid>
-          <StatCard
+        <StatPanelGrid>
+          <StatPanel
             label="Capaian baca meter"
             nilai={capaian ? `${capaian.persen.toLocaleString("id-ID", { maximumFractionDigits: 1 })}%` : "–"}
             keterangan={
@@ -79,20 +97,20 @@ export default async function DashboardPage() {
             progres={capaian?.persen}
             nada="info"
           />
-          <StatCard
+          <StatPanel
             label={terakhir ? `Kubikasi ${formatPeriode(terakhir.periode)}` : "Kubikasi"}
             nilai={terakhir ? `${terakhir.pemakaianM3.toLocaleString("id-ID")} m³` : "–"}
             keterangan={terakhir ? selisih(terakhir.pemakaianM3, sebelumnya?.pemakaianM3) : undefined}
             icon={DropletsIcon}
           />
-          <StatCard
+          <StatPanel
             label={terakhir ? `Tagihan ${formatPeriode(terakhir.periode)}` : "Tagihan"}
             nilai={terakhir ? formatRupiahRingkas(terakhir.nilai) : "–"}
             judulLengkap={terakhir ? formatRupiah(terakhir.nilai) : undefined}
             keterangan={terakhir ? selisih(terakhir.nilai, sebelumnya?.nilai) : undefined}
             icon={ReceiptIcon}
           />
-          <StatCard
+          <StatPanel
             label="Anomali periode ini"
             nilai={capaian ? capaian.anomali.toLocaleString("id-ID") : "–"}
             keterangan={
@@ -103,10 +121,9 @@ export default async function DashboardPage() {
             icon={TriangleAlertIcon}
             nada={capaian && capaian.persenAnomali > AMBANG_ANOMALI_PERSEN ? "peringatan" : "netral"}
           />
-        </StatGrid>
+        </StatPanelGrid>
 
-        {/* Grafik tren */}
-        <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+        <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
           <TrenPenjualan data={tren} />
           <TrenAnomali data={trenAnomali} />
         </div>

@@ -75,7 +75,7 @@ export function TooltipGrafik({
       <ul className="flex flex-col gap-1.5">
         {baris.map(({ kunci, s, nilai }) => (
           <li key={kunci} className="flex items-center gap-2">
-            <span aria-hidden className="size-2 shrink-0 rounded-[2px]" style={{ background: s.warna }} />
+            <span aria-hidden className="size-2 shrink-0 rounded-xs" style={{ background: s.warna }} />
             <span className="text-muted-foreground">{s.label}</span>
             <span className="num text-foreground ml-auto pl-4 font-medium">{fmt(nilai, kunci)}</span>
           </li>
