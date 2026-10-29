@@ -13,7 +13,7 @@ export const RUTE = {
   // Layanan utama (sudah ada)
   cekTagihan: "/cek-tagihan",
   laporMeter: "/lapor-meter",
-  pengaduan: "/pengaduan",
+  pengaduan: "/pengaduan-air",
   dasbor: "/dashboard",
   // Halaman informasi & perusahaan (BARU: buat halamannya, atau sesuaikan rutenya)
   infoGangguan: "/info-gangguan",

@@ -688,7 +688,7 @@ export const primaryNav: NavItem[] = [
   },
   {
     title: "Pengaduan",
-    href: "/dashboard/pengaduan",
+    href: "/pengaduan",
     description: "Laporan pengaduan pelanggan.",
     keywords: ["pengaduan", "laporan", "rekap"],
   },

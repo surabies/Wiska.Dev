@@ -17,7 +17,7 @@ export default async function DetailPengaduanPage({ params }: { params: Promise<
   return (
     <PageContainer
       breadcrumbs={[
-        { label: "Pengaduan", href: "/dashboard/pengaduan" },
+        { label: "Pengaduan", href: "/pengaduan" },
         { label: "Detail tiket" },
       ]}
     >

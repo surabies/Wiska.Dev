@@ -65,7 +65,7 @@ export function DetailTiket({ pengaduanId }: { pengaduanId: string }) {
       <div className="flex min-h-64 flex-col items-center justify-center gap-3 p-6 text-center">
         <TriangleAlert className="size-6 text-destructive" />
         <p className="text-sm text-muted-foreground">{galat ?? "Tiket tidak ditemukan."}</p>
-        <Button variant="outline" size="sm" onClick={() => router.push("/dashboard/pengaduan")}>
+        <Button variant="outline" size="sm" onClick={() => router.push("/pengaduan")}>
           <ArrowLeft /> Kembali ke daftar
         </Button>
       </div>
