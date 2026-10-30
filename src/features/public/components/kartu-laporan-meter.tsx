@@ -14,13 +14,12 @@ import { ImageIcon } from "@/components/ui/hugeicons-compat"
 import { Badge } from "@/components/ui/badge"
 import { BingkaiFoto } from "@/components/bingkai-foto"
 import {
-  HaloCard,
-  HaloCardAction,
-  HaloCardContent,
-  HaloCardDescription,
-  HaloCardHeader,
-  HaloCardTitle,
-} from "@/components/ui/halo-card"
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import type { DetailLaporanBulanIni } from "../lib/api"
 import { formatPeriode, formatWaktu, statusLaporanMandiriWarga } from "../lib/format"
 
@@ -29,21 +28,20 @@ export function KartuLaporanMeter({ laporan }: { laporan: DetailLaporanBulanIni 
   const periodeLabel = formatPeriode(laporan.periode)
 
   return (
-    // Tahap 1: HaloCard polos dengan aria-label.
-    <HaloCard aria-label={`Laporan meter periode ${periodeLabel}`}>
-      {/* Tahap 2: judul + deskripsi di header, badge status di slot Action. */}
-      <HaloCardHeader>
-        <HaloCardTitle className="text-base">Periode {periodeLabel}</HaloCardTitle>
-        <HaloCardDescription>Dikirim {formatWaktu(laporan.createdAt)} WIB</HaloCardDescription>
-        <HaloCardAction>
+    <Card aria-label={`Laporan meter periode ${periodeLabel}`}>
+      <CardHeader className="relative pb-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <CardTitle className="text-base">Periode {periodeLabel}</CardTitle>
+            <CardDescription>Dikirim {formatWaktu(laporan.createdAt)} WIB</CardDescription>
+          </div>
           <Badge variant="outline" className={status.badgeClass}>
             {status.label}
           </Badge>
-        </HaloCardAction>
-      </HaloCardHeader>
+        </div>
+      </CardHeader>
 
-      {/* Tahap 3: isi kartu. */}
-      <HaloCardContent className="flex flex-col gap-4">
+      <CardContent className="flex flex-col gap-4">
         {/* Alasan penolakan tampil ke WARGA, bukan disembunyikan — persis yang
             perlu mereka baca sebelum mengirim ulang. */}
         {laporan.status === "DITOLAK" && laporan.alasanDitolak && (
@@ -83,7 +81,7 @@ export function KartuLaporanMeter({ laporan }: { laporan: DetailLaporanBulanIni 
           </p>
           <BingkaiFoto src={laporan.fotoUrl} alt={`Foto stand meter periode ${periodeLabel}`} mode="utuh" rasio="16/9" />
         </div>
-      </HaloCardContent>
-    </HaloCard>
+      </CardContent>
+    </Card>
   )
 }

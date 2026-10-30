@@ -1,0 +1,104 @@
+// ============================================================================
+// TARGET DELTA BACA METER AIR (v0.3)
+//
+// Dokumen ini menjelaskan delta terhadap schema aktual; BUKAN schema mandiri
+// dan tidak boleh dimasukkan ke prisma/schema.
+//
+// MODEL CANONICAL YANG SUDAH ADA (jangan dibuat duplikat):
+//   User                 -> user
+//   Pelanggan            -> pelanggan
+//   LanggananWarga       -> langganan_warga
+//   Meter                -> meter
+//   PembacaanMeter       -> pembacaan_meter
+//   Tagihan              -> tagihan
+//   PeriodePenagihan     -> periode_penagihan
+//   DaftarCatat          -> daftar_catat
+//   LaporanHarianPetugas -> laporan_harian_petugas
+//   LaporanMandiri       -> laporan_mandiri
+//   AuditLog             -> audit_log
+//
+// KONSEKUENSI REKONSILIASI:
+// - PeriodeTagih tidak dibuat: PeriodePenagihan tetap sumber status closing.
+//   Jendela laporan mandiri memakai key-value Konfigurasi.
+// - MeterTerpasang tidak dibuat: Meter tetap canonical sampai histori aset
+//   dinormalisasi. Partial unique index aktif ada di invarian-baca-meter.sql.
+// - PengirimanBacaan tidak dibuat: kedua intake tetap berbeda, tetapi hasil
+//   resmi keduanya adalah PembacaanMeter yang sama.
+// - PenyesuaianTagihan/ledger kredit-refund tidak dibuat pada fase ini.
+// - Kondisi legacy dipetakan ke enum KondisiCatat yang sudah ada; jangan
+//   membuat enum KondisiKunjungan kedua.
+//
+// Migrasi KirimanLaporanMandiri telah ditambahkan pada
+// prisma/migrations/20261031000000_laporan_mandiri_kiriman_immutable.
+// Validasi schema/migration belum berarti database staging/produksi telah
+// dimigrasikan atau data historis telah diverifikasi.
+// ============================================================================
+
+// Model yang sudah ada; disalin di sini hanya untuk menunjukkan relasi delta.
+//
+// model User {
+//   kirimanLaporanMandiri KirimanLaporanMandiri[]
+//     @relation("KirimanLaporanMandiriPengirim")
+// }
+//
+// model LaporanMandiri {
+//   kiriman KirimanLaporanMandiri[]
+// }
+
+/// Arsip immutable setiap percobaan kirim mandiri. `LaporanMandiri` tetap
+/// proyeksi antrean/status terbaru yang dipakai UI dan proses verifikasi.
+model KirimanLaporanMandiri {
+  id               String   @id @default(cuid())
+  laporanMandiriId String
+  pengirimId       String?
+  standDilaporkan  Int
+  fotoUrl          String
+  fotoPublicId     String   @unique
+  nomorPelapor     String
+  namaPelapor      String
+  diterimaPada     DateTime @default(now())
+
+  laporanMandiri LaporanMandiri @relation(fields: [laporanMandiriId], references: [id], onDelete: Restrict)
+  pengirim       User?          @relation("KirimanLaporanMandiriPengirim", fields: [pengirimId], references: [id], onDelete: Restrict)
+
+  @@index([laporanMandiriId, diterimaPada])
+  @@index([pengirimId, diterimaPada])
+  @@map("kiriman_laporan_mandiri")
+}
+
+// RELASI YANG SUDAH ADA DAN MENJADI KONTRAK DOMAIN:
+//
+// model LanggananWarga {
+//   @@unique([userId, pelangganId])
+//   @@map("langganan_warga")
+// }
+//
+// model Meter {
+//   isAktif Boolean
+//   @@map("meter")
+// }
+//
+// model PembacaanMeter {
+//   pemakaianRiil Int?
+//   pemakaianM3   Int  // pemakaian yang ditagihkan; dapat berbeda dari delta
+//   @@unique([meterId, periode])
+//   @@map("pembacaan_meter")
+// }
+//
+// model PeriodePenagihan {
+//   periode Int @unique
+//   status  StatusPeriodePenagihan // BERJALAN | TERKUNCI
+//   @@map("periode_penagihan")
+// }
+
+// TAHAP BERIKUTNYA — belum dimigrasikan:
+//
+// 1. Revisi pembacaan append-only yang merujuk PembacaanMeter, dengan nilai
+//    sebelum/sesudah, alasan, pengaju, penyetuju berbeda, waktu, dan relasi
+//    opsional ke Tagihan yang terdampak. Tagihan lama tidak ikut ditulis ulang.
+// 2. Maker-checker correction workflow untuk Bagian Langganan. Role/Divisi
+//    persetujuan harus dipetakan ke organisasi/RBAC sebelum endpoint dibuat.
+// 3. Prosedur nota debit/kredit, saldo kredit, dan refund adalah lingkup billing
+//    terpisah; jangan tambahkan PenyesuaianTagihan sebelum kebijakannya disahkan.
+// 4. Idempotensi perangkat petugas (deviceId + clientEventId + payloadHash)
+//    ditambahkan setelah kontrak sync offline dan model Pencatat disepakati.

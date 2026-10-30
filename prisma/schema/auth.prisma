@@ -1,57 +1,58 @@
 model User {
-  id                  String                 @id @default(cuid())
-  name                String?
+  id                    String                  @id @default(cuid())
+  name                  String?
   /// Login non-Google (petugas lapangan, staf internal) memakai username,
   /// bukan email. Email tetap wajib & unik untuk akun Google.
-  username            String?                @unique
-  email               String                 @unique
-  emailVerified       DateTime?
-  image               String?
+  username              String?                 @unique
+  email                 String                  @unique
+  emailVerified         DateTime?
+  image                 String?
   /// Hash Argon2id untuk login Credentials. Null untuk akun yang hanya
   /// login via Google (OAuth-only).
-  passwordHash        String?
-  role                Role                   @default(USER)
-  status              UserStatus             @default(ACTIVE)
-  twoFactorEnabled    Boolean                @default(false)
-  divisiId            String?
-  bagianId            String?
-  subBagianId         String?
+  passwordHash          String?
+  role                  Role                    @default(USER)
+  status                UserStatus              @default(ACTIVE)
+  twoFactorEnabled      Boolean                 @default(false)
+  divisiId              String?
+  bagianId              String?
+  subBagianId           String?
   /// Denormalized dari divisi/subBagian — dibaca langsung di JWT/session
   /// (lihat auth.ts callbacks.jwt) supaya authorization check di edge
   /// middleware (proxy.ts) tidak perlu query Prisma. WAJIB tetap sinkron
   /// dengan divisiId/subBagianId setiap kali penempatan user diubah.
-  divisiKode          String?
-  subBagianKode       String?
-  lastLoginAt         DateTime?
-  loginCount          Int                    @default(0)
-  createdAt           DateTime               @default(now())
-  updatedAt           DateTime               @updatedAt
-  accounts            Account[]
-  auditLogs           AuditLog[]
-  langgananWarga      LanggananWarga[]
-  laporanVerif1       LaporanHarianPetugas[] @relation("LaporanVerif1")
-  laporanVerif2       LaporanHarianPetugas[] @relation("LaporanVerif2")
-  laporanVerif3       LaporanHarianPetugas[] @relation("LaporanVerif3")
-  laporanDiverifikasi LaporanHarianPetugas[] @relation("LaporanVerifikator")
-  laporanMandiriVerif LaporanMandiri[]       @relation("LaporanMandiriVerifikator")
-  mutasiDiproses      MutasiPelanggan[]      @relation("MutasiProsesOleh")
-  notifikasi          Notifikasi[]
-  perangkatNotif      PerangkatNotif[]
-  pelangganDibuat     Pelanggan[]            @relation("PelangganAuthor")
-  pelangganDiupdate   Pelanggan[]            @relation("PelangganLastEditor")
-  pemutusanDiproses   Pemutusan[]            @relation("PemutusanProsesOleh")
-  pencatat            Pencatat?
-  pengaduanDitugaskan Pengaduan[]            @relation("PengaduanDitugaskan")
-  pengaduanEskalasi   Pengaduan[]            @relation("PengaduanEskalasi")
-  riwayatPengaduan    RiwayatPengaduan[]     @relation("RiwayatPengaduanOleh")
-  sessions            Session[]
-  tagihanDivalidasi   Tagihan[]              @relation("TagihanValidator")
-  periodeDitutup      PeriodePenagihan[]     @relation("PeriodeDitutupBy")
-  periodeDibuka       PeriodePenagihan[]     @relation("PeriodeDibukaBy")
-  twoFactors          TwoFactor[]
-  bagian              Bagian?                @relation(fields: [bagianId], references: [id])
-  divisi              Divisi?                @relation(fields: [divisiId], references: [id])
-  subBagian           SubBagian?             @relation(fields: [subBagianId], references: [id])
+  divisiKode            String?
+  subBagianKode         String?
+  lastLoginAt           DateTime?
+  loginCount            Int                     @default(0)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  accounts              Account[]
+  auditLogs             AuditLog[]
+  langgananWarga        LanggananWarga[]
+  laporanVerif1         LaporanHarianPetugas[]  @relation("LaporanVerif1")
+  laporanVerif2         LaporanHarianPetugas[]  @relation("LaporanVerif2")
+  laporanVerif3         LaporanHarianPetugas[]  @relation("LaporanVerif3")
+  laporanDiverifikasi   LaporanHarianPetugas[]  @relation("LaporanVerifikator")
+  laporanMandiriVerif   LaporanMandiri[]        @relation("LaporanMandiriVerifikator")
+  kirimanLaporanMandiri KirimanLaporanMandiri[] @relation("KirimanLaporanMandiriPengirim")
+  mutasiDiproses        MutasiPelanggan[]       @relation("MutasiProsesOleh")
+  notifikasi            Notifikasi[]
+  perangkatNotif        PerangkatNotif[]
+  pelangganDibuat       Pelanggan[]             @relation("PelangganAuthor")
+  pelangganDiupdate     Pelanggan[]             @relation("PelangganLastEditor")
+  pemutusanDiproses     Pemutusan[]             @relation("PemutusanProsesOleh")
+  pencatat              Pencatat?
+  pengaduanDitugaskan   Pengaduan[]             @relation("PengaduanDitugaskan")
+  pengaduanEskalasi     Pengaduan[]             @relation("PengaduanEskalasi")
+  riwayatPengaduan      RiwayatPengaduan[]      @relation("RiwayatPengaduanOleh")
+  sessions              Session[]
+  tagihanDivalidasi     Tagihan[]               @relation("TagihanValidator")
+  periodeDitutup        PeriodePenagihan[]      @relation("PeriodeDitutupBy")
+  periodeDibuka         PeriodePenagihan[]      @relation("PeriodeDibukaBy")
+  twoFactors            TwoFactor[]
+  bagian                Bagian?                 @relation(fields: [bagianId], references: [id])
+  divisi                Divisi?                 @relation(fields: [divisiId], references: [id])
+  subBagian             SubBagian?              @relation(fields: [subBagianId], references: [id])
 
   @@index([email])
   @@index([username])

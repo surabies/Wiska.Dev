@@ -26,9 +26,12 @@ import { JenisPengaduan, KlasifikasiPengaduan, type Prisma } from "@db"
 import { prisma } from "@db"
 import { validate } from "../../lib/validate"
 import { ok, created } from "../../lib/response"
-import { NotFoundError, BadRequestError } from "../../lib/errors"
+import {
+  NotFoundError,
+  BadRequestError,
+  ForbiddenError,
+} from "../../lib/errors"
 import { cekRateLimit, ipKlien } from "../../lib/rate-limit"
-import { jendelaLaporMandiri } from "@/lib/domain/lapor-mandiri"
 import {
   simpanBerkas,
   BerkasTidakValidError,
@@ -48,6 +51,12 @@ import {
 import { tutupOtomatisBilaKedaluwarsa } from "../pengaduan/otomatis"
 import { tandaiWilayah } from "../pengaduan/wilayah"
 import { getSessionUserOpsional } from "../../lib/session"
+import {
+  dapatkanJendelaLaporMandiri,
+  pastikanLaporanMandiriBolehDikirim,
+  pastikanSambunganTertautKeAkun,
+  simpanKirimanLaporanMandiri,
+} from "../laporan/laporan-mandiri.service"
 
 export const publikRouter = new Hono()
 
@@ -78,7 +87,7 @@ publikRouter.get("/pelanggan/:nomorLangganan", async (c) => {
 
   const pelanggan = await verifikasiPelanggan(parsed.data)
 
-  const periodeBerjalan = dateToPeriode(new Date())
+  const periodeBerjalan = (await dapatkanJendelaLaporMandiri()).periode
   const laporanBulanIni = await prisma.laporanMandiri.findUnique({
     where: {
       pelangganId_periode: {
@@ -847,10 +856,15 @@ publikRouter.post("/pengaduan/:nomorTiket/chat", async (c) => {
 // LAPOR METER MANDIRI
 // ============================================================
 
-/// Jendela waktu pelaporan, supaya layar warga bisa menampilkan pemberitahuan
-/// tanpa menebak-nebak dari jam perangkatnya sendiri. Sengaja TANPA rate
-/// limit dan tanpa autentikasi: ini hanya membaca kalender.
-publikRouter.get("/lapor-meter/jendela", (c) => ok(c, jendelaLaporMandiri()))
+/// Jendela waktu pelaporan dari konfigurasi server, bukan jam/perkiraan client.
+publikRouter.get("/lapor-meter/jendela", async (c) => {
+  cekRateLimit(ipKlien(c), {
+    nama: "jendela-lapor-meter",
+    maks: 60,
+    jendelaMs: 5 * 60 * 1000,
+  })
+  return ok(c, await dapatkanJendelaLaporMandiri())
+})
 
 /// multipart/form-data (bukan JSON) karena membawa berkas foto.
 publikRouter.post("/lapor-meter", async (c) => {
@@ -860,10 +874,17 @@ publikRouter.post("/lapor-meter", async (c) => {
     jendelaMs: 10 * 60 * 1000,
   })
 
+  // Periksa sesi sebelum membaca multipart body; pemeriksaan Auth.js dapat
+  // mengkloning request dan harus berjalan sebelum stream dikonsumsi.
+  const sesi = await getSessionUserOpsional(c)
+  if (sesi && sesi.role !== "USER") {
+    throw new ForbiddenError("Jalur ini hanya untuk akun warga.")
+  }
+
   // DIPERIKSA PALING AWAL — sebelum form diurai, sebelum foto disentuh.
   // Menolak setelah mengunggah foto berarti menghabiskan kuota penyimpanan
   // dan kuota bandwidth warga untuk berkas yang pasti dibuang.
-  const jendela = jendelaLaporMandiri()
+  const jendela = await dapatkanJendelaLaporMandiri()
   if (!jendela.boleh) throw new BadRequestError(jendela.pesan)
 
   const form = await c.req.formData()
@@ -890,45 +911,31 @@ publikRouter.post("/lapor-meter", async (c) => {
     })
 
   const pelanggan = await verifikasiPelanggan(parsed.nomorLangganan)
+  if (sesi) {
+    await pastikanSambunganTertautKeAkun(sesi.id, pelanggan.id)
+  }
 
   const foto = form.get("foto")
   if (!(foto instanceof File))
     throw new BadRequestError("Foto meter wajib dilampirkan sebagai bukti.")
 
-  // Periode = bulan berjalan. TIDAK diterima dari client: kalau bisa dipilih
-  // sendiri, orang bisa menimpa/mengisi periode lampau yang sudah ditagih.
-  const sekarang = new Date()
-  const periode = dateToPeriode(
-    new Date(Date.UTC(sekarang.getUTCFullYear(), sekarang.getUTCMonth(), 1)),
-  )
+  // Periode WIB dihitung oleh server bersama validasi jendela; bukan dari
+  // bulan UTC atau nilai yang dipilih oleh client.
+  const periode = jendela.periode
 
   // Dicek DULU sebelum foto diunggah — percuma menulis berkas kalau barisnya
   // pasti ditolak unique constraint.
-  const sudahAda = await prisma.laporanMandiri.findUnique({
-    where: { pelangganId_periode: { pelangganId: pelanggan.id, periode } },
-  })
-
-  // "Satu laporan per bulan" berlaku untuk laporan yang MASIH HIDUP:
-  // MENUNGGU (sedang diverifikasi) dan DIVERIFIKASI/DIGUNAKAN (sudah jadi
-  // angka resmi). Laporan DITOLAK bukan salah satunya — penolakan justru
-  // biasanya berbunyi "foto tidak terbaca, kirim ulang", dan mengunci warga
-  // sampai bulan depan membuat perintah itu mustahil dijalankan sekaligus
-  // menghapus satu-satunya kesempatan mereka punya angka meter bulan ini.
-  if (sudahAda && sudahAda.status !== "DITOLAK") {
-    throw new BadRequestError(
-      `Anda sudah mengirim laporan meter untuk periode ${periode}. Satu laporan per bulan. Status laporan Anda: ${sudahAda.status}.`,
-    )
-  }
+  const kirimUlang = await pastikanLaporanMandiriBolehDikirim(
+    pelanggan.id,
+    periode,
+  )
 
   let simpan
   try {
-    // Nama & folder deterministik ("202607_stand_00401700010" di dalam
-    // folder Cloudinary "laporan-mandiri/202607") — bukan UUID acak — supaya
-    // foto tersusun rapi per periode dan gampang ditelusuri manual di
-    // Cloudinary Console, bukan hanya lewat fotoUrl di database.
+    // ID unik mencegah retry sesudah penolakan menimpa bukti kiriman terdahulu.
     simpan = await simpanBerkas(foto, {
       prefix: "laporan-mandiri",
-      namaBerkas: `${periode}_stand_${pelanggan.nomorLangganan}`,
+      namaBerkas: `${periode}_stand_${pelanggan.nomorLangganan}_${crypto.randomUUID()}`,
       subFolder: String(periode),
     })
   } catch (err) {
@@ -937,67 +944,25 @@ publikRouter.post("/lapor-meter", async (c) => {
     throw err
   }
 
-  const isi = {
+  const row = await simpanKirimanLaporanMandiri({
+    pelangganId: pelanggan.id,
+    nomorLangganan: pelanggan.nomorLangganan,
+    periode,
     standDilaporkan: parsed.standDilaporkan,
     fotoUrl: simpan.url,
     fotoPublicId: simpan.publicId,
     nomorPelapor: parsed.nomorPelapor,
     namaPelapor: parsed.namaPelapor,
-    // status MENUNGGU — laporan TIDAK langsung jadi angka resmi. Petugas
-    // memverifikasinya lewat PATCH /api/v1/laporan-mandiri/:id/verify sebelum
-    // menjadi PembacaanMeter. Ini yang membuat laporan palsu dari publik
-    // tidak bisa langsung mengubah tagihan siapa pun.
-    status: "MENUNGGU" as const,
-  }
-  const pilih = {
-    periode: true,
-    standDilaporkan: true,
-    status: true,
-    createdAt: true,
-  }
-
-  // KIRIM ULANG MENIMPA BARIS YANG DITOLAK, bukan menambah baris kedua — dan
-  // itu bukan sekadar cara menghindari @@unique([pelangganId, periode]).
-  // Nama berkas di storage deterministik (`${periode}_stand_${nomorLangganan}`
-  // dengan overwrite), jadi foto lama SUDAH tergantikan oleh yang baru.
-  // Baris kedua hanya akan menunjuk foto yang sama persis: dua laporan
-  // berbeda angka dengan satu foto, dan yang lama memamerkan bukti yang bukan
-  // miliknya. Jejak penolakan sengaja dibersihkan (alasan & verifikator
-  // dinolkan) supaya panel verifikasi tidak menampilkan alasan penolakan
-  // lama di samping foto baru yang belum diperiksa siapa pun.
-  //
-  // createdAt DISEGARKAN — satu-satunya kolom yang "berbohong" kalau
-  // dibiarkan. Antrean verifikasi diurutkan createdAt desc dan disaring
-  // "kiriman warga hari ini" lewat createdAt: laporan yang dikirim ulang hari
-  // ini tapi masih bertanggal dua pekan lalu akan terkubur di dasar antrean
-  // dan tidak muncul di saringan hari ini — persis nasib yang sedang kita
-  // perbaiki. Setelah ditimpa, baris ini MEMANG kiriman hari ini.
-  const row = sudahAda
-    ? await prisma.laporanMandiri.update({
-        where: { id: sudahAda.id },
-        data: {
-          ...isi,
-          alasanDitolak: null,
-          verifiedAt: null,
-          verifiedById: null,
-          createdAt: new Date(),
-        },
-        select: pilih,
-      })
-    : await prisma.laporanMandiri.create({
-        data: {
-          ...isi,
-          pelangganId: pelanggan.id,
-          nomorLangganan: pelanggan.nomorLangganan,
-          periode,
-        },
-        select: pilih,
-      })
+    pengirimId: sesi?.id ?? null,
+  })
 
   return created(c, {
-    ...row,
-    pesan: sudahAda
-      ? "Laporan perbaikan Anda terkirim menggantikan laporan yang ditolak, dan sedang menunggu verifikasi petugas."
+    periode: row.periode,
+    standDilaporkan: row.standDilaporkan,
+    status: row.status,
+    createdAt: row.createdAt,
+    pesan: kirimUlang
+      ? "Laporan perbaikan Anda terkirim. Bukti kiriman sebelumnya tetap tersimpan; kiriman baru menunggu verifikasi petugas."
       : "Laporan meter Anda terkirim dan sedang menunggu verifikasi petugas.",
   })
 })

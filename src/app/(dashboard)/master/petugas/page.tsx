@@ -18,7 +18,7 @@ export default async function PetugasPage() {
     <PageContainer
       className="flex min-h-0 flex-1 flex-col"
       breadcrumbs={[
-        { label: "Pencatat Meter", href: "/master/petugas" },
+        { label: "Master", href: "/master/petugas" },
         { label: "Petugas" },
       ]}
     >

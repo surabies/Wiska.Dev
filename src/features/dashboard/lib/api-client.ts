@@ -40,6 +40,11 @@ export interface HasilList<T> {
   total: number
 }
 
+export interface JendelaLaporMandiri {
+  tanggalBuka: number
+  tanggalTutup: number
+}
+
 /** GET /api/v1<path> dengan query params; null/undefined/"" dibuang. */
 export async function ambilList<T>(
   path: string,
@@ -99,6 +104,18 @@ export async function kirimJson<T>(path: string, method: "POST" | "PATCH" | "PUT
     body: JSON.stringify(body),
   })
   return bacaEnvelope<T>(res)
+}
+
+export function ambilJendelaLaporMandiri() {
+  return ambilSatu<JendelaLaporMandiri>("/konfigurasi/lapor-mandiri/jendela")
+}
+
+export function simpanJendelaLaporMandiri(nilai: JendelaLaporMandiri) {
+  return kirimJson<JendelaLaporMandiri>(
+    "/konfigurasi/lapor-mandiri/jendela",
+    "PATCH",
+    nilai,
+  )
 }
 
 /** POST multipart/form-data ke /api/v1<path> (unggah berkas, mis.

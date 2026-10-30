@@ -17,7 +17,12 @@ import {
   sortQuery,
 } from "../../lib/pagination"
 import { ok, paginated } from "../../lib/response"
-import { NotFoundError } from "../../lib/errors"
+import { BadRequestError, NotFoundError } from "../../lib/errors"
+import {
+  dapatkanJendelaLaporMandiri,
+  KUNCI_TANGGAL_BUKA,
+  KUNCI_TANGGAL_TUTUP,
+} from "../laporan/laporan-mandiri.service"
 
 export const konfigurasiRouter = new Hono()
 
@@ -70,6 +75,66 @@ konfigurasiRouter.get(
 )
 
 konfigurasiRouter.get(
+  "/lapor-mandiri/jendela",
+  requireRole(...ROLE_GROUPS.ADMIN),
+  async (c) => {
+    const jendela = await dapatkanJendelaLaporMandiri()
+    return ok(c, {
+      tanggalBuka: jendela.tanggalBuka,
+      tanggalTutup: jendela.tanggalTutup,
+    })
+  },
+)
+
+const jendelaLaporMandiriSchema = z
+  .object({
+    tanggalBuka: z.number().int().min(1).max(28),
+    tanggalTutup: z.number().int().min(1).max(28),
+  })
+  .refine((nilai) => nilai.tanggalBuka <= nilai.tanggalTutup, {
+    message: "Tanggal buka tidak boleh melewati tanggal tutup.",
+    path: ["tanggalBuka"],
+  })
+
+konfigurasiRouter.patch(
+  "/lapor-mandiri/jendela",
+  requireRole(...ROLE_GROUPS.ADMIN),
+  validate("json", jendelaLaporMandiriSchema),
+  async (c) => {
+    const { tanggalBuka, tanggalTutup } = c.req.valid("json")
+    const [konfigurasiBuka, konfigurasiTutup] = await prisma.$transaction(
+      async (tx) => {
+        const buka = await tx.konfigurasi.upsert({
+          where: { kunci: KUNCI_TANGGAL_BUKA },
+          update: { nilai: String(tanggalBuka) },
+          create: {
+            kunci: KUNCI_TANGGAL_BUKA,
+            nilai: String(tanggalBuka),
+            deskripsi: "Tanggal mulai laporan meter mandiri setiap bulan.",
+            tipe: "number",
+          },
+        })
+        const tutup = await tx.konfigurasi.upsert({
+          where: { kunci: KUNCI_TANGGAL_TUTUP },
+          update: { nilai: String(tanggalTutup) },
+          create: {
+            kunci: KUNCI_TANGGAL_TUTUP,
+            nilai: String(tanggalTutup),
+            deskripsi: "Tanggal akhir laporan meter mandiri setiap bulan.",
+            tipe: "number",
+          },
+        })
+        return [buka, tutup] as const
+      },
+    )
+    return ok(c, {
+      tanggalBuka: Number(konfigurasiBuka.nilai),
+      tanggalTutup: Number(konfigurasiTutup.nilai),
+    })
+  },
+)
+
+konfigurasiRouter.get(
   "/:kunci",
   requireRole(...ROLE_GROUPS.STAFF_UP),
   async (c) => {
@@ -96,6 +161,11 @@ konfigurasiRouter.patch(
   async (c) => {
     const kunci = c.req.param("kunci")
     const body = c.req.valid("json")
+    if (kunci === KUNCI_TANGGAL_BUKA || kunci === KUNCI_TANGGAL_TUTUP) {
+      throw new BadRequestError(
+        "Ubah tanggal buka dan tutup sekaligus melalui /api/v1/konfigurasi/lapor-mandiri/jendela.",
+      )
+    }
     const row = await prisma.konfigurasi.upsert({
       where: { kunci },
       update: body,

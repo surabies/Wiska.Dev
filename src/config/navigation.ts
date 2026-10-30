@@ -390,74 +390,74 @@ export const navGroups: NavGroup[] = [
     title: "Tool Tutup Bulan",
     items: [
       {
-        title: "PBPK",
-        href: "/admin/closing/pbpk",
-        description: "Input data pasang baru & kontrak.",
-        keywords: ["pbpk", "pasang baru", "kontrak"],
+      title: "PBPK",
+      href: "/tools-tutup/pbpk",
+      description: "Input data pasang baru & kontrak.",
+      keywords: ["pbpk", "pasang baru", "kontrak"],
       },
       {
         title: "Stand Angkat",
-        href: "/admin/closing/stand-angkat",
+        href: "/tools-tutup/stand-angkat",
         description: "Input stand angkat meter.",
         keywords: ["stand", "angkat", "meter"],
       },
       {
         title: "Update Zonasi",
-        href: "/admin/closing/zonasi",
+        href: "/tools-tutup/update-zonasi",
         description: "Pembaruan zona layanan.",
         keywords: ["zonasi", "zona", "pembaruan"],
       },
       {
         title: "Posting Datameter",
-        href: "/admin/closing/posting-datameter",
+        href: "/tools-tutup/posting-datameter",
         description: "Posting pembacaan meter ke tagihan.",
         keywords: ["posting", "datameter", "tagihan"],
       },
       {
         title: "Create Closed DRD",
-        href: "/admin/closing/closed-drb",
+        href: "/tools-tutup/create-closed-drd",
         description: "Membentuk DRD tutup.",
-        keywords: ["drb", "closed", "tutup"],
+        keywords: ["drd", "closed", "tutup"],
       },
       {
         title: "Create Perbandingan",
-        href: "/admin/closing/perbandingan",
+        href: "/tools-tutup/create-perbandingan",
         description: "Membuat perbandingan tagihan.",
         keywords: ["perbandingan", "tagihan"],
       },
       {
         title: "Create Bulan Baru",
-        href: "/admin/closing/bulan-baru",
+        href: "/tools-tutup/create-bulan-baru",
         description: "Memulai periode baru.",
-        keywords: ["bulan baru", "perioda baru"],
+        keywords: ["bulan baru", "periode baru"],
       },
       {
         title: "Upload Master Pelanggan",
-        href: "/admin/closing/upload-master",
+        href: "/tools-tutup/upload-master-pelanggan",
         description: "Upload master data pelanggan.",
         keywords: ["upload", "pelanggan", "master"],
       },
       {
         title: "Sync Pelanggan Baru",
-        href: "/admin/closing/sync-pelanggan",
+        href: "/tools-tutup/sync-pelanggan-baru",
         description: "Sinkronisasi pelanggan baru.",
         keywords: ["sync", "pelanggan", "baru"],
       },
       {
         title: "Update Data Pelanggan",
-        href: "/admin/closing/update-pelanggan",
+        href: "/tools-tutup/update-data-pelanggan",
         description: "Pembaruan data pelanggan.",
         keywords: ["update", "pelanggan", "data"],
       },
       {
         title: "Cek Selisih Pelanggan",
-        href: "/admin/closing/selisih-pelanggan",
+        href: "/tools-tutup/cek-selisih-pelanggan",
         description: "Cek selisih data pelanggan.",
         keywords: ["cek", "selisih", "pelanggan"],
       },
       {
         title: "Monitoring Tutup Bulan",
-        href: "/admin/closing/monitoring",
+        href: "/tools-tutup/monitoring-tutup-bulan",
         description: "Monitoring status tutup bulan.",
         keywords: ["monitoring", "tutup", "bulan"],
       },
@@ -478,12 +478,6 @@ export const navGroups: NavGroup[] = [
         href: "/tools/import-stand",
         description: "Import data stand angkat.",
         keywords: ["import", "stand", "angkat"],
-      },
-      {
-        title: "Import PBPK",
-        href: "/tools/import-pbpk",
-        description: "Import data pembayaran dan pemasangan baru.",
-        keywords: ["import", "pembayaran", "pemasangan"],
       },
       {
         title: "Proses PBPK",
@@ -530,6 +524,19 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
+    id: "pengaturan",
+    title: "Pengaturan",
+    items: [
+      {
+        title: "Jendela Laporan Mandiri",
+        href: "/pengaturan",
+        description:
+          "Atur tanggal buka dan tutup pelaporan meter mandiri setiap bulan.",
+        keywords: ["lapor mandiri", "jadwal", "tanggal", "konfigurasi"],
+      },
+    ],
+  },
+  {
     id: "sync-tutup-bulan",
     title: "Sync Tutup Bulan",
     items: [
@@ -554,6 +561,36 @@ export const navGroups: NavGroup[] = [
       {
         title: "Sync (4) BULAN BARU",
         href: "/sync/sync-bulan-baru",
+        description: "Sinkronkan data bulan baru.",
+        keywords: ["sync", "bulan baru"],
+      },
+    ],
+  },
+  {
+    id: "Module Test Aplikasi",
+    title: "Module Test",
+    items: [
+      {
+        title: "Import Pbpk",
+        href: "/test/import-pbpk",
+        description: "Sinkronkan kirim data mutasi.",
+        keywords: ["sync", "mutasi", "sinkronisasi"],
+      },
+      {
+        title: "Import Lapdatameter",
+        href: "/test/import-lapdatameter",
+        description: "Sinkronkan kirim data meter.",
+        keywords: ["sync", "datameter", "meter"],
+      },
+      {
+        title: "Import R-Nomor",
+        href: "/test/import-r-nomor",
+        description: "Import STI sinkronisasi.",
+        keywords: ["sync", "sti", "import"],
+      },
+      {
+        title: "Import Rekonsiliasi",
+        href: "/test/import-rekonsiliasi",
         description: "Sinkronkan data bulan baru.",
         keywords: ["sync", "bulan baru"],
       },

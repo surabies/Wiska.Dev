@@ -11,6 +11,7 @@
 // karena endpoint publik memang dirancang untuk dipanggil langsung dan
 // rate limit-nya berbasis IP pemakai — kalau lewat server action, semua
 // request akan terlihat berasal dari IP server.
+import type { JendelaLaporMandiri } from "@/lib/domain/lapor-mandiri"
 
 export class ApiError extends Error {
   readonly code: string
@@ -289,10 +290,14 @@ export interface HasilLaporMeter {
   pesan: string
 }
 
+export async function ambilJendelaLaporMandiri() {
+  const res = await fetch("/api/public/lapor-meter/jendela")
+  return tangani<JendelaLaporMandiri>(res)
+}
+
 /// multipart, bukan JSON — membawa berkas foto. JANGAN menyetel header
 /// Content-Type sendiri: browser harus menuliskannya berikut `boundary`.
 export async function laporMeter(form: FormData) {
   const res = await fetch("/api/public/lapor-meter", { method: "POST", body: form })
   return tangani<HasilLaporMeter>(res)
 }
-

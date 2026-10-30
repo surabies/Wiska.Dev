@@ -3,7 +3,8 @@
 //
 // ALUR STATUS YANG SEBENARNYA TERJADI: MENUNGGU -> DIGUNAKAN (verify) atau
 // MENUNGGU -> DITOLAK (reject), dan DITOLAK -> MENUNGGU lagi bila warga
-// mengirim ulang foto yang benar (POST / menimpa barisnya — lihat di bawah).
+// mengirim ulang foto yang benar. Setiap percobaan/bukti lama tetap tersimpan
+// pada KirimanLaporanMandiri; baris utama hanya proyeksi antrean terkini.
 // DIVERIFIKASI ada di enum tapi TIDAK PERNAH
 // DITULIS: verify membuat PembacaanMeter resmi di transaksi yang sama, jadi
 // laporan langsung berstatus "sudah dipakai". Baris yang sudah diverifikasi
@@ -17,7 +18,12 @@ import { validate } from "../../lib/validate"
 import { requireRole, ROLE_GROUPS } from "../../middleware/rbac"
 import { getSessionUser } from "../../lib/session"
 import { ok, created, paginated } from "../../lib/response"
-import { NotFoundError, ConflictError, BadRequestError } from "../../lib/errors"
+import {
+  NotFoundError,
+  ConflictError,
+  BadRequestError,
+  ForbiddenError,
+} from "../../lib/errors"
 import {
   paginationQuerySchema,
   buildSkipTake,
@@ -27,12 +33,16 @@ import {
 } from "../../lib/pagination"
 import { dateToPeriode, periodeToDate } from "../../lib/periode"
 import { rentangTanggalWIB } from "../../lib/rentang-tanggal"
-import { jendelaLaporMandiri } from "@/lib/domain/lapor-mandiri"
 import {
   ambilPembacaanResmi,
   denganSumberResmi,
   simpanPembacaanResmi,
 } from "./pembacaan-resmi"
+import {
+  dapatkanJendelaLaporMandiri,
+  pastikanSambunganTertautKeAkun,
+  simpanKirimanLaporanMandiri,
+} from "./laporan-mandiri.service"
 
 export const laporanMandiriRouter = new Hono()
 
@@ -280,7 +290,7 @@ laporanMandiriRouter.get(
 
 const createSchema = z.object({
   pelangganId: z.string().min(1),
-  periode: z.coerce.number().int().min(190001).max(999912),
+  periode: z.coerce.number().int().min(190001).max(999912).optional(),
   standDilaporkan: z.coerce.number().int().min(0),
   fotoUrl: z.url(),
   fotoPublicId: z.string().trim().min(1),
@@ -288,64 +298,42 @@ const createSchema = z.object({
   namaPelapor: z.string().trim().min(1).max(150),
 })
 
-// Tanpa requireRole: pelanggan (role USER) memang pengirim utama laporan ini.
-// @@unique([pelangganId, periode]) -> kirim dua kali utk periode sama = 409,
-// KECUALI laporan sebelumnya DITOLAK (lihat di bawah).
+// Jalur akun hanya menerima sambungan yang tertaut ke akun warga yang sedang
+// login. Pelanggan tetap diverifikasi petugas sebelum menjadi pembacaan resmi.
 laporanMandiriRouter.post("/", validate("json", createSchema), async (c) => {
-  // Jendela tanggal 1-25 ditegakkan DI SINI JUGA, bukan hanya di
+  const requester = getSessionUser(c)
+  if (requester.role !== "USER") {
+    throw new ForbiddenError("Jalur ini hanya untuk akun warga.")
+  }
+
+  // Jendela tanggal ditegakkan DI SINI JUGA, bukan hanya di
   // /publik/lapor-meter. Keduanya membuat baris LaporanMandiri yang sama;
   // menjaga satu pintu saja berarti aturannya bisa dilewati lewat pintu
   // lain, dan aturan yang punya jalan memutar bukan aturan.
-  const jendela = jendelaLaporMandiri()
+  const jendela = await dapatkanJendelaLaporMandiri()
   if (!jendela.boleh) throw new BadRequestError(jendela.pesan)
 
   const body = c.req.valid("json")
-  const pelanggan = await prisma.pelanggan.findUnique({
-    where: { id: body.pelangganId },
-  })
-  if (!pelanggan || pelanggan.deletedAt) throw new NotFoundError("Pelanggan")
-
-  // KIRIM ULANG SETELAH DITOLAK. Aturan "satu laporan per periode" mengikat
-  // laporan yang masih hidup (MENUNGGU) dan yang sudah jadi angka resmi
-  // (DIVERIFIKASI/DIGUNAKAN) — bukan yang ditolak. Penolakan lazimnya berbunyi
-  // "foto tidak terbaca, kirim ulang"; menahan pengiriman berikutnya sampai
-  // periode berganti membuat perintah itu tidak mungkin dijalankan. Barisnya
-  // DITIMPA, bukan digandakan — alasannya sama dengan di /publik/lapor-meter:
-  // nama berkas foto deterministik per periode, jadi baris kedua akan menunjuk
-  // foto yang sudah tergantikan.
-  const sudahAda = await prisma.laporanMandiri.findUnique({
-    where: {
-      pelangganId_periode: {
-        pelangganId: body.pelangganId,
-        periode: body.periode,
-      },
-    },
-  })
-  if (sudahAda && sudahAda.status !== "DITOLAK") {
-    throw new ConflictError(
-      `Laporan periode ${body.periode} untuk pelanggan ini sudah ada (status: ${sudahAda.status}). Satu laporan per periode.`,
+  if (body.periode !== undefined && body.periode !== jendela.periode) {
+    throw new BadRequestError(
+      `Periode laporan harus mengikuti periode berjalan ${jendela.periode}.`,
     )
   }
-  if (sudahAda) {
-    // createdAt disegarkan: antrean verifikasi diurutkan & disaring memakai
-    // kolom ini ("kiriman warga hari ini"), dan setelah ditimpa baris ini
-    // memang kiriman baru — bukan yang bertanggal lama.
-    const diperbarui = await prisma.laporanMandiri.update({
-      where: { id: sudahAda.id },
-      data: {
-        ...body,
-        status: "MENUNGGU",
-        alasanDitolak: null,
-        verifiedAt: null,
-        verifiedById: null,
-        createdAt: new Date(),
-      },
-    })
-    return created(c, diperbarui)
-  }
+  const pelanggan = await pastikanSambunganTertautKeAkun(
+    requester.id,
+    body.pelangganId,
+  )
 
-  const row = await prisma.laporanMandiri.create({
-    data: { ...body, nomorLangganan: pelanggan.nomorLangganan },
+  const row = await simpanKirimanLaporanMandiri({
+    pelangganId: pelanggan.id,
+    nomorLangganan: pelanggan.nomorLangganan,
+    periode: jendela.periode,
+    standDilaporkan: body.standDilaporkan,
+    fotoUrl: body.fotoUrl,
+    fotoPublicId: body.fotoPublicId,
+    nomorPelapor: body.nomorPelapor,
+    namaPelapor: body.namaPelapor,
+    pengirimId: requester.id,
   })
   return created(c, row)
 })

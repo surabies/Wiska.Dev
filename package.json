@@ -23,7 +23,8 @@
     "server:generate-urut-catat": "tsx --conditions=react-server src/lib/server/scripts/generate-urut-catat.ts",
     "server:perbaiki-jenis-pemutusan": "tsx --conditions=react-server src/lib/server/scripts/perbaiki-jenis-pemutusan.ts",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test": "vitest run"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
@@ -97,6 +98,7 @@
     "prisma": "7.10.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
   }
 }

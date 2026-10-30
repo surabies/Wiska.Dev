@@ -10,13 +10,19 @@
 // di sini — lihat catatan keputusan produk di server/modules/publik/verifikasi.ts.
 import * as React from "react"
 import { CheckCircle2, AlertCircle, Upload, CalendarClock } from "@/components/ui/hugeicons-compat"
-import { jendelaLaporMandiri } from "@/lib/domain/lapor-mandiri"
+import type { JendelaLaporMandiri } from "@/lib/domain/lapor-mandiri"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
-import { cariPelanggan, laporMeter, ApiError, type PelangganPratinjau } from "../lib/api"
+import {
+  ambilJendelaLaporMandiri,
+  cariPelanggan,
+  laporMeter,
+  ApiError,
+  type PelangganPratinjau,
+} from "../lib/api"
 import { formatPeriode } from "../lib/format"
 import { PemilihFoto } from "./pemilih-foto"
 import { LaporMeterSukses, type HasilLaporanTampilan } from "./lapor-meter-sukses"
@@ -24,6 +30,9 @@ import { InputNomorLangganan } from "./input-nomor-langganan"
 import { TombolUtama } from "./tombol-utama"
 
 export function LaporMeterForm() {
+  const [jendela, setJendela] = React.useState<JendelaLaporMandiri | null>(null)
+  const [jendelaPending, setJendelaPending] = React.useState(true)
+  const [jendelaError, setJendelaError] = React.useState<string | null>(null)
   const [nomorLangganan, setNomorLangganan] = React.useState("")
   const [pratinjau, setPratinjau] = React.useState<PelangganPratinjau | null>(null)
   const [cariPending, setCariPending] = React.useState(false)
@@ -39,6 +48,26 @@ export function LaporMeterForm() {
   const [kirimError, setKirimError] = React.useState<string | null>(null)
   const [kirimPending, setKirimPending] = React.useState(false)
   const [hasil, setHasil] = React.useState<HasilLaporanTampilan | null>(null)
+
+  const muatJendela = React.useCallback(async () => {
+    setJendelaPending(true)
+    setJendelaError(null)
+    try {
+      setJendela(await ambilJendelaLaporMandiri())
+    } catch (err) {
+      setJendelaError(
+        err instanceof ApiError
+          ? err.message
+          : "Jadwal pelaporan gagal dimuat. Coba lagi.",
+      )
+    } finally {
+      setJendelaPending(false)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    void muatJendela()
+  }, [muatJendela])
 
   React.useEffect(() => {
     return () => {
@@ -146,14 +175,28 @@ export function LaporMeterForm() {
 
   if (hasil) return <LaporMeterSukses hasil={hasil} onReset={reset} />
 
-  // Dihitung di sini, bukan diambil dari server, supaya pemberitahuannya
-  // muncul SEKETIKA tanpa kedipan "memuat" — modul domainnya murni, jadi
-  // hasilnya sama persis dengan yang dipakai server. Yang MENEGAKKAN aturan
-  // tetap server (POST /publik/lapor-meter menolak duluan); ini hanya
-  // menyelamatkan warga dari mengisi formulir dan mengunggah foto untuk
-  // sesuatu yang pasti ditolak. Kalau jam perangkatnya meleset jauh, pesan
-  // dari server yang muncul — kalimatnya sama.
-  const jendela = jendelaLaporMandiri()
+  if (jendelaPending) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+        <Spinner className="size-4" />
+        Memuat jadwal pelaporan…
+      </div>
+    )
+  }
+
+  if (!jendela) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+          <span>{jendelaError ?? "Jadwal pelaporan tidak tersedia."}</span>
+          <Button type="button" variant="outline" size="sm" onClick={muatJendela}>
+            Coba lagi
+          </Button>
+        </AlertDescription>
+      </Alert>
+    )
+  }
 
   // `bisaKirimUlang` dari server, BUKAN `!sudahLaporBulanIni`: laporan yang
   // DITOLAK tetap "sudah ada" tapi tidak mengunci bulan berjalan — lihat
@@ -176,7 +219,11 @@ export function LaporMeterForm() {
         <div className="rounded-xl border bg-muted/40 p-4 text-sm text-muted-foreground">
           <p className="font-medium text-foreground">Jadwal pelaporan</p>
           <p className="mt-1">
-            Setiap bulan, tanggal <strong className="text-foreground">1 sampai 25</strong>. Di luar
+            Setiap bulan, tanggal{" "}
+            <strong className="text-foreground">
+              {jendela.tanggalBuka} sampai {jendela.tanggalTutup}
+            </strong>
+            . Di luar
             tanggal itu petugas sedang merampungkan pencatatan dan perhitungan rekening, sehingga
             laporan yang masuk tidak lagi bisa diperhitungkan untuk bulan berjalan.
           </p>
@@ -251,7 +298,7 @@ export function LaporMeterForm() {
               {pratinjau.alasanDitolak ? `: ${pratinjau.alasanDitolak}` : "."}
             </p>
             <p className="text-xs text-amber-700/90 dark:text-amber-400/90">
-              Silakan perbaiki dan kirim ulang di bawah — foto baru Anda akan menggantikan foto sebelumnya.
+              Silakan perbaiki dan kirim ulang di bawah — foto lama tetap menjadi arsip verifikasi.
             </p>
           </div>
         )}

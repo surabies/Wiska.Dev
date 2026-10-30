@@ -82,6 +82,7 @@ export const GROUP_ICONS: Record<string, IconSvgElement> = {
   "tool-tutup-bulan": CalendarLock01Icon,
   tools: Wrench01Icon,
   "sync-tutup-bulan": RefreshIcon,
+  pengaturan: Calendar03Icon,
 }
 
 export const FALLBACK_GROUP_ICON: IconSvgElement = Layers01Icon
@@ -101,6 +102,7 @@ const ITEM_ICONS: Record<string, IconSvgElement> = {
   "penggabungan rute": GitMergeIcon,
   "pindah rute": Route01Icon,
   "pindah rute monitoring": Activity01Icon,
+  "jendela laporan mandiri": CalendarAdd01Icon,
 
   // Pengolahan Data
   "baca meter wilayah (chn)": DashboardSpeed01Icon,

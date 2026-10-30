@@ -313,7 +313,7 @@ model LaporanHarianPetugas {
 }
 
 model LaporanMandiri {
-  id              String               @id @default(cuid())
+  id              String                  @id @default(cuid())
   pelangganId     String
   nomorLangganan  String
   periode         Int
@@ -325,17 +325,18 @@ model LaporanMandiri {
   /// anggota keluarga).
   nomorPelapor    String
   namaPelapor     String
-  status          StatusLaporanMandiri @default(MENUNGGU)
+  status          StatusLaporanMandiri    @default(MENUNGGU)
   verifiedById    String?
   verifiedAt      DateTime?
   alasanDitolak   String?
   /// Jika diverifikasi & digunakan -> link ke PembacaanMeter resmi.
-  pembacaanId     String?              @unique
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  pelanggan       Pelanggan            @relation(fields: [pelangganId], references: [id])
-  pembacaan       PembacaanMeter?      @relation(fields: [pembacaanId], references: [id])
-  verifiedBy      User?                @relation("LaporanMandiriVerifikator", fields: [verifiedById], references: [id])
+  pembacaanId     String?                 @unique
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  kiriman         KirimanLaporanMandiri[]
+  pelanggan       Pelanggan               @relation(fields: [pelangganId], references: [id])
+  pembacaan       PembacaanMeter?         @relation(fields: [pembacaanId], references: [id])
+  verifiedBy      User?                   @relation("LaporanMandiriVerifikator", fields: [verifiedById], references: [id])
 
   @@unique([pelangganId, periode])
   @@index([pelangganId])
@@ -343,6 +344,27 @@ model LaporanMandiri {
   @@index([periode])
   @@index([status])
   @@map("laporan_mandiri")
+}
+
+/// Bukti tiap percobaan kirim mandiri. Baris laporan utama tetap menjadi
+/// proyeksi antrean/status terbaru, sedangkan rekam kirim ini tidak ditimpa.
+model KirimanLaporanMandiri {
+  id               String   @id @default(cuid())
+  laporanMandiriId String
+  pengirimId       String?
+  standDilaporkan  Int
+  fotoUrl          String
+  fotoPublicId     String   @unique
+  nomorPelapor     String
+  namaPelapor      String
+  diterimaPada     DateTime @default(now())
+
+  laporanMandiri LaporanMandiri @relation(fields: [laporanMandiriId], references: [id], onDelete: Restrict)
+  pengirim       User?          @relation("KirimanLaporanMandiriPengirim", fields: [pengirimId], references: [id], onDelete: Restrict)
+
+  @@index([laporanMandiriId, diterimaPada])
+  @@index([pengirimId, diterimaPada])
+  @@map("kiriman_laporan_mandiri")
 }
 
 model MutasiPelanggan {

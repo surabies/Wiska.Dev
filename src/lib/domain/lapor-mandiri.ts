@@ -1,8 +1,7 @@
 // Shared time-window rules for customer self-reported meter readings.
 //
-// Aturannya: warga hanya boleh melaporkan angka meternya sendiri pada
-// TANGGAL 1–25 setiap bulan. Lewat tanggal itu sistem menolak, dan
-// mengarahkan mereka melapor pada jendela berikutnya.
+// Aturannya: warga hanya boleh melapor pada jendela tanggal yang ditetapkan
+// operator untuk setiap bulan. Nilai awal 1–25 dapat diubah lewat konfigurasi.
 //
 // KENAPA ADA BATASNYA. Laporan mandiri menjadi PembacaanMeter resmi setelah
 // diverifikasi petugas, dan pembacaan itulah dasar tagihan. Laporan yang
@@ -24,10 +23,10 @@
 // yang sengaja UTC: di sana periode adalah KUNCI DATA yang harus cocok
 // dengan sumber CSV, di sini tanggal adalah PENGALAMAN MANUSIA.
 
-/// Hari pertama warga boleh melapor (inklusif).
+/// Hari pertama warga boleh melapor (inklusif), dipakai sebagai nilai awal.
 export const TANGGAL_BUKA_LAPOR_MANDIRI = 1
 
-/// Hari terakhir warga boleh melapor (inklusif).
+/// Hari terakhir warga boleh melapor (inklusif), dipakai sebagai nilai awal.
 export const TANGGAL_TUTUP_LAPOR_MANDIRI = 25
 
 const OFFSET_WIB_MS = 7 * 60 * 60 * 1000
@@ -62,6 +61,8 @@ export interface JendelaLaporMandiri {
   tanggal: number
   /// Periode berjalan menurut WIB, bentuk thbl (mis. 202608).
   periode: number
+  /// Hari pertama jendela pelaporan (inklusif).
+  tanggalBuka: number
   /// Batas hari terakhir, untuk ditampilkan di layar.
   tanggalTutup: number
   /// Sisa hari sampai jendela ditutup — 0 berarti hari ini hari terakhir.
@@ -105,7 +106,27 @@ function tanggalUji(): number | null {
 
 export function jendelaLaporMandiri(
   sekarang: Date = new Date(),
+  opsi: {
+    tanggalBuka?: number
+    tanggalTutup?: number
+  } = {},
 ): JendelaLaporMandiri {
+  const tanggalBuka = opsi.tanggalBuka ?? TANGGAL_BUKA_LAPOR_MANDIRI
+  const tanggalTutup = opsi.tanggalTutup ?? TANGGAL_TUTUP_LAPOR_MANDIRI
+  if (
+    !Number.isInteger(tanggalBuka) ||
+    !Number.isInteger(tanggalTutup) ||
+    tanggalBuka < 1 ||
+    tanggalBuka > 28 ||
+    tanggalTutup < 1 ||
+    tanggalTutup > 28 ||
+    tanggalBuka > tanggalTutup
+  ) {
+    throw new RangeError(
+      "Jendela laporan mandiri harus berada pada tanggal 1–28 dan tanggal buka tidak boleh melewati tanggal tutup.",
+    )
+  }
+
   const wib = keWib(sekarang)
   const geser = tanggalUji()
   if (geser !== null) wib.setUTCDate(geser)
@@ -115,40 +136,39 @@ export function jendelaLaporMandiri(
   const periode = tahun * 100 + (bulan + 1)
 
   const boleh =
-    tanggal >= TANGGAL_BUKA_LAPOR_MANDIRI &&
-    tanggal <= TANGGAL_TUTUP_LAPOR_MANDIRI
+    tanggal >= tanggalBuka && tanggal <= tanggalTutup
 
   if (boleh) {
-    const sisaHari = TANGGAL_TUTUP_LAPOR_MANDIRI - tanggal
+    const sisaHari = tanggalTutup - tanggal
     return {
       boleh: true,
       tanggal,
       periode,
-      tanggalTutup: TANGGAL_TUTUP_LAPOR_MANDIRI,
+      tanggalBuka,
+      tanggalTutup,
       sisaHari,
       bukaBerikutnya: null,
       pesan:
         sisaHari === 0
-          ? `Hari ini hari TERAKHIR pelaporan bulan ini (tanggal ${TANGGAL_TUTUP_LAPOR_MANDIRI}). Setelah hari ini pelaporan ditutup sampai tanggal 1 bulan depan.`
-          : `Pelaporan dibuka sampai tanggal ${TANGGAL_TUTUP_LAPOR_MANDIRI} — tersisa ${sisaHari} hari lagi.`,
+          ? `Hari ini hari TERAKHIR pelaporan bulan ini (tanggal ${tanggalTutup}). Setelah hari ini pelaporan ditutup sampai jendela berikutnya.`
+          : `Pelaporan dibuka tanggal ${tanggalBuka}–${tanggalTutup} — tersisa ${sisaHari} hari lagi.`,
     }
   }
 
-  // Tertutup: jendela berikutnya selalu tanggal 1 bulan berikutnya, karena
-  // penutupan hanya terjadi di ujung akhir bulan (tanggal 26 ke atas).
-  const bulanDepan = bulan === 11 ? 0 : bulan + 1
-  const tahunDepan = bulan === 11 ? tahun + 1 : tahun
-  const bukaBerikutnya = `${TANGGAL_BUKA_LAPOR_MANDIRI} ${NAMA_BULAN[bulanDepan]} ${tahunDepan}`
+  const bulanBuka = tanggal < tanggalBuka ? bulan : (bulan + 1) % 12
+  const tahunBuka = tanggal < tanggalBuka || bulan < 11 ? tahun : tahun + 1
+  const bukaBerikutnya = `${tanggalBuka} ${NAMA_BULAN[bulanBuka]} ${tahunBuka}`
 
   return {
     boleh: false,
     tanggal,
     periode,
-    tanggalTutup: TANGGAL_TUTUP_LAPOR_MANDIRI,
+    tanggalBuka,
+    tanggalTutup,
     sisaHari: null,
     bukaBerikutnya,
     pesan:
-      `Pelaporan meter mandiri hanya dilayani tanggal ${TANGGAL_BUKA_LAPOR_MANDIRI}–${TANGGAL_TUTUP_LAPOR_MANDIRI} setiap bulan. ` +
+      `Pelaporan meter mandiri hanya dilayani tanggal ${tanggalBuka}–${tanggalTutup} setiap bulan. ` +
       `Hari ini sudah tanggal ${tanggal}, jadi pelaporan bulan ini sudah ditutup. ` +
       `Silakan laporkan angka meter Anda mulai ${bukaBerikutnya}. ` +
       `Bila meter Anda belum sempat dicatat bulan ini, petugas akan tetap berkunjung sesuai jadwal rutenya.`,
