@@ -2,6 +2,10 @@
 
 Dokumen ini berisi standar operasional, rumus matematika, dan aturan logika bisnis untuk backend **Hono / TypeScript** dalam menentukan besaran pemakaian air ($m^3$) berdasarkan status/kondisi meter di lapangan.
 
+> **Peringatan status — 31 Oktober 2026:** bagian taksasi/kelompok kondisi dan contoh kode di dokumen ini adalah rancangan legacy yang **tidak boleh dipakai sebagai kontrak runtime saat ini**. Aturan target terbaru ada di [Aturan Domain Kondisi Catat Meter](../../src/docs/aturan-kondisi-catatan-meter.md). Beberapa bagian bertentangan dengan keputusan terbaru, termasuk minimum 10 m³, faktor LOS_METER, nilai nol otomatis, DICABUT, dan perlakuan minus. Kebijakan target kini menetapkan pembulatan ke atas tanpa minimum, tetapi contoh implementasi legacy tetap tidak boleh digunakan sebagai sumber runtime.
+
+Rumus yang dirujuk untuk `MB` dan `MUDA_KEMBALI` hanya referensi awal; validasi data stand, kapasitas meter, perilaku minus, dan audit tetap wajib sesuai matriks kondisi terbaru.
+
 ---
 
 ## 1. Penggantian Meter Air di Tengah Periode (Ganti Meter)

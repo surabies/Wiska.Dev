@@ -4,13 +4,7 @@
 // khusus layar verifikasi (kotak centang + aksi massal, pewarnaan per ring,
 // ribuan baris, kolom beku, navigasi papan ketik).
 //
-// URUTAN KOLOM mengikuti alur kerja verifikator, dari kiri ke kanan:
-//   1. SIAPA        No. Pel · Nama                      (No. Pel beku)
-//   2. ANGKA DIUJI  ST Awal · ST Akhir · Pakai · Lalu · Dev %
-//   3. KONDISI      Kondisi catat (menjelaskan angka yang janggal)
-//   4. HASIL        ST Resmi · Tagihan (terisi setelah diverifikasi)
-//   5. KONTEKS      Rute · Petugas · Tgl Catat
-//   6. REFERENSI    Alamat (lebar, jarang menentukan keputusan) · Status
+// Urutan dan makna kolom mengikuti kontrak tabel verifikasi di dokumentasi.
 //
 // PENAMAAN HEADER ringkas, mengikuti header tabel.md dan istilah PDAM; nama
 // panjangnya ada di tooltip (atribut title) tiap header.
@@ -37,15 +31,24 @@ import { GAYA_TAHAP, GAYA_BELUM_DIBACA, gayaAnomali, tahapDari, type Tahap } fro
 
 export interface BarisVerifikasi {
   id: string
+  pelangganId?: string | null
   nomorLangganan?: string | null
   namaPelanggan?: string | null
   alamatPelanggan?: string | null
   periode?: number | null
   standAwal?: number | null
+  standAwalRevisi?: number | null
   standAkhir?: number | null
   standAkhirRevisi?: number | null
+  standAngkatLama?: number | null
+  standAwalMeterBaru?: number | null
   pemakaian?: number | null
   pemakaianTagihVerif?: number | null
+  kondisiRevisi?: string | null
+  jenisInput?: string | null
+  alasanManual?: string | null
+  meterVerifId?: string | null
+  blokTarifVerif?: number | null
   pemakaianLalu?: number | null
   pembacaan?: {
     standAkhir: number
@@ -59,6 +62,7 @@ export interface BarisVerifikasi {
   verif3At?: string | null
   verifiedAt?: string | null
   isVerified?: boolean | null
+  status?: string | null
   pencatat?: { id: string; namaLapangan: string } | null
   pelanggan?: {
     nomorLangganan?: string
@@ -77,7 +81,16 @@ const angka = (n: number | null | undefined) =>
 const tanggal = (s: string | null | undefined) => {
   if (!s) return "—"
   const d = new Date(s)
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" })
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : d.toLocaleString("id-ID", {
+        timeZone: "Asia/Jakarta",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
 }
 
 function Lencana({ kelas, anak }: { kelas: string; anak: React.ReactNode }) {
@@ -88,26 +101,16 @@ function Lencana({ kelas, anak }: { kelas: string; anak: React.ReactNode }) {
   )
 }
 
-/// Jumlah ring yang sudah dilewati tiap tahap — menggerakkan batang mini.
-const RING_LOLOS: Record<Tahap, number> = { MENUNGGU: 0, V1: 1, V2: 2, V3: 3, DITOLAK: 0 }
 const TEKS_CHIP: Record<Tahap, string> = { MENUNGGU: "—", V1: "V1", V2: "V2", V3: "V3", DITOLAK: "Cek" }
 
 function ChipRing({ tahap }: { tahap: Tahap }) {
   const gaya = GAYA_TAHAP[tahap]
-  const lolos = RING_LOLOS[tahap]
   return (
     <span
       className={`inline-flex h-6 items-center gap-1.5 rounded-md px-1.5 text-[11px] font-semibold whitespace-nowrap ${gaya.lencana}`}
       aria-label={`Tahap ${gaya.label}`}
     >
-      <span className="flex items-center gap-0.5" aria-hidden>
-        {([1, 2, 3] as const).map((r) => (
-          <span
-            key={r}
-            className={`h-3 w-1 rounded-full ${r <= lolos ? gaya.titik : "bg-current opacity-20"}`}
-          />
-        ))}
-      </span>
+      <span className={`size-2 rounded-full ${gaya.titik}`} aria-hidden />
       {tahap === "DITOLAK" && <HugeiconsIcon icon={Alert02Icon} strokeWidth={2} className="size-3" aria-hidden />}
       {TEKS_CHIP[tahap]}
     </span>
@@ -146,12 +149,41 @@ function IkonRingTunggal({ tahap }: { tahap: Tahap }) {
 }
 
 /// Lebar kolom beku — dipakai header DAN badan supaya `left` keduanya sama.
-/// Salah 1px di sini membuat kolom kedua menindih yang pertama saat digulir.
 const L_CEKLIS = 40
-const L_RING = 92
+const L_RING = 76
+const L_STATUS = 116
 const L_NOMOR = 132
 const X_RING = L_CEKLIS
-const X_NOMOR = L_CEKLIS + L_RING
+const X_STATUS = X_RING + L_RING
+const X_NOMOR = X_STATUS + L_STATUS
+
+function statusLabel(
+  row: BarisVerifikasi,
+  tahap: Tahap,
+  modeBelumDibaca: boolean,
+  modeRing: ModeRing,
+): string {
+  if (modeBelumDibaca) return "Belum dibaca"
+  if (modeRing === "tunggal") {
+    if (row.status === "DITOLAK") return "Perlu Review"
+    if (row.status === "DIVERIFIKASI" || row.status === "DIGUNAKAN") return "Disetujui"
+    return "Pending"
+  }
+  if (tahap === "V3") return "Disetujui"
+  if (tahap === "DITOLAK") return "Perlu Review"
+  return "Pending"
+}
+
+function statusKelas(label: string): string {
+  if (label === "Disetujui") {
+    return "bg-green-500/10 text-green-700 ring-1 ring-inset ring-green-500/25 dark:text-green-400"
+  }
+  if (label === "Perlu Review") {
+    return "bg-red-500/10 text-red-700 ring-1 ring-inset ring-red-500/25 dark:text-red-400"
+  }
+  if (label === "Belum dibaca") return GAYA_BELUM_DIBACA.lencana
+  return "bg-neutral-500/10 text-neutral-700 ring-1 ring-inset ring-neutral-500/20 dark:text-neutral-300"
+}
 
 export function TabelVerifikasi({
   rows,
@@ -221,6 +253,13 @@ export function TabelVerifikasi({
               Ring
             </th>
             <th
+              className={thBeku}
+              style={{ left: X_STATUS, width: L_STATUS, minWidth: L_STATUS }}
+              title="Status proses verifikasi"
+            >
+              Status
+            </th>
+            <th
               className={`${thBeku} border-border/70 border-r`}
               style={{ left: X_NOMOR, width: L_NOMOR, minWidth: L_NOMOR }}
               title="Nomor pelanggan (langganan)"
@@ -228,23 +267,25 @@ export function TabelVerifikasi({
               No. Pel
             </th>
             <th style={{ minWidth: 220 }}>Nama</th>
+            <th style={{ minWidth: 280 }}>Alamat</th>
+            <th style={{ minWidth: 84 }} title="Kode rute pembacaan">Rute</th>
+            {!modeBelumDibaca && (
+              <th style={{ minWidth: 140 }} title="Keterangan saat pencatatan">Ket Catat</th>
+            )}
             {!modeBelumDibaca && (
               <>
-                <th className="text-right" style={{ minWidth: 88 }} title="Stand awal (angka meter bulan lalu)">ST Awal</th>
+                <th className="text-right" style={{ minWidth: 88 }} title="Stand awal aktif">ST Awal</th>
                 <th className="text-right" style={{ minWidth: 88 }} title="Stand akhir hasil catat petugas / laporan pelanggan">ST Akhir</th>
-                <th className="text-right" style={{ minWidth: 72 }} title="Pemakaian hasil catat (m³)">Pakai</th>
-                <th className="text-right" style={{ minWidth: 72 }} title="Pemakaian bulan lalu (m³)">Lalu</th>
-                <th className="text-right" style={{ minWidth: 84 }} title="Deviasi pemakaian terhadap bulan lalu">Dev %</th>
-                <th style={{ minWidth: 140 }} title="Keterangan kondisi saat dicatat">Kondisi</th>
+                <th className="text-right" style={{ minWidth: 88 }} title="Stand awal hasil revisi">ST Revisi</th>
                 <th className="text-right" style={{ minWidth: 96 }} title="Stand akhir resmi (setelah diverifikasi; * = dikoreksi)">ST Resmi</th>
-                <th className="text-right" style={{ minWidth: 88 }} title="Pemakaian yang ditagihkan (m³)">Tagihan</th>
+                <th className="text-right" style={{ minWidth: 72 }} title="Pemakaian periode ini (m³)">Pakai</th>
+                <th className="text-right" style={{ minWidth: 72 }} title="Pemakaian bulan sebelumnya (m³)">Lalu</th>
+                <th className="text-right" style={{ minWidth: 84 }} title="Deviasi pemakaian terhadap bulan lalu">Dev %</th>
+                <th className="text-right" style={{ minWidth: 88 }} title="Pemakaian tagihan dalam m³">Tagihan</th>
               </>
             )}
-            <th style={{ minWidth: 84 }} title="Kode rute pembacaan">Rute</th>
             <th style={{ minWidth: 130 }} title="Petugas pencatat">Petugas</th>
-            {!modeBelumDibaca && <th style={{ minWidth: 92 }} title="Tanggal catat">Tgl Catat</th>}
-            <th style={{ minWidth: 300 }}>Alamat</th>
-            <th style={{ minWidth: 132 }}>Status</th>
+            {!modeBelumDibaca && <th style={{ minWidth: 155 }} title="Tanggal dan waktu catat">Tgl Catat</th>}
           </tr>
         </thead>
         <tbody>
@@ -260,15 +301,9 @@ export function TabelVerifikasi({
             const hasilStandAkhir = row.pembacaan?.standAkhir ?? null
             const hasilPemakaian = row.pembacaan?.pemakaianM3 ?? null
 
-            const labelStatus = modeBelumDibaca
-              ? gaya.label
-              : modeRing === "tunggal"
-                ? tahap === "V3"
-                  ? "Terverifikasi"
-                  : tahap === "DITOLAK"
-                    ? "Cek ulang"
-                    : "Menunggu"
-                : gaya.label
+            const labelStatus = statusLabel(row, tahap, modeBelumDibaca, modeRing)
+            const standAwalAktif = row.standAwalRevisi ?? row.standAwal
+            const hasilTagihan = row.pemakaianTagihVerif ?? hasilPemakaian
 
             // Sel beku butuh latar SENDIRI supaya isi kolom lain tidak
             // menembus saat digulir.
@@ -320,14 +355,41 @@ export function TabelVerifikasi({
                     <ChipRing tahap={modeBelumDibaca ? "MENUNGGU" : tahap} />
                   )}
                 </td>
+                <td className={`${latarBeku} text-xs`} style={{ left: X_STATUS, width: L_STATUS }}>
+                  <Lencana kelas={statusKelas(labelStatus)} anak={labelStatus} />
+                </td>
                 <td className={`${latarBeku} border-border/70 border-r font-mono`} style={{ left: X_NOMOR }}>
                   {nomor}
                 </td>
                 <td className="max-w-60 truncate font-medium" title={nama}>{nama}</td>
+                <td className="text-muted-foreground max-w-80 truncate" title={alamat}>{alamat}</td>
+                <td className="text-muted-foreground font-mono">{row.pelanggan?.rute?.kode ?? "—"}</td>
+                {!modeBelumDibaca && (
+                  <td className="text-muted-foreground max-w-36 truncate">
+                    {row.kondisi ? (LABEL_KONDISI_CATAT[row.kondisi] ?? row.kondisi) : "—"}
+                    {row.jenisInput && row.jenisInput !== "PETUGAS" && (
+                      <span
+                        className="ml-1 rounded bg-muted px-1 py-0.5 text-[10px] text-muted-foreground"
+                        title={row.alasanManual ?? "Laporan ditambahkan secara manual"}
+                      >
+                        Manual
+                      </span>
+                    )}
+                  </td>
+                )}
                 {!modeBelumDibaca && (
                   <>
-                    <td className="text-right tabular-nums">{angka(row.standAwal)}</td>
+                    <td className="text-right tabular-nums">{angka(standAwalAktif)}</td>
                     <td className="text-right tabular-nums">{angka(row.standAkhir)}</td>
+                    <td className="text-right tabular-nums">{angka(row.standAwalRevisi)}</td>
+                    <td className="text-right tabular-nums">
+                      {angka(hasilStandAkhir)}
+                      {row.pembacaan &&
+                        row.standAkhirRevisi != null &&
+                        row.standAkhirRevisi !== row.standAkhir && (
+                          <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400" title="Dikoreksi saat verifikasi">*</span>
+                        )}
+                    </td>
                     <td className="text-right font-medium tabular-nums">{angka(row.pemakaian)}</td>
                     <td className="text-muted-foreground text-right tabular-nums">{angka(row.pemakaianLalu)}</td>
                     <td className="text-right tabular-nums">
@@ -339,27 +401,11 @@ export function TabelVerifikasi({
                         `${row.persentase}%`
                       )}
                     </td>
-                    <td className="text-muted-foreground max-w-36 truncate">
-                      {row.kondisi ? (LABEL_KONDISI_CATAT[row.kondisi] ?? row.kondisi) : "—"}
-                    </td>
-                    <td className="text-right tabular-nums">
-                      {angka(hasilStandAkhir)}
-                      {row.pembacaan &&
-                        row.standAkhirRevisi != null &&
-                        row.standAkhirRevisi !== row.standAkhir && (
-                          <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400" title="Dikoreksi saat verifikasi">*</span>
-                        )}
-                    </td>
-                    <td className="text-right tabular-nums">{angka(hasilPemakaian)}</td>
+                    <td className="text-right tabular-nums">{angka(hasilTagihan)}</td>
                   </>
                 )}
-                <td className="text-muted-foreground font-mono">{row.pelanggan?.rute?.kode ?? "—"}</td>
                 <td className="text-muted-foreground max-w-32 truncate">{row.pencatat?.namaLapangan ?? "—"}</td>
                 {!modeBelumDibaca && <td className="text-muted-foreground tabular-nums">{tanggal(row.tanggalCatat)}</td>}
-                <td className="text-muted-foreground max-w-80 truncate" title={alamat}>{alamat}</td>
-                <td>
-                  <Lencana kelas={gaya.lencana} anak={labelStatus} />
-                </td>
               </tr>
             )
           })}

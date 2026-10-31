@@ -89,6 +89,7 @@ export async function verifikasiMassal(opsi: Opsi): Promise<HasilVerifMassal> {
       tanggalCatat: true,
       fotoStandUrl: true,
       persentase: true,
+      jenisInput: true,
       verif1At: true,
       verif2At: true,
       verif3At: true,
@@ -222,7 +223,12 @@ export async function verifikasiMassal(opsi: Opsi): Promise<HasilVerifMassal> {
       // tangan manusia akan membuat jejak audit berbohong.
       const pemakaianTagih = l.pemakaianTagihVerif ?? l.pemakaian
       const alasanTaksir =
-        l.pemakaianTagihVerif !== null ? "OVERRIDE_MANUAL" : null
+        l.jenisInput === "MANUAL_MASSAL" &&
+        pemakaianTagih === l.pemakaian
+          ? "MANUAL_ADD"
+          : l.pemakaianTagihVerif !== null
+            ? "OVERRIDE_MANUAL"
+            : null
 
       const kini = new Date()
       await prisma.$transaction(async (tx) => {

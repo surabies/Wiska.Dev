@@ -87,6 +87,32 @@ const listQuerySchema = paginationQuerySchema.extend({
   /// itu: seorang pencatat bisa memegang beberapa rute, dan satu rute bisa
   /// berpindah tangan di tengah bulan.
   ruteId: z.string().optional(),
+  wilayahDistId: z.string().optional(),
+  zonaId: z.string().optional(),
+  ruteLanjutanId: z.string().optional(),
+  pencatatLanjutanId: z.string().optional(),
+  kondisiLanjutan: z.enum(KondisiCatat).optional(),
+  tarifGolonganId: z.string().optional(),
+  kecamatanId: z.string().optional(),
+  kelurahanId: z.string().optional(),
+  alamat: z.string().trim().min(1).optional(),
+  noPel: z.string().trim().min(1).optional(),
+  nama: z.string().trim().min(1).optional(),
+  standKoreksi: z.enum(["ya", "tidak"]).optional(),
+  statusSpt: z.enum(["ya", "tidak"]).optional(),
+  statusBaca: z.enum(["ya", "tidak"]).optional(),
+  tanggalBacaDari: z.string().trim().optional(),
+  tanggalBacaSampai: z.string().trim().optional(),
+  kategori: z.enum(["ONSITE", "OFFSITE"]).optional(),
+  pemakaianRangeDari: z.coerce.number().int().optional(),
+  pemakaianRangeSampai: z.coerce.number().int().optional(),
+  pemakaianOperator: z.enum(["=", ">", ">=", "<", "<="]).optional(),
+  pemakaian: z.coerce.number().int().optional(),
+  persentaseOperator: z.enum(["=", ">", ">=", "<", "<="]).optional(),
+  persentase: z.coerce.number().int().optional(),
+  verifWil: z.enum(["ya", "tidak"]).optional(),
+  verifKasie: z.enum(["ya", "tidak"]).optional(),
+  verifPusat: z.enum(["ya", "tidak"]).optional(),
   /// Kondisi catat lapangan (NORMAL, RUMAH_KOSONG, METER_RUSAK, …). Kolomnya
   /// sudah tampil di tabel /dashboard/laporan-harian sejak lama, tapi tanpa
   /// penyaring ini pertanyaan pengawasan yang wajar — "berapa meter rusak
@@ -127,11 +153,19 @@ const PILIH_RINGKAS = {
   standAwal: true,
   standAkhir: true,
   standAkhirRevisi: true,
+  standAwalRevisi: true,
+  kondisiRevisi: true,
+  standAngkatLama: true,
+  standAwalMeterBaru: true,
+  meterVerifId: true,
+  blokTarifVerif: true,
   pemakaianTagihVerif: true,
   pemakaian: true,
   pemakaianLalu: true,
   persentase: true,
   kondisi: true,
+  jenisInput: true,
+  alasanManual: true,
   tanggalCatat: true,
   /// Usulan dari lapangan ikut di baris ringkas: layar tinjauan menyaring
   /// dengan `adaUsulan` lalu menampilkannya langsung di tabel, tanpa perlu
@@ -202,6 +236,127 @@ laporanHarianRouter.get(
           },
         ],
       })
+    }
+    if (query.alamat) {
+      and.push({
+        OR: [
+          { alamatPelanggan: { contains: query.alamat, mode: "insensitive" as const } },
+          { pelanggan: { is: { alamat: { contains: query.alamat, mode: "insensitive" as const } } } },
+        ],
+      })
+    }
+    if (query.noPel) {
+      and.push({
+        OR: [
+          { nomorLangganan: { contains: query.noPel } },
+          { pelanggan: { is: { nomorLangganan: { contains: query.noPel } } } },
+        ],
+      })
+    }
+    if (query.nama) {
+      and.push({
+        OR: [
+          { namaPelanggan: { contains: query.nama, mode: "insensitive" as const } },
+          { pelanggan: { is: { nama: { contains: query.nama, mode: "insensitive" as const } } } },
+        ],
+      })
+    }
+    if (query.wilayahDistId) {
+      and.push({
+        pelanggan: {
+          is: { seksiCater: { is: { wilayahDistId: query.wilayahDistId } } },
+        },
+      })
+    }
+    if (query.zonaId) and.push({ pelanggan: { is: { zonaId: query.zonaId } } })
+    if (query.ruteLanjutanId) {
+      and.push({ pelanggan: { is: { ruteId: query.ruteLanjutanId } } })
+    }
+    if (query.pencatatLanjutanId) {
+      and.push({ pencatatId: query.pencatatLanjutanId })
+    }
+    if (query.kondisiLanjutan) and.push({ kondisi: query.kondisiLanjutan })
+    if (query.tarifGolonganId) {
+      and.push({ pelanggan: { is: { tarifGolonganId: query.tarifGolonganId } } })
+    }
+    if (query.kecamatanId) {
+      and.push({ pelanggan: { is: { kecamatanId: query.kecamatanId } } })
+    }
+    if (query.kelurahanId) {
+      and.push({ pelanggan: { is: { kelurahanId: query.kelurahanId } } })
+    }
+    if (query.standKoreksi) {
+      const adaRevisi = {
+        OR: [
+          { standAwalRevisi: { not: null } },
+          { standAkhirRevisi: { not: null } },
+        ],
+      }
+      and.push(
+        query.standKoreksi === "ya"
+          ? adaRevisi
+          : {
+              standAwalRevisi: null,
+              standAkhirRevisi: null,
+            },
+      )
+    }
+    if (query.statusSpt) {
+      and.push(
+        query.statusSpt === "ya"
+          ? { pelanggan: { is: { status: "TUTUP_SPT" } } }
+          : {
+              OR: [
+                { pelanggan: { is: { status: { not: "TUTUP_SPT" } } } },
+                { pelanggan: null },
+              ],
+            },
+      )
+    }
+    if (query.statusBaca) {
+      and.push({ isVerified: query.statusBaca === "ya" })
+    }
+    const tanggalBaca = rentangTanggalWIB(query.tanggalBacaDari, query.tanggalBacaSampai)
+    if (tanggalBaca) and.push({ tanggalCatat: tanggalBaca })
+    if (query.kategori) and.push({ kategori: query.kategori })
+    if (query.pemakaianRangeDari !== undefined || query.pemakaianRangeSampai !== undefined) {
+      const pemakaian: Record<string, number> = {}
+      if (query.pemakaianRangeDari !== undefined) pemakaian.gte = query.pemakaianRangeDari
+      if (query.pemakaianRangeSampai !== undefined) pemakaian.lte = query.pemakaianRangeSampai
+      and.push({ pemakaian })
+    }
+    const operatorPrisma = {
+      "=": "equals",
+      ">": "gt",
+      ">=": "gte",
+      "<": "lt",
+      "<=": "lte",
+    } as const
+    if (query.pemakaian !== undefined) {
+      and.push({
+        pemakaian: {
+          [operatorPrisma[query.pemakaianOperator ?? "="]]: query.pemakaian,
+        },
+      })
+    }
+    if (query.persentase !== undefined) {
+      and.push({
+        persentase: {
+          [operatorPrisma[query.persentaseOperator ?? "="]]: query.persentase,
+        },
+      })
+    }
+    for (const [parameter, kolom] of [
+      ["verifWil", "verif1At"],
+      ["verifKasie", "verif2At"],
+      ["verifPusat", "verif3At"],
+    ] as const) {
+      const nilai = query[parameter]
+      if (nilai) {
+        and.push({
+          [kolom]: nilai === "ya" ? { not: null } : null,
+        })
+      }
     }
     const where = {
       ...(tglCatat ? { tanggalCatat: tglCatat } : {}),
@@ -2301,7 +2456,11 @@ laporanHarianRouter.patch(
             ...dataStandAngkat,
             standAkhirMeterBaru: standAkhir,
           })
-        : Math.max(0, standAkhir - laporan.standAwal)
+        : standAkhir - laporan.standAwal
+    if (pemakaianRiil < 0)
+      throw new BadRequestError(
+        "Pemakaian hasil stand negatif. Koreksi dan tinjau datanya sebelum pengesahan V3.",
+      )
 
     // TIDAK ADA TAKSASI OTOMATIS.
     //
@@ -2319,9 +2478,12 @@ laporanHarianRouter.patch(
     // yang sama di verif-massal.ts.
     const pemakaianTagih = pemakaianTagihVerif ?? laporan.pemakaian
     const alasanTaksir =
-      pemakaianTagihVerif != null && pemakaianTagihVerif !== pemakaianRiil
-        ? "OVERRIDE_MANUAL"
-        : null
+      laporan.jenisInput === "MANUAL_MASSAL" &&
+      pemakaianTagih === laporan.pemakaian
+        ? "MANUAL_ADD"
+        : pemakaianTagihVerif != null && pemakaianTagihVerif !== pemakaianRiil
+          ? "OVERRIDE_MANUAL"
+          : null
 
     const kini = new Date()
 
@@ -2333,6 +2495,7 @@ laporanHarianRouter.patch(
         sumber: "PETUGAS",
         laporanId: laporan.id,
         data: {
+          ...(meterVerifId ? { meterId: meterVerifId } : {}),
           standLalu:
             dataStandAngkat?.standAwalMeterBaru ?? laporan.standAwal,
           standAkhir,
@@ -2392,6 +2555,503 @@ laporanHarianRouter.patch(
       })
     })
     return ok(c, row)
+  },
+)
+
+/// Verifikasi satu klik: akun menandai tahap miliknya dengan data yang sudah
+/// tersimpan. Koreksi data dilakukan lewat endpoint /koreksi, bukan di sini.
+laporanHarianRouter.patch(
+  "/:id/verifikasi-langsung",
+  requireRole(...ROLE_GROUPS.SUPERVISOR_UP),
+  async (c) => {
+    const id = c.req.param("id")
+    const requester = getSessionUser(c)
+    const ring = (ROLE_GROUPS.SENIOR_UP as readonly string[]).includes(
+      requester.role,
+    )
+      ? 3
+      : (ROLE_GROUPS.MANAGEMENT_UP as readonly string[]).includes(
+            requester.role,
+          )
+        ? 2
+        : 1
+    const laporan = await prisma.laporanHarianPetugas.findUnique({
+      where: { id },
+    })
+    if (!laporan) throw new NotFoundError("LaporanHarianPetugas")
+    if (laporan.pembacaanId || laporan.isVerified)
+      throw new ConflictError("Laporan sudah menjadi pembacaan resmi")
+
+    const kini = new Date()
+    const auditMeta = auditMetaFromRequest(c.req.raw)
+    if (ring === 1) {
+      if (laporan.verif1At)
+        throw new ConflictError("Tahap V1 sudah ditandai diverifikasi")
+      if (laporan.verif2At || laporan.verif3At)
+        throw new ConflictError(
+          "V1 tidak dapat diulang setelah tahap berikutnya diverifikasi",
+        )
+      if (!laporan.pelangganId)
+        throw new BadRequestError(
+          "Alamat belum tertaut ke data pelanggan; koreksi data pelanggan sebelum verifikasi.",
+        )
+      const meterId = laporan.meterVerifId
+        ? (
+            await prisma.meter.findFirst({
+              where: {
+                id: laporan.meterVerifId,
+                pelangganId: laporan.pelangganId,
+              },
+              select: { id: true },
+            })
+          )?.id
+        : (
+            await prisma.meter.findMany({
+              where: { pelangganId: laporan.pelangganId, isAktif: true },
+              select: { id: true },
+              take: 2,
+            })
+          ).length === 1
+          ? (
+              await prisma.meter.findFirst({
+                where: { pelangganId: laporan.pelangganId, isAktif: true },
+                select: { id: true },
+              })
+            )?.id
+          : null
+      if (!meterId)
+        throw new BadRequestError(
+          "Meter aktif tidak dapat ditentukan dengan pasti. Lengkapi pilihan meter lewat Edit sebelum verifikasi.",
+        )
+
+      const row = await prisma.$transaction(async (tx) => {
+        const berubah = await tx.laporanHarianPetugas.updateMany({
+          where: {
+            id,
+            verif1At: null,
+            verif2At: null,
+            verif3At: null,
+            pembacaanId: null,
+            isVerified: false,
+          },
+          data: {
+            verif1At: kini,
+            verif1ById: requester.id,
+            meterVerifId: meterId,
+            verifiedAt: null,
+            verifiedById: null,
+          },
+        })
+        if (berubah.count !== 1)
+          throw new ConflictError("Status laporan berubah. Muat ulang sebelum mencoba lagi.")
+        await recordAudit(tx, {
+          userId: requester.id,
+          aksi: "VERIFIKASI_V1_LANGSUNG",
+          entitas: "LaporanHarianPetugas",
+          entitasId: id,
+          perubahan: {
+            sebelum: { verif1At: laporan.verif1At, verif1ById: laporan.verif1ById },
+            sesudah: { verif1At: kini, verif1ById: requester.id, meterVerifId: meterId },
+          },
+          ...auditMeta,
+        })
+        return tx.laporanHarianPetugas.findUniqueOrThrow({ where: { id } })
+      })
+      return ok(c, { ring, laporan: row })
+    }
+
+    if (ring === 2) {
+      if (!laporan.verif1At)
+        throw new BadRequestError(
+          "V2 menunggu V1 — laporan belum diperiksa supervisor",
+        )
+      if (laporan.verif2At)
+        throw new ConflictError("Tahap V2 sudah ditandai diverifikasi")
+      if (laporan.verif3At)
+        throw new ConflictError(
+          "V2 tidak dapat diulang setelah tahap V3 diverifikasi",
+        )
+      const row = await prisma.$transaction(async (tx) => {
+        const berubah = await tx.laporanHarianPetugas.updateMany({
+          where: {
+            id,
+            verif1At: { not: null },
+            verif2At: null,
+            pembacaanId: null,
+            isVerified: false,
+          },
+          data: { verif2At: kini, verif2ById: requester.id },
+        })
+        if (berubah.count !== 1)
+          throw new ConflictError("Status laporan berubah. Muat ulang sebelum mencoba lagi.")
+        await recordAudit(tx, {
+          userId: requester.id,
+          aksi: "VERIFIKASI_V2_LANGSUNG",
+          entitas: "LaporanHarianPetugas",
+          entitasId: id,
+          perubahan: {
+            sebelum: { verif2At: laporan.verif2At, verif2ById: laporan.verif2ById },
+            sesudah: { verif2At: kini, verif2ById: requester.id },
+          },
+          ...auditMeta,
+        })
+        return tx.laporanHarianPetugas.findUniqueOrThrow({ where: { id } })
+      })
+      return ok(c, { ring, laporan: row })
+    }
+
+    if (!laporan.verif1At || !laporan.verif2At)
+      throw new BadRequestError("V3 menunggu V1 dan V2 selesai")
+    if (laporan.verif3At)
+      throw new ConflictError("Tahap V3 sudah ditandai diverifikasi")
+    if (!laporan.pelangganId)
+      throw new BadRequestError(
+        "Alamat belum tertaut ke data pelanggan; koreksi data pelanggan sebelum pengesahan V3.",
+      )
+    const meter = laporan.meterVerifId
+      ? await prisma.meter.findFirst({
+          where: {
+            id: laporan.meterVerifId,
+            pelangganId: laporan.pelangganId,
+          },
+        })
+      : await (async () => {
+          const aktif = await prisma.meter.findMany({
+            where: { pelangganId: laporan.pelangganId!, isAktif: true },
+            take: 2,
+          })
+          return aktif.length === 1 ? aktif[0] ?? null : null
+        })()
+    if (!meter)
+      throw new BadRequestError(
+        "Meter aktif tidak dapat ditentukan dengan pasti. Lengkapi pilihan meter lewat Edit sebelum pengesahan V3.",
+      )
+
+    const kondisi = laporan.kondisiRevisi ?? laporan.kondisi
+    const standAwal = laporan.standAwalRevisi ?? laporan.standAwal
+    const standAkhir = laporan.standAkhirRevisi ?? laporan.standAkhir
+    let pemakaianRiil: number
+    let standLalu = standAwal
+    if (kondisi === "MB") {
+      const dataStandAngkat = validasiStandAngkat(
+        kondisi,
+        laporan.standAngkatLama,
+        laporan.standAwalMeterBaru,
+      )
+      pemakaianRiil = hitungPemakaianGantiMeter({
+        standAwalLama: standAwal,
+        ...dataStandAngkat!,
+        standAkhirMeterBaru: standAkhir,
+      })
+      standLalu = dataStandAngkat!.standAwalMeterBaru
+    } else {
+      pemakaianRiil = standAkhir - standAwal
+    }
+    if (pemakaianRiil < 0)
+      throw new BadRequestError(
+        "Pemakaian hasil stand negatif. Koreksi dan tinjau datanya sebelum pengesahan V3.",
+      )
+    const pemakaianTagih =
+      laporan.pemakaianTagihVerif ?? laporan.pemakaian
+    if (pemakaianTagih < 0)
+      throw new BadRequestError(
+        "Pemakaian tagih bernilai negatif dan harus ditinjau sebelum pengesahan V3.",
+      )
+
+    const hasil = await prisma.$transaction(async (tx) => {
+      const berubah = await tx.laporanHarianPetugas.updateMany({
+        where: {
+          id,
+          verif1At: { not: null },
+          verif2At: { not: null },
+          verif3At: null,
+          pembacaanId: null,
+          isVerified: false,
+        },
+        data: { verif3At: kini, verif3ById: requester.id },
+      })
+      if (berubah.count !== 1)
+        throw new ConflictError("Status laporan berubah. Muat ulang sebelum mencoba lagi.")
+
+      const pembacaan = await simpanPembacaanResmi(tx, {
+        pelangganId: laporan.pelangganId,
+        meterId: meter.id,
+        periode: laporan.periode,
+        sumber: "PETUGAS",
+        laporanId: id,
+        data: {
+          standLalu,
+          standAkhir,
+          pemakaianM3: pemakaianTagih,
+          pemakaianRiil,
+          alasanTaksir:
+            laporan.jenisInput === "MANUAL_MASSAL" &&
+            pemakaianTagih === laporan.pemakaian
+              ? "MANUAL_ADD"
+              : laporan.pemakaianTagihVerif != null &&
+                  laporan.pemakaianTagihVerif !== pemakaianRiil
+                ? "OVERRIDE_MANUAL"
+                : null,
+          blokTarif:
+            laporan.blokTarifVerif ?? tentukanBlok(pemakaianTagih),
+          pemakaianLalu: laporan.pemakaianLalu,
+          kondisi,
+          kategori: laporan.kategori,
+          pencatatId: laporan.pencatatId,
+          tanggalCatat: laporan.tanggalCatat,
+          fotoBukti: laporan.fotoStandUrl,
+        },
+      })
+      if (laporan.pelangganId) {
+        await tx.daftarCatat.updateMany({
+          where: { periode: laporan.periode, pelangganId: laporan.pelangganId },
+          data: { status: "DICATAT", selesaiAt: kini },
+        })
+      }
+      const row = await tx.laporanHarianPetugas.update({
+        where: { id },
+        data: {
+          isVerified: true,
+          verifiedAt: kini,
+          verifiedById: requester.id,
+          pembacaanId: pembacaan.id,
+        },
+        include: { pembacaan: true },
+      })
+      await recordAudit(tx, {
+        userId: requester.id,
+        aksi: "VERIFIKASI_V3_LANGSUNG",
+        entitas: "LaporanHarianPetugas",
+        entitasId: id,
+        perubahan: {
+          sebelum: { verif3At: laporan.verif3At, pembacaanId: laporan.pembacaanId },
+          sesudah: { verif3At: kini, pembacaanId: pembacaan.id },
+        },
+        ...auditMeta,
+      })
+      return row
+    })
+    return ok(c, { ring, laporan: hasil })
+  },
+)
+
+const koreksiLaporanSchema = z.object({
+  standAwalRevisi: z.coerce.number().int().min(0).nullable().optional(),
+  standAkhirRevisi: z.coerce.number().int().min(0).nullable().optional(),
+  pemakaianTagihVerif: z.coerce.number().int().min(0).nullable().optional(),
+  kondisiRevisi: z.enum(KondisiCatat).nullable().optional(),
+  standAngkatLama: z.coerce.number().int().min(0).nullable().optional(),
+  standAwalMeterBaru: z.coerce.number().int().min(0).nullable().optional(),
+  meterVerifId: z.string().nullable().optional(),
+  alasan: z.string().trim().min(3).max(500),
+})
+
+laporanHarianRouter.patch(
+  "/:id/koreksi",
+  requireRole(...ROLE_GROUPS.STAFF_UP),
+  validate("json", koreksiLaporanSchema),
+  async (c) => {
+    const id = c.req.param("id")
+    const body = c.req.valid("json")
+    const requester = getSessionUser(c)
+    const laporan = await prisma.laporanHarianPetugas.findUnique({
+      where: { id },
+    })
+    if (!laporan) throw new NotFoundError("LaporanHarianPetugas")
+
+    const staff = requester.role === "STAFF"
+    const bolehSenior = (ROLE_GROUPS.SENIOR_UP as readonly string[]).includes(
+      requester.role,
+    )
+    const bolehManajemen = (
+      ROLE_GROUPS.MANAGEMENT_UP as readonly string[]
+    ).includes(requester.role)
+    const bolehSupervisor = (
+      ROLE_GROUPS.SUPERVISOR_UP as readonly string[]
+    ).includes(requester.role)
+    const koreksiDiizinkan =
+      staff ||
+      (laporan.verif3At || laporan.pembacaanId
+        ? bolehSenior
+        : laporan.verif2At
+          ? bolehSenior
+          : laporan.verif1At
+            ? bolehManajemen
+            : bolehSupervisor)
+    if (!koreksiDiizinkan)
+      throw new ForbiddenError(
+        "Role Anda tidak berwenang mengoreksi tahap laporan ini.",
+      )
+
+    if (laporan.pembacaanId) {
+      const tagihan = await prisma.tagihan.findUnique({
+        where: { pembacaanId: laporan.pembacaanId },
+        select: { id: true },
+      })
+      if (tagihan)
+        throw new ConflictError(
+          "Pembacaan ini sudah digunakan tagihan; koreksi biasa ditolak.",
+        )
+    }
+    const periode = await prisma.periodePenagihan.findUnique({
+      where: { periode: laporan.periode },
+      select: { status: true },
+    })
+    if (periode?.status === "TERKUNCI")
+      throw new ConflictError("Periode sudah ditutup; laporan tidak dapat dikoreksi.")
+
+    const kondisiRevisi =
+      body.kondisiRevisi !== undefined
+        ? body.kondisiRevisi
+        : laporan.kondisiRevisi
+    const kondisiEfektif = kondisiRevisi ?? laporan.kondisi
+    const standAwalRevisi =
+      body.standAwalRevisi !== undefined
+        ? body.standAwalRevisi
+        : laporan.standAwalRevisi
+    if (kondisiEfektif === "REV_PENCATAT" && standAwalRevisi == null)
+      throw new BadRequestError(
+        "Kondisi Revisi Pencatat memerlukan nilai ST Awal revisi.",
+      )
+    if (kondisiEfektif !== "REV_PENCATAT" && standAwalRevisi != null)
+      throw new BadRequestError(
+        "ST Awal revisi hanya boleh diisi untuk kondisi Revisi Pencatat.",
+      )
+
+    const standAkhirRevisi =
+      body.standAkhirRevisi !== undefined
+        ? body.standAkhirRevisi
+        : laporan.standAkhirRevisi
+    const pemakaianTagihVerif =
+      body.pemakaianTagihVerif !== undefined
+        ? body.pemakaianTagihVerif
+        : laporan.pemakaianTagihVerif
+    const standAngkatLama =
+      body.standAngkatLama !== undefined
+        ? body.standAngkatLama
+        : laporan.standAngkatLama
+    const standAwalMeterBaru =
+      body.standAwalMeterBaru !== undefined
+        ? body.standAwalMeterBaru
+        : laporan.standAwalMeterBaru
+    const meterVerifId =
+      body.meterVerifId !== undefined
+        ? body.meterVerifId
+        : laporan.meterVerifId
+    if (meterVerifId) {
+      if (!laporan.pelangganId)
+        throw new BadRequestError(
+          "Pelanggan laporan belum tertaut; meter tujuan tidak dapat divalidasi.",
+        )
+      const meter = await prisma.meter.findFirst({
+        where: {
+          id: meterVerifId,
+          pelangganId: laporan.pelangganId,
+        },
+        select: { id: true },
+      })
+      if (!meter)
+        throw new BadRequestError("Meter tujuan bukan milik pelanggan laporan ini.")
+    }
+    if (kondisiEfektif === "MB") {
+      validasiStandAngkat(kondisiEfektif, standAngkatLama, standAwalMeterBaru)
+      await validasiMeterBaru(laporan.pelangganId, meterVerifId)
+    }
+    if (laporan.pembacaanId && !meterVerifId)
+      throw new BadRequestError(
+        "Pembacaan resmi harus tetap terhubung ke meter pelanggan.",
+      )
+
+    const standAwalAktif = standAwalRevisi ?? laporan.standAwal
+    const standAkhirAktif = standAkhirRevisi ?? laporan.standAkhir
+    const pemakaianRiil =
+      kondisiEfektif === "MB"
+        ? hitungPemakaianGantiMeter({
+            standAwalLama: standAwalAktif,
+            standAngkatLama: standAngkatLama!,
+            standAwalMeterBaru: standAwalMeterBaru!,
+            standAkhirMeterBaru: standAkhirAktif,
+          })
+        : standAkhirAktif - standAwalAktif
+    if (pemakaianRiil < 0)
+      throw new BadRequestError(
+        "Pemakaian hasil koreksi negatif. Periksa kembali stand dan kondisi meter.",
+      )
+    const perubahan = {
+      standAwalRevisi,
+      standAkhirRevisi,
+      pemakaianTagihVerif,
+      kondisiRevisi,
+      standAngkatLama,
+      standAwalMeterBaru,
+      meterVerifId,
+    }
+    const dataLaporan = {
+      standAwalRevisi,
+      standAkhirRevisi,
+      pemakaianTagihVerif,
+      kondisiRevisi,
+      standAngkatLama,
+      standAwalMeterBaru,
+      meterVerifId,
+      ...(kondisiEfektif === "REV_PENCATAT"
+        ? { pemakaian: pemakaianRiil }
+        : {}),
+    }
+    const hasil = await prisma.$transaction(async (tx) => {
+      const row = await tx.laporanHarianPetugas.update({
+        where: { id },
+        data: dataLaporan,
+      })
+      if (laporan.pembacaanId) {
+        const pakaiTagih =
+          pemakaianTagihVerif ?? laporan.pemakaian
+        await tx.pembacaanMeter.update({
+          where: { id: laporan.pembacaanId },
+          data: {
+            standLalu:
+              kondisiEfektif === "MB"
+                ? standAwalMeterBaru!
+                : standAwalAktif,
+            standAkhir: standAkhirAktif,
+            pemakaianM3: pakaiTagih,
+            pemakaianRiil,
+            alasanTaksir:
+              laporan.jenisInput === "MANUAL_MASSAL" &&
+              pakaiTagih === laporan.pemakaian
+                ? "MANUAL_ADD"
+                : pemakaianTagihVerif != null &&
+                    pemakaianTagihVerif !== pemakaianRiil
+                  ? "OVERRIDE_MANUAL"
+                  : null,
+            kondisi: kondisiEfektif,
+          },
+        })
+      }
+      await recordAudit(tx, {
+        userId: requester.id,
+        aksi: "KOREKSI_LAPORAN_PETUGAS",
+        entitas: "LaporanHarianPetugas",
+        entitasId: id,
+        perubahan: {
+          alasan: body.alasan,
+          sebelum: {
+            standAwalRevisi: laporan.standAwalRevisi,
+            standAkhirRevisi: laporan.standAkhirRevisi,
+            pemakaianTagihVerif: laporan.pemakaianTagihVerif,
+            kondisiRevisi: laporan.kondisiRevisi,
+            standAngkatLama: laporan.standAngkatLama,
+            standAwalMeterBaru: laporan.standAwalMeterBaru,
+            meterVerifId: laporan.meterVerifId,
+          },
+          sesudah: perubahan,
+          pemakaianRiil,
+        },
+        ...auditMetaFromRequest(c.req.raw),
+      })
+      return row
+    })
+    return ok(c, hasil)
   },
 )
 
@@ -2481,7 +3141,12 @@ laporanHarianRouter.patch(
         verif2ById: null,
         verif3At: null,
         verif3ById: null,
+        standAwalRevisi: null,
         standAkhirRevisi: null,
+        kondisiRevisi: null,
+        standAngkatLama: null,
+        standAwalMeterBaru: null,
+        pemakaianTagihVerif: null,
         meterVerifId: null,
         blokTarifVerif: null,
       },
@@ -2585,7 +3250,12 @@ laporanHarianRouter.patch(
           data: {
             verif1At: null,
             verif1ById: null,
+            standAwalRevisi: null,
             standAkhirRevisi: null,
+            kondisiRevisi: null,
+            standAngkatLama: null,
+            standAwalMeterBaru: null,
+            pemakaianTagihVerif: null,
             meterVerifId: null,
             blokTarifVerif: null,
           },

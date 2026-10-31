@@ -234,6 +234,8 @@ enum AlasanTaksir {
   TAKSIRAN_BULAN_LALU
   NOL_TIDAK_ADA_AIR
   OVERRIDE_MANUAL
+  /// Pakai usulan Manual ADD All; bukan pemakaian aktual untuk histori.
+  MANUAL_ADD
 }
 
 enum UkuranMeter {

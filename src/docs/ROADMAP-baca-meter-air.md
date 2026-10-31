@@ -1,9 +1,9 @@
 # Roadmap — Aplikasi Baca Meter Air
 
-**Versi:** 0.1 (roadmap berbasis release gate)
+**Versi:** 0.2 (G0 pilot ditutup; berbasis release gate)
 **Tanggal:** 31 Oktober 2026
 **Status:** urutan kerja usulan; tidak menjanjikan tanggal rilis
-**Dokumen terkait:** [PRD](./PRD-baca-meter-air.md), [Definisi MVP](./MVP-baca-meter-air.md), [Arsitektur](./arsitektur-awal-baca-meter.md)
+**Dokumen terkait:** [Status dan progres proyek](./STATUS-baca-meter-air.md), [PRD](./PRD-baca-meter-air.md), [Definisi MVP](./MVP-baca-meter-air.md), [Aturan Verifikasi Berjenjang dan Koreksi](./aturan-verifikasi-berjenjang.md), [Arsitektur](./arsitektur-awal-baca-meter.md)
 
 ## Prinsip roadmap
 
@@ -13,24 +13,26 @@
 - Pisahkan pilot, produksi awal, dan peluncuran pasar. Kesiapan teknis tidak otomatis berarti kesiapan operasional, dukungan, kontrak, atau kepatuhan.
 - Perubahan database dilakukan lewat migration yang direview; jangan mengasumsikan draft migration sudah diterapkan.
 
-## Tahap 0 — putuskan kebijakan dan garis dasar data
+## Tahap 0 — kebijakan pilot disetujui; garis dasar billing produksi masih perlu
 
 **Tujuan:** hilangkan asumsi yang dapat mengubah angka resmi/tagihan.
 
+**Status:** keputusan scope dan kebijakan khusus pilot disetujui Wiska Prayoga pada 31 Oktober 2026 dan dicatat di [status proyek](./STATUS-baca-meter-air.md). Ini menutup G0 untuk pilot, bukan mengesahkan formula billing produksi atau membuktikan kesiapan teknis pilot.
+
 ### Pekerjaan
 
-- Sahkan PRD, persona, lingkup MVP, area pilot, pemilik keputusan, dan ukuran sukses.
-- Minta codebook legacy dan pemilik data menjelaskan kondisi kunjungan, `pakai_drd`, tarif, pembulatan, pemakaian nol/negatif, meter diganti/rollover, dan taksiran.
-- Rekonsiliasi beberapa periode serta sumber asli; sampel satu periode tidak cukup untuk mengesahkan rumus.
-- Tentukan otoritas Bagian Langganan, pembuat/pemeriksa koreksi, dan apakah koreksi memengaruhi tagihan, saldo, pembayaran, nota, atau refund.
-- Tetapkan kebijakan identitas warga, klaim `LanggananWarga`, upload anonim, foto/GPS, retensi, consent/pemberitahuan, dan dukungan.
-- Tentukan rute/perangkat pilot, beban puncak, SLA/SLO, RPO/RTO, pemilik incident, dan rollback.
+- [x] Sahkan batas pilot: rute CD112 di Wilayah Pelayanan 5, 1–7 November 2026, 20–30 sambungan, satu petugas/HP Android, hasil shadow-only.
+- [x] Sahkan aturan kondisi pembacaan konservatif, akses OTP warga, kiriman mandiri anonim/akun, bukti foto/GPS, retensi, dan koreksi manual.
+- [x] Tetapkan akuntabilitas G0 pada Wiska Prayoga; pengawas koreksi harus berbeda dari petugas dan ditunjuk sebelum pilot.
+- Sebelum billing resmi, sahkan [codebook kondisi catat](./codebook-kondisi-catatan-meter.md), pemakaian minimum, tarif/pembulatan, `pakai_drd`, serta rekonsiliasi beberapa periode dan sumber asli. Aturan pilot tidak mengesahkan formula billing produksi.
+- Sebelum go-live, tetapkan retensi catatan audit resmi, SLO/SLA, volume puncak, RPO/RTO, dan proses koreksi pasca-tagihan.
+- **Pra-pilot (belum selesai):** tetapkan petugas dan daftar sambungan, tunjuk akun supervisor, buktikan data pilot terisolasi dari closing/tagihan, periksa sumber nomor HP terverifikasi untuk OTP, publikasikan pemberitahuan, siapkan prosedur penghapusan/anonimisasi, dan luluskan seluruh gerbang teknis.
 
-### Exit gate
+### Exit gate kebijakan pilot
 
-- Keputusan bisnis, data, privasi, koreksi, dan sign-off billing tercatat.
-- Tidak ada kode legacy penting yang diam-diam dipetakan atau aturan konsumsi yang dianggap benar tanpa bukti.
-- Data sumber pilot dan proses rekonsiliasi dapat diakses oleh pemilik yang ditunjuk.
+- Keputusan G0 khusus pilot telah tercatat di [status proyek](./STATUS-baca-meter-air.md).
+- Output pilot tetap shadow-only; tidak ada keputusan di tahap ini yang memberi izin menerbitkan atau mengubah tagihan resmi.
+- **Status:** lulus untuk keputusan pilot; pekerjaan pra-pilot dan baseline billing produksi tetap menjadi blocker di tahap berikutnya.
 
 ## Tahap 1 — tutup vertical slice MVP
 
@@ -42,6 +44,9 @@
 - Selesaikan offline outbox, ID operasi/idempotensi, hash payload, per-item result, retry/checkpoint attachment, dan konflik yang dapat dipulihkan.
 - Pastikan jalur petugas dan warga hanya membuat satu `PembacaanMeter` resmi melalui validasi workflow yang sama.
 - Selesaikan uji akses object-level, validasi meter aktif/pelanggan/periode, race pada verify/reject/closing, dan audit before/after.
+- Implementasikan matriks per kondisi: `NORMAL` memakai delta; 14 anomali memakai prioritas taksasi rata-rata 12 bulan → 3 pemakaian terbesar → 3 bulan terakhir/riwayat tersedia, dibulatkan ke atas tanpa minimum; kondisi lain dicatat aktual atau ditahan untuk review; nilai minus tidak dijepit menjadi nol. Manual ADD tetap opsi jika rute/periode tidak tercatat.
+- Sesuaikan verifikasi satuan/massal dengan kontrak ring berbasis aktor: V2/V3 boleh langsung memproses tanpa ring bawah; V2 menunggu V3 dan V3 membuat hasil resmi. Ikon menampilkan hanya ring terakhir, sedangkan audit mempertahankan histori.
+- Tutup gap pada [audit ring verifikasi dan koreksi](./aturan-verifikasi-berjenjang.md): larang self-reopen V1/V2; sediakan koreksi administratif STAFF hanya sebelum Tagihan; berikan STAFF final closing dengan prasyarat teruji.
 - Tutup pengalaman warga: jadwal server, linked account constraint, pending/reject/retry, foto terpisah, dan akses minimal terhadap data.
 - Uji kasus rollover, meter diganti, meter rusak, rumah terkunci, stand nol/abnormal; aturan yang belum disetujui tetap ke review manual.
 - Berikan laporan rekonsiliasi dan tampilan pengecualian sebelum closing.
@@ -51,6 +56,12 @@
 - Semua kriteria P0 pada [Definisi MVP](./MVP-baca-meter-air.md) lulus di test otomatis dan staging.
 - Tidak ada duplikasi hasil resmi saat retry atau race yang diuji.
 - Semua perbedaan konsumsi memiliki provenance/alasan atau disposition review yang disetujui.
+
+### Backlog lanjutan di luar pilot
+
+- **Koreksi workflow Manual Add (aktif):** Manual Add satuan dapat mengganti hasil yang sudah melewati verifikasi hanya pada periode terbuka dan sebelum hasil masuk Tagihan; penggantian wajib beralasan, diaudit before/after, mereset ring, dan mengembalikan laporan ke verifikasi. Manual Add All memfilter Petugas lalu Rute, langsung menampilkan alamat belum disetorkan, menghitung taksasi otomatis, menambahkan hanya pilihan checkbox, serta melaporkan progres batch tersimpan. Rilis tetap menunggu validasi integrasi role/duplikat/race, migration staging, dan uji hasil Manual melalui V1/V2/V3.
+- Histori Manual Add All dibatasi ke pembacaan resmi aktual nonnegatif tanpa `alasanTaksir`; gunakan 12 bulan, tiga tertinggi, atau seluruh histori valid yang tersedia. Tanpa histori pemakaian valid, Pakai 0 m³. ST Awal dan ST Akhir sama, menggunakan `standLalu` dari pencatatan resmi terakhir; tanpa pencatatan atau meter, stand 0. Tidak ada status siap/ditahan per baris. Hasil Manual Add tetap menunggu verifikasi; `MANUAL_ADD` pada hasil resmi mengecualikannya dari histori aktual berikutnya.
+- Tetapkan dan uji batas kewajaran/manual-review atas angka ekstrem sebelum rilis produksi; jangan menerbitkan atau menagihkan taksasi otomatis sebelum alur verifikasi.
 
 ## Tahap 2 — migration dan readiness staging
 
@@ -119,6 +130,7 @@
 - Tetapkan SLO, jam support, escalation path, incident response, status page, release/rollback, perubahan schema, dan disaster recovery.
 - Uji kapasitas dan rencana scale berdasarkan volume yang disepakati; pantau koneksi DB, query, storage, queue, dan worker.
 - Sahkan DPIA/privacy review dan ketentuan penggunaan foto/GPS/kontak sesuai hukum dan kontrak yang berlaku.
+- Kurangi risiko konsentrasi akuntabilitas: tunjuk reviewer independen untuk sign-off produksi dan keputusan berisiko tinggi.
 - Siapkan onboarding organisasi/area, konfigurasi, pelatihan, dokumentasi operator/pelanggan, SLA, support, dan proses upgrade.
 - Perluas per wilayah secara bertahap dengan canary dan review pasca-rilis.
 
@@ -134,21 +146,20 @@ Ini snapshot pekerjaan kode, bukan penilaian audit independen baru.
 
 | Area | Status saat ini | Bukti / pekerjaan berikutnya |
 |---|---|---|
+| Keputusan G0 pilot | Selesai untuk scope dan kebijakan pilot | Disetujui Wiska Prayoga 31 Oktober 2026; supervisor, OTP, pemberitahuan, acceptance criteria, dan staging tetap prasyarat mulai pilot. |
 | Arsitektur dan scope air | Sebagian besar dirancang | Dokumen menyelaraskan sumber model aktual; validasi kebutuhan operasional masih diperlukan. |
 | Laporan mandiri dan jendela tanggal | Implementasi awal tersedia | Backend memakai periode WIB, arsip kiriman, UI jadwal, dan halaman admin; uji integrasi dan hak akses di staging masih perlu dilakukan. |
-| Skema dan migration arsip | Draft tersedia, belum terbukti di DB | Prisma validate/build lulus, tetapi migration harus direview, dipreflight, dan diuji di staging sebelum dijalankan. |
+| Skema dan migration arsip | Model Prisma dan migration sudah ada di repository; penerapan database belum diverifikasi | Review migration, jalankan preflight konflik, lalu uji pada staging yang representatif. Keberadaan file migration bukan bukti bahwa staging atau produksi sudah dimigrasikan. |
 | Pembacaan resmi petugas/warga | Alur existing dan perubahan awal tersedia | Buktikan semua jalur serta retry/race memakai aturan dan model canonical yang sama. |
 | Offline sync/idempotensi | Belum dinyatakan selesai | Tetapkan kontrak event, payload hash, checkpoint, attachment resume, konflik, dan test lapangan. |
-| Data legacy dan formula pemakaian | Belum disahkan | Satu periode CSV menemukan banyak delta stand/tagih berbeda; perlu codebook, data lintas periode, dan sign-off pemilik. |
+| Data legacy dan formula pemakaian | Aturan konservatif pilot disahkan; billing produksi belum | Satu periode CSV menemukan banyak delta stand/tagih berbeda; perlu codebook produksi, data lintas periode, dan sign-off sebelum hasil dipakai untuk tagihan. |
 | Koreksi pasca-tagihan/financial adjustment | Belum diimplementasikan | Tentukan maker-checker, kebijakan billing, invoice terbayar, nota, saldo, dan refund. |
-| Test dan build | Build lulus, test ada | `pnpm test` menjalankan 60 tes; tetap tambahkan integration/concurrency/security/performance/restore test. |
+| Test dan build | Hasil build/test terkini belum diverifikasi pada pembaruan dokumen ini | Periksa hasil CI sebelum tiap gate; buktikan cakupan integration, concurrency, security, performance, dan restore sesuai risiko pilot. |
 | Readiness produksi komersial | Belum tercapai | Lengkapi semua exit gate di atas, termasuk operasi, support, privasi, keamanan, dan penerapan database. |
 
 ## Cadence dan pengelolaan
 
-- Tunjuk satu **Product Owner** untuk keputusan dan prioritas.
-- Tunjuk **Data/Billing Owner** untuk codebook, formula, closing, dan koreksi uang.
-- Engineering lead mengelola migration, kontrak API, test, dan release gate.
-- Security/privacy owner meninjau akses, data sensitif, retention, dan threat model.
-- Operations lead memiliki pilot, monitoring, restore, support, dan incident response.
+- Wiska Prayoga adalah pemilik akuntabilitas G0 untuk produk, data/billing, engineering, keamanan/privasi, dan operasi; perangkapan ini dicatat sebagai risiko tata kelola.
+- Sebelum pilot, tunjuk Supervisor Operasional/Admin Utama dengan akun tersendiri, berbeda dari petugas lapangan.
+- Engineering mengelola migration, kontrak API, test, dan release gate; Operations menyiapkan pilot, monitoring, restore, support, dan incident response.
 - Review roadmap setelah setiap exit gate; perubahan lingkup/target harus memperbarui PRD dan Definisi MVP.

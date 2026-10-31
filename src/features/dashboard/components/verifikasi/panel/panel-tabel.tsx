@@ -16,7 +16,11 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ambilList, kirimJson, ApiError } from "../../../lib/api-client"
-import { ToolbarVerifikasi, FILTER_AWAL, type FilterVerifikasi } from "../toolbar-verifikasi"
+import {
+  ToolbarVerifikasi,
+  FILTER_AWAL,
+  type FilterVerifikasi,
+} from "../toolbar-verifikasi"
 import { TabelVerifikasi, type BarisVerifikasi, type Kerapatan } from "../tabel-verifikasi"
 import { AksiMassal, type Ring } from "../aksi-massal"
 import { usePeriodeKerja } from "../../../lib/periode-kerja"
@@ -24,6 +28,7 @@ import { formatPeriode } from "@/features/public/lib/format"
 import { KontrolTampilan } from "../kontrol-tampilan"
 import { RingkasanSebaris } from "../ringkasan-verifikasi"
 import type { StatsVerifikasi } from "../types/tipe"
+import type { OpsiPencarian, KriteriaPencarian } from "../modal/modal-pencarian"
 
 /// Batas per permintaan verifikasi massal — sama dengan yang diterima server.
 const BATCH_VERIF = 500
@@ -40,6 +45,8 @@ export function PanelTabel({
   periodes,
   pencatats,
   rutes,
+  opsiPencarian,
+  galatOpsiPencarian,
   ambangAnomali,
   bolehRing,
   idTerpilih,
@@ -58,6 +65,8 @@ export function PanelTabel({
   periodes: number[]
   pencatats: { id: string; namaLapangan: string }[]
   rutes: { id: string; kode: string }[]
+  opsiPencarian: OpsiPencarian
+  galatOpsiPencarian: string | null
   ambangAnomali: number
   bolehRing: (r: Ring) => boolean
   idTerpilih: string | null
@@ -135,6 +144,8 @@ export function PanelTabel({
       params.tanggalDari = filter.tanggalDari || undefined
       params.tanggalSampai = filter.tanggalSampai || undefined
       params.hanyaAnomali = filter.hanyaAnomali ? "true" : undefined
+      params.kondisi = filter.kondisi || undefined
+      Object.assign(params, filter.kriteriaLanjutan)
     }
     const jalur = tab === "laporan" ? "/laporan-harian" : "/laporan-harian/belum-dibaca"
 
@@ -233,22 +244,26 @@ export function PanelTabel({
   function ekspor() {
     const pilih = rows.filter((r) => terpilih.has(r.id))
     const kolom = [
-      "No. Pel", "Nama", "ST Awal", "ST Akhir", "Pakai (m3)", "Lalu (m3)", "Dev %",
-      "Kondisi", "ST Resmi", "Tagihan (m3)", "Rute", "Petugas", "Tgl Catat", "Alamat", "Status",
+      "Ring", "Status", "No. Pel", "Nama", "Alamat", "Rute", "Ket Catat",
+      "ST Awal", "ST Akhir", "ST Revisi", "ST Resmi", "Pakai (m3)", "Lalu (m3)",
+      "Dev %", "Tagihan (m3)", "Petugas", "Tgl Catat",
     ]
     const isi = pilih.map((r) => [
+      r.verif3At ? "V3" : r.verif2At ? "V2" : r.verif1At ? "V1" : "—",
+      r.verif3At || r.isVerified ? "Disetujui" : r.verifiedAt ? "Perlu Review" : "Pending",
       r.nomorLangganan ?? r.pelanggan?.nomorLangganan ?? "",
       r.pelanggan?.nama ?? r.namaPelanggan ?? "",
-      r.standAwal ?? "", r.standAkhir ?? "",
-      r.pemakaian ?? "", r.pemakaianLalu ?? "", r.persentase ?? "",
-      r.kondisi ?? "",
-      r.verif1At ? r.standAkhirRevisi ?? r.standAkhir ?? "" : "",
-      r.verif1At ? r.pemakaianTagihVerif ?? r.pemakaian ?? "" : "",
-      r.pelanggan?.rute?.kode ?? "",
-      r.pencatat?.namaLapangan ?? "",
-      r.tanggalCatat ? r.tanggalCatat.slice(0, 10) : "",
       r.pelanggan?.alamat ?? r.alamatPelanggan ?? "",
-      r.verif3At ? "V3" : r.verif2At ? "V2" : r.verif1At ? "V1" : "MENUNGGU",
+      r.pelanggan?.rute?.kode ?? "",
+      r.kondisi ?? "",
+      r.standAwalRevisi ?? r.standAwal ?? "",
+      r.standAkhir ?? "",
+      r.standAwalRevisi ?? "",
+      r.pembacaan?.standAkhir ?? "",
+      r.pemakaian ?? "", r.pemakaianLalu ?? "", r.persentase ?? "",
+      r.pemakaianTagihVerif ?? r.pembacaan?.pemakaianM3 ?? "",
+      r.pencatat?.namaLapangan ?? "",
+      r.tanggalCatat ? new Date(r.tanggalCatat).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }) : "",
     ])
     const csv = [kolom, ...isi]
       .map((baris) => baris.map((s) => `"${String(s).replace(/"/g, '""')}"`).join(";"))
@@ -318,6 +333,8 @@ export function PanelTabel({
           periodes={periodePilihan}
           pencatats={pencatats}
           rutes={rutes}
+          opsiPencarian={opsiPencarian}
+          galatOpsiPencarian={galatOpsiPencarian}
           jumlahTampil={rows.length}
           jumlahTotal={total}
           memuat={memuat}
@@ -331,6 +348,9 @@ export function PanelTabel({
               padat={kerapatan === "padat"}
               onPadat={(p) => setKerapatan(p ? "padat" : "normal")}
             />
+          }
+          onPencarianLanjutan={(kriteria: KriteriaPencarian) =>
+            setFilter((f) => ({ ...f, kriteriaLanjutan: kriteria }))
           }
         />
       </div>

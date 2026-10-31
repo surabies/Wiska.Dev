@@ -198,16 +198,10 @@ export const navGroups: NavGroup[] = [
         keywords: ["pindah", "jenis", "pelanggan"],
       },
       {
-        title: "Manual ADD",
-        href: "/admin/input-data",
-        description: "Input data manual satu item.",
-        keywords: ["manual", "input", "data"],
-      },
-      {
-        title: "Manual Add All",
-        href: "/admin/import-backup",
-        description: "Input data manual banyak item sekaligus.",
-        keywords: ["manual", "bulk", "input"],
+        title: "Manual Add",
+        href: "/laporan/manual-add",
+        description: "Tambahkan laporan satu pelanggan atau massal per rute dan petugas.",
+        keywords: ["manual", "bulk", "add all", "input", "laporan"],
       },
       {
         title: "Hitung Rata-Rata",

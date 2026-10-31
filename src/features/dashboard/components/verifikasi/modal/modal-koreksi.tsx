@@ -3,14 +3,16 @@
 // features/dashboard/components/verifikasi/modal-koreksi.tsx — "Koreksi Data
 // Pembacaan" (menu Edit dan CHN; keduanya membuka form yang SAMA).
 //
-// HANYA TAMPILAN: Simpan memanggil `onSimpan` bila diberikan; logika bisnis
-// disambungkan belakangan. Tata letak mengikuti form sistem lama — Form Edit,
-// Data Berjalan | Data Koreksi, Stand Angkat, Riwayat Deposit.
+// Simpan memakai callback halaman; tata letak mengikuti form sistem lama —
+// Form Edit, Data Berjalan | Data Koreksi, Stand Angkat, Riwayat Deposit.
 import * as React from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Table,
   TableBody,
@@ -20,6 +22,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { LABEL_KONDISI_CATAT } from "../../../lib/label"
+import { ambilList, ApiError } from "../../../lib/api-client"
+import type { MeterRingkas } from "../types/tipe"
 import { KELAS_KONTROL_MODAL, PilihSatu } from "../dialog-verifikasi"
 import { BarisForm, JudulBagian, KerangkaModal, KotakBaca } from "../kerangka-modal"
 
@@ -41,22 +45,39 @@ export interface DataKoreksi {
   standAkhir: number | null
   pemakaian: number | null
   kelainan?: string | null
+  kondisiAsli?: string | null
+  standAwalRevisi?: number | null
+  standAkhirRevisi?: number | null
+  pemakaianTagihVerif?: number | null
+  standAngkatLama?: number | null
+  standAwalMeterBaru?: number | null
+  pelangganId?: string | null
+  meterVerifId?: string | null
   /** null = tidak ada stand angkat. */
   standAngkat?: { lama: number | null; baru: number | null } | null
   riwayatDeposit?: BarisDeposit[]
 }
 
-/// Bentuk minimum baris tabel (petugas maupun mandiri) yang dibutuhkan konversi.
+/** Bentuk minimum baris tabel (petugas maupun mandiri) yang dibutuhkan konversi. */
 export interface BarisSumberModal {
+  pelangganId?: string | null
   nomorLangganan?: string | null
   periode?: number | null
   standAwal?: number | null
   standAkhir?: number | null
   pemakaian?: number | null
   kondisi?: string | null
+  kondisiRevisi?: string | null
+  standAwalRevisi?: number | null
+  standAkhirRevisi?: number | null
+  pemakaianTagihVerif?: number | null
+  standAngkatLama?: number | null
+  standAwalMeterBaru?: number | null
+  meterVerifId?: string | null
   alamatPelanggan?: string | null
   namaPelanggan?: string | null
   pelanggan?: {
+    id?: string
     nama?: string | null
     alamat?: string | null
     tarifGolongan?: { kodeAsli: string } | null
@@ -73,17 +94,32 @@ export function dataKoreksiDariBaris(b: BarisSumberModal): DataKoreksi {
     standAwal: b.standAwal ?? null,
     standAkhir: b.standAkhir ?? null,
     pemakaian: b.pemakaian ?? null,
-    kelainan: b.kondisi ?? null,
-    standAngkat: null,
+    kelainan: b.kondisiRevisi ?? b.kondisi ?? null,
+    kondisiAsli: b.kondisi ?? null,
+    standAwalRevisi: b.standAwalRevisi ?? null,
+    standAkhirRevisi: b.standAkhirRevisi ?? null,
+    pemakaianTagihVerif: b.pemakaianTagihVerif ?? null,
+    standAngkatLama: b.standAngkatLama ?? null,
+    standAwalMeterBaru: b.standAwalMeterBaru ?? null,
+    pelangganId: b.pelanggan?.id ?? b.pelangganId ?? null,
+    meterVerifId: b.meterVerifId ?? null,
+    standAngkat:
+      b.standAngkatLama != null || b.standAwalMeterBaru != null
+        ? { lama: b.standAngkatLama ?? null, baru: b.standAwalMeterBaru ?? null }
+        : null,
     riwayatDeposit: [],
   }
 }
 
 export interface HasilKoreksi {
-  standAkhir: number | null
-  taksasi: boolean
-  nilaiTaksasi: string
-  kelainan: string
+  standAwalRevisi: number | null
+  standAkhirRevisi: number | null
+  pemakaianTagihVerif: number | null
+  kondisiRevisi: string | null
+  standAngkatLama: number | null
+  standAwalMeterBaru: number | null
+  meterVerifId: string | null
+  alasan: string
 }
 
 const angka = (n: number | null | undefined) => (n == null ? "—" : n.toLocaleString("id-ID"))
@@ -96,21 +132,109 @@ export function ModalKoreksi({
 }: {
   data: DataKoreksi
   onTutup: () => void
-  /** Belum diberikan = Simpan hanya menutup modal (logika menyusul). */
-  onSimpan?: (h: HasilKoreksi) => void
+  onSimpan?: (h: HasilKoreksi) => Promise<void>
   onRata3?: () => void
 }) {
-  const [standAkhir, setStandAkhir] = React.useState(data.standAkhir == null ? "" : String(data.standAkhir))
-  const [taksasi, setTaksasi] = React.useState(false)
-  const [nilaiTaksasi, setNilaiTaksasi] = React.useState("")
+  const [standAkhir, setStandAkhir] = React.useState(
+    String(data.standAkhirRevisi ?? data.standAkhir ?? ""),
+  )
+  const [standAwal, setStandAwal] = React.useState(
+    String(data.standAwalRevisi ?? data.standAwal ?? ""),
+  )
+  const [taksasi, setTaksasi] = React.useState(data.pemakaianTagihVerif != null)
+  const [nilaiTaksasi, setNilaiTaksasi] = React.useState(
+    data.pemakaianTagihVerif == null ? "" : String(data.pemakaianTagihVerif),
+  )
   const [kelainan, setKelainan] = React.useState(data.kelainan ?? "")
+  const [standAngkatLama, setStandAngkatLama] = React.useState(
+    data.standAngkatLama == null ? "" : String(data.standAngkatLama),
+  )
+  const [standAwalMeterBaru, setStandAwalMeterBaru] = React.useState(
+    data.standAwalMeterBaru == null ? "" : String(data.standAwalMeterBaru),
+  )
+  const [alasan, setAlasan] = React.useState("")
+  const [galat, setGalat] = React.useState<string | null>(null)
+  const [menyimpan, setMenyimpan] = React.useState(false)
+  const [meters, setMeters] = React.useState<MeterRingkas[]>([])
+  const [meterId, setMeterId] = React.useState(data.meterVerifId ?? "")
+
+  React.useEffect(() => {
+    if (!data.pelangganId) {
+      setMeters([])
+      return
+    }
+    let batal = false
+    ambilList<MeterRingkas>("/meter", { pelangganId: data.pelangganId, pageSize: 100 })
+      .then(({ rows }) => {
+        if (!batal) {
+          setMeters(rows)
+          const [meterAktif] = rows.filter((meter) => meter.isAktif)
+          if (meterAktif) setMeterId((terpilih) => terpilih || meterAktif.id)
+        }
+      })
+      .catch((err) => {
+        if (!batal)
+          setGalat(err instanceof ApiError ? err.message : "Gagal memuat pilihan meter.")
+      })
+    return () => {
+      batal = true
+    }
+  }, [data.pelangganId])
 
   const akhirNum = standAkhir === "" ? null : Number(standAkhir)
+  const awalNum = standAwal === "" ? null : Number(standAwal)
   const pakai =
-    data.standAwal != null && akhirNum != null && Number.isFinite(akhirNum)
-      ? Math.max(0, akhirNum - data.standAwal)
+    awalNum != null && akhirNum != null && Number.isInteger(awalNum) && Number.isInteger(akhirNum)
+      ? akhirNum - awalNum
       : null
+  const standAngkatNum = standAngkatLama === "" ? null : Number(standAngkatLama)
+  const standAwalBaruNum = standAwalMeterBaru === "" ? null : Number(standAwalMeterBaru)
   const riwayat = data.riwayatDeposit ?? []
+
+  async function simpan() {
+    if (!onSimpan) return
+    const akhirValid = akhirNum != null && Number.isInteger(akhirNum) && akhirNum >= 0
+    const awalValid =
+      kelainan !== "REV_PENCATAT" ||
+      (awalNum != null && Number.isInteger(awalNum) && awalNum >= 0)
+    const taksasiValid =
+      !taksasi ||
+      (nilaiTaksasi !== "" && Number.isInteger(Number(nilaiTaksasi)))
+    const meterBaruValid =
+      kelainan !== "MB" ||
+      (standAngkatNum != null &&
+        Number.isInteger(standAngkatNum) &&
+        standAwalBaruNum != null &&
+        Number.isInteger(standAwalBaruNum))
+    if (!akhirValid || !awalValid || !taksasiValid || !meterBaruValid || alasan.trim().length < 3) {
+      setGalat("Periksa nilai stand, pemakaian, data meter baru, dan alasan koreksi.")
+      return
+    }
+    setMenyimpan(true)
+    setGalat(null)
+    try {
+      await onSimpan({
+        standAwalRevisi:
+          kelainan === "REV_PENCATAT" ? awalNum : null,
+        standAkhirRevisi:
+          akhirNum === data.standAkhir ? null : akhirNum,
+        pemakaianTagihVerif: taksasi ? Number(nilaiTaksasi) : null,
+        kondisiRevisi:
+          kelainan === data.kondisiAsli ? null : kelainan || null,
+        standAngkatLama:
+          kelainan === "MB" ? standAngkatNum : null,
+        standAwalMeterBaru:
+          kelainan === "MB" ? standAwalBaruNum : null,
+        meterVerifId: meterId || null,
+        alasan: alasan.trim(),
+      })
+      onTutup()
+    } catch (err) {
+      setGalat(err instanceof Error ? err.message : "Koreksi gagal disimpan.")
+    } finally {
+      setMenyimpan(false)
+    }
+  }
 
   return (
     <KerangkaModal
@@ -131,17 +255,11 @@ export function ModalKoreksi({
           </Button>
           <Button
             className="h-9"
-            onClick={() => {
-              onSimpan?.({
-                standAkhir: akhirNum != null && Number.isFinite(akhirNum) ? akhirNum : null,
-                taksasi,
-                nilaiTaksasi,
-                kelainan,
-              })
-              onTutup()
-            }}
+            disabled={!onSimpan || menyimpan}
+            onClick={() => void simpan()}
           >
-            Simpan
+            {menyimpan && <Spinner className="size-3.5" />}
+            Simpan koreksi
           </Button>
         </>
       }
@@ -173,7 +291,20 @@ export function ModalKoreksi({
 
             <div className="flex min-w-0 flex-col gap-2.5">
               <JudulBagian>Data Koreksi</JudulBagian>
-              <BarisForm label="Stand Awal"><KotakBaca nilai={data.standAwal} /></BarisForm>
+              {kelainan === "REV_PENCATAT" ? (
+                <BarisForm label="ST Awal revisi" htmlFor="koreksi-awal">
+                  <Input
+                    id="koreksi-awal"
+                    type="number"
+                    min={0}
+                    value={standAwal}
+                    onChange={(e) => setStandAwal(e.target.value)}
+                    className={KELAS_KONTROL_MODAL}
+                  />
+                </BarisForm>
+              ) : (
+                <BarisForm label="Stand Awal"><KotakBaca nilai={data.standAwal} /></BarisForm>
+              )}
               <BarisForm label="Stand Akhir" htmlFor="koreksi-akhir">
                 <Input
                   id="koreksi-akhir"
@@ -210,6 +341,7 @@ export function ModalKoreksi({
                     variant="link"
                     className="h-auto shrink-0 p-0 text-xs text-blue-600 dark:text-blue-400"
                     onClick={onRata3}
+                    disabled={!onRata3}
                   >
                     Rata3
                   </Button>
@@ -228,7 +360,59 @@ export function ModalKoreksi({
                   }))}
                 />
               </BarisForm>
+              {kelainan === "MB" && (
+                <>
+                  <BarisForm label="Stand angkat meter lama" htmlFor="koreksi-angkat-lama">
+                    <Input
+                      id="koreksi-angkat-lama"
+                      type="number"
+                      min={0}
+                      value={standAngkatLama}
+                      onChange={(e) => setStandAngkatLama(e.target.value)}
+                      className={KELAS_KONTROL_MODAL}
+                    />
+                  </BarisForm>
+                  <BarisForm label="Stand awal meter baru" htmlFor="koreksi-awal-baru">
+                    <Input
+                      id="koreksi-awal-baru"
+                      type="number"
+                      min={0}
+                      value={standAwalMeterBaru}
+                      onChange={(e) => setStandAwalMeterBaru(e.target.value)}
+                      className={KELAS_KONTROL_MODAL}
+                    />
+                  </BarisForm>
+                </>
+              )}
+              <BarisForm label="Meter tujuan">
+                <PilihSatu
+                  ariaLabel="Meter tujuan"
+                  value={meterId}
+                  onChange={setMeterId}
+                  placeholder="Pilih meter pelanggan"
+                  opsi={meters.map((meter) => ({
+                    value: meter.id,
+                    label: `${meter.nomorMeter}${meter.merkKode ? ` · ${meter.merkKode}` : ""}${meter.isAktif ? " (aktif)" : " (histori)"}`,
+                    disabled: kelainan === "MB" && !meter.isAktif,
+                  }))}
+                />
+              </BarisForm>
             </div>
+            {galat && (
+              <Alert variant="destructive">
+                <AlertDescription>{galat}</AlertDescription>
+              </Alert>
+            )}
+            <BarisForm label="Alasan koreksi" htmlFor="alasan-koreksi">
+              <Textarea
+                id="alasan-koreksi"
+                value={alasan}
+                onChange={(event) => setAlasan(event.target.value)}
+                maxLength={500}
+                placeholder="Jelaskan alasan dan dasar koreksi."
+                aria-required="true"
+              />
+            </BarisForm>
           </div>
         </section>
 

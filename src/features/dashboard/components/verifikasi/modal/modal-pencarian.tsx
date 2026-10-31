@@ -1,9 +1,8 @@
 "use client"
 
 // features/dashboard/components/verifikasi/modal-pencarian.tsx — modal
-// "Pencarian Data" (filter custom): tiap kriteria punya kotak centang; hanya
-// kriteria yang DICENTANG yang dikirim lewat `onCari`. HANYA TAMPILAN —
-// onCari dipakai induk bila sudah ada logikanya.
+// "Pencarian Data" (filter custom): hanya kriteria yang dicentang dan diisi
+// dikirim ke induk untuk diterapkan pada endpoint laporan harian.
 //
 // Daftar kriteria berbasis konfigurasi (KIRI / KANAN / BAWAH) supaya menambah
 // atau mengubah urutan kriteria cukup satu baris. Pilihan untuk dropdown yang
@@ -15,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { LABEL_KONDISI_CATAT } from "@/features/dashboard/lib/label"
 import { KELAS_KONTROL_MODAL, PilihSatu, type OpsiPilihan } from "../dialog-verifikasi"
 import { KerangkaModal } from "../kerangka-modal"
 
@@ -32,6 +32,13 @@ const OPERATOR: OpsiPilihan[] = [
   { value: "<", label: "<" },
   { value: "<=", label: "≤" },
 ]
+const JENIS_CATAT: OpsiPilihan[] = [
+  { value: "ONSITE", label: "Kunjungan langsung" },
+  { value: "OFFSITE", label: "Di luar lokasi" },
+]
+const KONDISI_CATAT: OpsiPilihan[] = Object.entries(LABEL_KONDISI_CATAT).map(
+  ([value, label]) => ({ value, label }),
+)
 
 type Jenis = "pilih" | "teks" | "rentang" | "tanggal" | "operator"
 interface Bidang {
@@ -43,14 +50,13 @@ interface Bidang {
 }
 
 const KIRI: Bidang[] = [
-  { kunci: "wilayah", label: "Wilayah", jenis: "pilih" },
-  { kunci: "zonasi", label: "Zonasi", jenis: "pilih" },
-  { kunci: "rute", label: "Rute", jenis: "teks" },
-  { kunci: "jenisPelanggan", label: "Jenis Pelanggan", jenis: "pilih" },
+  { kunci: "wilayahDistId", label: "Wilayah", jenis: "pilih" },
+  { kunci: "zonaId", label: "Zonasi", jenis: "pilih" },
+  { kunci: "ruteLanjutanId", label: "Rute", jenis: "pilih" },
   { kunci: "alamat", label: "Alamat", jenis: "teks" },
   { kunci: "noPel", label: "No. Pel", jenis: "teks" },
   { kunci: "nama", label: "Nama", jenis: "teks" },
-  { kunci: "jenisTarif", label: "Jenis Tarif", jenis: "pilih" },
+  { kunci: "tarifGolonganId", label: "Jenis Tarif", jenis: "pilih" },
   { kunci: "standKoreksi", label: "Stand Koreksi", jenis: "pilih", opsi: YA_TIDAK },
   { kunci: "statusSpt", label: "Status SPT", jenis: "pilih", opsi: YA_TIDAK },
 ]
@@ -58,15 +64,14 @@ const KIRI: Bidang[] = [
 const KANAN: Bidang[] = [
   { kunci: "statusBaca", label: "Status Baca", jenis: "pilih", opsi: YA_TIDAK },
   { kunci: "tanggalBaca", label: "Tanggal Baca", jenis: "tanggal" },
-  { kunci: "keteranganCatat", label: "Keterangan Catat", jenis: "pilih" },
-  { kunci: "petugas", label: "Petugas", jenis: "pilih" },
-  { kunci: "jenisCatat", label: "Jenis Catat", jenis: "pilih" },
+  { kunci: "kondisiLanjutan", label: "Keterangan Catat", jenis: "pilih", opsi: KONDISI_CATAT },
+  { kunci: "pencatatLanjutanId", label: "Petugas", jenis: "pilih" },
+  { kunci: "kategori", label: "Jenis Catat", jenis: "pilih", opsi: JENIS_CATAT },
   { kunci: "pemakaianRange", label: "Pemakaian Range", jenis: "rentang" },
-  { kunci: "depositRange", label: "Deposit Range", jenis: "rentang" },
   { kunci: "pemakaian", label: "Pemakaian", jenis: "operator" },
   { kunci: "persentase", label: "Persentase", jenis: "operator" },
-  { kunci: "kecamatan", label: "Kecamatan", jenis: "pilih" },
-  { kunci: "kelurahan", label: "Kelurahan", jenis: "pilih" },
+  { kunci: "kecamatanId", label: "Kecamatan", jenis: "pilih" },
+  { kunci: "kelurahanId", label: "Kelurahan", jenis: "pilih" },
 ]
 
 const BAWAH: Bidang[] = [
@@ -77,21 +82,34 @@ const BAWAH: Bidang[] = [
 
 const SEMUA = [...KIRI, ...KANAN, ...BAWAH]
 
+export function hitungKriteriaPencarian(kriteria: KriteriaPencarian): number {
+  return SEMUA.filter((b) =>
+    b.jenis === "rentang" || b.jenis === "tanggal"
+      ? Boolean(kriteria[`${b.kunci}Dari`] || kriteria[`${b.kunci}Sampai`])
+      : Boolean(kriteria[b.kunci]),
+  ).length
+}
+
 interface Keadaan {
   aktif: Record<string, boolean>
   nilai: Record<string, string>
 }
 
-function keadaanAwal(opsi: OpsiPencarian): Keadaan {
-  const nilai: Record<string, string> = {}
+function keadaanAwal(nilaiAwal: KriteriaPencarian): Keadaan {
+  const nilai: Record<string, string> = { ...nilaiAwal }
   for (const b of SEMUA) {
-    if (b.jenis === "pilih") nilai[b.kunci] = (b.opsi ?? opsi[b.kunci])?.[0]?.value ?? ""
-    if (b.jenis === "operator") nilai[`${b.kunci}Op`] = "="
+    if (b.jenis === "pilih") nilai[b.kunci] ??= ""
+    if (b.jenis === "operator") nilai[`${b.kunci}Operator`] ??= "="
   }
-  // Bawaan mengikuti form sistem lama: Status Baca = Ya, Verifikasi Wil = Tidak.
-  nilai.statusBaca = "ya"
-  nilai.verifWil = "tidak"
-  return { aktif: { statusBaca: true, verifWil: true }, nilai }
+  const aktif: Record<string, boolean> = {}
+  for (const b of SEMUA) {
+    const punyaNilai =
+      b.jenis === "rentang" || b.jenis === "tanggal"
+        ? Boolean(nilai[`${b.kunci}Dari`] || nilai[`${b.kunci}Sampai`])
+        : Boolean(nilai[b.kunci])
+    aktif[b.kunci] = punyaNilai
+  }
+  return { aktif, nilai }
 }
 
 function Kontrol({
@@ -165,8 +183,8 @@ function Kontrol({
           <div className="w-24 shrink-0">
             <PilihSatu
               ariaLabel={`${b.label} operator`}
-              value={v(`${b.kunci}Op`)}
-              onChange={(x) => ubah(`${b.kunci}Op`, x)}
+              value={v(`${b.kunci}Operator`)}
+              onChange={(x) => ubah(`${b.kunci}Operator`, x)}
               opsi={OPERATOR}
               disabled={mati}
             />
@@ -226,17 +244,19 @@ export function ModalPencarian({
   buka,
   onBuka,
   opsi = {},
+  nilaiAwal = {},
   onCari,
 }: {
   buka: boolean
   onBuka: (v: boolean) => void
   /** Pilihan dropdown yang datanya dari server, dikunci dengan `kunci` kriteria. */
   opsi?: OpsiPencarian
-  /** Hanya kriteria yang dicentang. Belum diberikan = tombol hanya menutup modal. */
-  onCari?: (kriteria: KriteriaPencarian, jumlah: number) => void
+  /** Kriteria yang sedang diterapkan; dipakai untuk mengisi ulang modal. */
+  nilaiAwal?: KriteriaPencarian
+  onCari: (kriteria: KriteriaPencarian, jumlah: number) => void
 }) {
-  const [keadaan, setKeadaan] = React.useState<Keadaan>(() => keadaanAwal(opsi))
-  const jumlah = SEMUA.filter((b) => keadaan.aktif[b.kunci]).length
+  const [keadaan, setKeadaan] = React.useState<Keadaan>(() => keadaanAwal(nilaiAwal))
+  const [galat, setGalat] = React.useState<string | null>(null)
 
   const ubahAktif = (kunci: string, v: boolean) =>
     setKeadaan((k) => ({ ...k, aktif: { ...k.aktif, [kunci]: v } }))
@@ -245,8 +265,10 @@ export function ModalPencarian({
 
   function cari() {
     const hasil: KriteriaPencarian = {}
+    let jumlah = 0
     for (const b of SEMUA) {
       if (!keadaan.aktif[b.kunci]) continue
+      const sebelum = Object.keys(hasil).length
       const ambil = (k: string) => {
         const x = keadaan.nilai[k]
         if (x) hasil[k] = x
@@ -256,12 +278,35 @@ export function ModalPencarian({
         ambil(`${b.kunci}Sampai`)
       } else if (b.jenis === "operator") {
         ambil(b.kunci)
-        ambil(`${b.kunci}Op`)
+        if (keadaan.nilai[b.kunci]) ambil(`${b.kunci}Operator`)
       } else {
         ambil(b.kunci)
       }
+      if (Object.keys(hasil).length > sebelum) jumlah += 1
     }
-    onCari?.(hasil, jumlah)
+    for (const kunci of ["pemakaianRangeDari", "pemakaianRangeSampai", "pemakaian", "persentase"]) {
+      const nilai = hasil[kunci]
+      if (nilai && !Number.isInteger(Number(nilai))) {
+        setGalat("Pemakaian dan persentase harus berupa bilangan bulat.")
+        return
+      }
+    }
+    for (const b of SEMUA.filter((bidang) => bidang.jenis === "rentang" || bidang.jenis === "tanggal")) {
+      const dari = hasil[`${b.kunci}Dari`]
+      const sampai = hasil[`${b.kunci}Sampai`]
+      const terbalik =
+        dari && sampai
+          ? b.jenis === "rentang"
+            ? Number(dari) > Number(sampai)
+            : dari > sampai
+          : false
+      if (terbalik) {
+        setGalat(`${b.label}: nilai awal tidak boleh melewati nilai akhir.`)
+        return
+      }
+    }
+    setGalat(null)
+    onCari(hasil, jumlah)
     onBuka(false)
   }
 
@@ -272,24 +317,20 @@ export function ModalPencarian({
       buka={buka}
       onBuka={onBuka}
       judul="Pencarian Data"
-      subjudul="Centang kriteria yang ingin dipakai; kriteria tanpa centang diabaikan."
+      subjudul="Centang kriteria yang ingin dipakai; filter diterapkan pada data laporan dan sambungan."
       lebar="xl"
       footer={
         <>
-          {!onCari && (
-            <span className="mr-auto text-[11px] text-muted-foreground">
-              Tampilan saja — pencarian belum tersambung ke tabel.
-            </span>
-          )}
+          {galat && <span role="alert" className="mr-auto text-xs text-destructive">{galat}</span>}
           <Button
             variant="outline"
             className="h-9"
-            onClick={() => setKeadaan(keadaanAwal(opsi))}
+            onClick={() => { setKeadaan(keadaanAwal({})); setGalat(null) }}
           >
             Atur ulang
           </Button>
-          <Button className="h-9 min-w-36" onClick={cari} disabled={jumlah === 0}>
-            Cari Data{jumlah > 0 ? ` (${jumlah})` : ""}
+          <Button className="h-9 min-w-36" onClick={cari}>
+            Cari Data
           </Button>
         </>
       }

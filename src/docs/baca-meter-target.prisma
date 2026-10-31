@@ -58,8 +58,8 @@ model KirimanLaporanMandiri {
   namaPelapor      String
   diterimaPada     DateTime @default(now())
 
-  laporanMandiri LaporanMandiri @relation(fields: [laporanMandiriId], references: [id], onDelete: Restrict)
-  pengirim       User?          @relation("KirimanLaporanMandiriPengirim", fields: [pengirimId], references: [id], onDelete: Restrict)
+  // laporanMandiri LaporanMandiri @relation(fields: [laporanMandiriId], references: [id], onDelete: Restrict)
+  // pengirim       User?          @relation("KirimanLaporanMandiriPengirim", fields: [pengirimId], references: [id], onDelete: Restrict)
 
   @@index([laporanMandiriId, diterimaPada])
   @@index([pengirimId, diterimaPada])
@@ -67,7 +67,7 @@ model KirimanLaporanMandiri {
 }
 
 // RELASI YANG SUDAH ADA DAN MENJADI KONTRAK DOMAIN:
-//
+//ttttt
 // model LanggananWarga {
 //   @@unique([userId, pelangganId])
 //   @@map("langganan_warga")

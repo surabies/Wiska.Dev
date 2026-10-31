@@ -216,6 +216,13 @@ model LaporanHarianPetugas {
   persentase          Int?
   kondisi             KondisiCatat      @default(NORMAL)
   kategori            KategoriPembacaan @default(ONSITE)
+  /// Asal pembuatan laporan. Manual ADD tetap menunggu verifikasi dan
+  /// tidak dianggap sebagai pembacaan aktual saat dipakai sebagai histori.
+  jenisInput          JenisInputLaporanHarian @default(PETUGAS)
+  alasanManual        String?
+  /// Metode dan pembacaan sumber yang dipakai untuk menghitung usulan
+  /// Manual Add All; menjadi bukti yang tidak berubah saat histori bertambah.
+  manualProvenance    Json?
   /// kd_wm = nomor meter. Disimpan String karena bisa orphan saat import
   /// awal.
   nomorMeter          String?
@@ -243,6 +250,11 @@ model LaporanHarianPetugas {
   /// standAkhir (angka catat petugas) TIDAK ditimpa lagi: hasil dan angka
   /// catat tampil pada kolom terpisah di tabel verifikasi.
   standAkhirRevisi    Int?
+  /// Stand awal aktif hasil koreksi Revisi Pencatat. standAwal tetap
+  /// menyimpan angka asli dari petugas untuk menjaga jejak sumber.
+  standAwalRevisi     Int?
+  /// Kondisi hasil koreksi verifikator; kondisi tetap menyimpan laporan asli petugas.
+  kondisiRevisi       KondisiCatat?
   /// Angka terakhir pada meter lama saat penggantian (kondisi MB).
   standAngkatLama     Int?
   /// Angka awal meter baru saat dipasang (kondisi MB).
@@ -767,6 +779,12 @@ enum StatusDaftarCatat {
   /// Dicabut di tengah periode berjalan. Tetap disimpan (tidak dihapus)
   /// supaya beban kerja periode ini tidak berubah surut.
   DICABUT
+}
+
+enum JenisInputLaporanHarian {
+  PETUGAS
+  MANUAL_SATUAN
+  MANUAL_MASSAL
 }
 
 /// ═══════════════════════════════════════════════════════════════════════

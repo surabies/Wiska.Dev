@@ -16,6 +16,7 @@ export {
   JenisMutasi,
   JenisPemutusan,
   JenisPengaduan,
+  JenisInputLaporanHarian,
   KlasifikasiPengaduan,
   JenisTagihanLain,
   KanalPembayaran,

@@ -39,6 +39,7 @@ import { tagihanLainRouter } from "./modules/tagihan/tagihan-lain.router"
 import { pembayaranRouter } from "./modules/pembayaran/pembayaran.router"
 import { pengaduanRouter } from "./modules/pengaduan/pengaduan.router"
 import { laporanHarianRouter } from "./modules/laporan/laporan-harian.router"
+import { manualAddRouter } from "./modules/laporan/manual-add.router"
 import { laporanMandiriRouter } from "./modules/laporan/laporan-mandiri.router"
 import { anomaliRouter } from "./modules/anomali/anomali.router"
 import { mutasiRouter } from "./modules/mutasi/mutasi.router"
@@ -182,6 +183,7 @@ v1.route("/tagihan-lain", tagihanLainRouter)
 v1.route("/pembayaran", pembayaranRouter)
 v1.route("/pengaduan", pengaduanRouter)
 v1.route("/laporan-harian", laporanHarianRouter)
+v1.route("/manual-add", manualAddRouter)
 v1.route("/laporan-mandiri", laporanMandiriRouter)
 v1.route("/anomali", anomaliRouter)
 v1.route("/mutasi", mutasiRouter)

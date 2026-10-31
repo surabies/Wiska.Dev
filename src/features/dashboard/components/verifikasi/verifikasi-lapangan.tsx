@@ -5,9 +5,9 @@
 // murni penampil (kiri) + kartu ringkasan dan tabel laporan (kanan).
 //
 // SELURUH AKSI lewat MENU KLIK KANAN (disusun menu-aksi.ts):
-//   Verifikasi    → modal ring berikutnya (V1/V2/V3 sesuai tahap baris)
+//   Verifikasi    → langsung menandai ring berikutnya; tidak membuka modal
 //   Unverifikasi  → batalkan SATU tahap terakhir (dialog konfirmasi)
-//   Edit / CHN    → modal Koreksi Data Pembacaan   (BARU, tampilan saja)
+//   Edit / CHN    → modal Koreksi Data Pembacaan
 //   ADD           → modal Baca Manual              (BARU, tampilan saja)
 //   Kondisi Foto  → modal Kondisi Foto & Lapangan  (BARU, tampilan saja)
 //   BacaUlang     → modal cek ulang (tolak)
@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -45,15 +46,24 @@ import {
   type KunciMenu,
   type ProfilMenu,
 } from "./types/menu-aksi";
-import { ModalKoreksi, dataKoreksiDariBaris } from "./modal/modal-koreksi";
+import { ModalKoreksi, dataKoreksiDariBaris, type HasilKoreksi } from "./modal/modal-koreksi";
 import { ModalKondisiFoto } from "./modal/modal-kondisi-foto";
 import { ModalBacaManual } from "./modal/modal-baca-manual";
+import type { OpsiPencarian } from "./modal/modal-pencarian";
 
 // Cermin ROLE_GROUPS (server/middleware/rbac.ts). Server tetap penjaga aslinya;
 // ini hanya menentukan item menu mana yang aktif.
 const SUPERVISOR_UP = new Set(["SUPER_ADMIN", "DIREKSI", "SENIOR_MANAGER", "MANAGER", "SUPERVISOR"]);
 const MANAGEMENT_UP = new Set(["SUPER_ADMIN", "DIREKSI", "SENIOR_MANAGER", "MANAGER"]);
 const SENIOR_UP = new Set(["SUPER_ADMIN", "DIREKSI", "SENIOR_MANAGER"]);
+const BISA_EDIT = new Set([
+  "SUPER_ADMIN",
+  "DIREKSI",
+  "SENIOR_MANAGER",
+  "MANAGER",
+  "SUPERVISOR",
+  "STAFF",
+]);
 
 // ISI role mana saja yang memakai menu profil "chn" (CHN, Batal Baca Ulang,
 // Unverifikasi mati). Dikosongkan sampai peran itu dipastikan — semua role
@@ -62,7 +72,8 @@ const ROLE_CHN = new Set<string>([]);
 
 /** Bentuk baris grid /laporan-harian yang dibaca kolom & menu konteks. */
 type BarisLaporan = RingLaporanHarian & {
-  id?: string;
+  id: string;
+  pelangganId?: string | null;
   nomorLangganan?: string;
   namaPelanggan?: string | null;
   alamatPelanggan?: string | null;
@@ -71,8 +82,14 @@ type BarisLaporan = RingLaporanHarian & {
   standAwal?: number;
   standAkhir?: number;
   standAkhirRevisi?: number | null;
+  standAwalRevisi?: number | null;
+  kondisiRevisi?: string | null;
+  standAngkatLama?: number | null;
+  standAwalMeterBaru?: number | null;
   pemakaian?: number;
   pemakaianTagihVerif?: number | null;
+  meterVerifId?: string | null;
+  blokTarifVerif?: number | null;
   pemakaianLalu?: number | null;
   persentase?: number | null;
   nomorMeter?: string | null;
@@ -108,6 +125,8 @@ export function VerifikasiLapangan({ role }: { role: string }) {
   const bisaV1 = SUPERVISOR_UP.has(role);
   const bisaV2 = MANAGEMENT_UP.has(role);
   const bisaV3 = SENIOR_UP.has(role);
+  const bisaEdit = BISA_EDIT.has(role);
+  const ringAkun: 1 | 2 | 3 | null = bisaV3 ? 3 : bisaV2 ? 2 : bisaV1 ? 1 : null;
   const profil: ProfilMenu = ROLE_CHN.has(role) ? "chn" : "penilai";
 
   // undefined = belum init (diisi periode terbaru yang punya data).
@@ -134,22 +153,41 @@ export function VerifikasiLapangan({ role }: { role: string }) {
 
   const [pencatats, setPencatats] = React.useState<{ id: string; namaLapangan: string }[]>([]);
   const [rutes, setRutes] = React.useState<{ id: string; kode: string }[]>([]);
+  const [opsiPencarian, setOpsiPencarian] = React.useState<OpsiPencarian>({});
+  const [galatOpsiPencarian, setGalatOpsiPencarian] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let batal = false;
-    ambilList<{ id: string; namaLapangan: string }>("/pencatat", { pageSize: 500 })
-      .then(({ rows }) => {
-        if (!batal) setPencatats(rows);
+    Promise.all([
+      ambilList<{ id: string; namaLapangan: string }>("/pencatat", { pageSize: 500 }),
+      ambilList<{ id: string; kode: string }>("/rute", { pageSize: 500 }),
+      ambilList<{ id: string; kode: string; nama: string }>("/wilayah-dist", { pageSize: 500 }),
+      ambilList<{ id: string; kode: string; nama: string }>("/zona", { pageSize: 500 }),
+      ambilList<{ id: string; kodeAsli: string; nama: string }>("/tarif", { pageSize: 500 }),
+      ambilList<{ id: string; kode: string; nama: string }>("/kecamatan", { pageSize: 500 }),
+      ambilList<{ id: string; kode: string; nama: string }>("/kelurahan", { pageSize: 500 }),
+    ])
+      .then(([hasilPencatat, hasilRute, wilayah, zona, tarif, kecamatan, kelurahan]) => {
+        if (batal) return;
+        setPencatats(hasilPencatat.rows);
+        setRutes(hasilRute.rows);
+        setOpsiPencarian({
+          wilayahDistId: wilayah.rows.map(({ id, kode, nama }) => ({ value: id, label: `${kode} · ${nama}` })),
+          zonaId: zona.rows.map(({ id, kode, nama }) => ({ value: id, label: `${kode} · ${nama}` })),
+          ruteLanjutanId: hasilRute.rows.map(({ id, kode }) => ({ value: id, label: kode })),
+          tarifGolonganId: tarif.rows.map(({ id, kodeAsli, nama }) => ({ value: id, label: `${kodeAsli} · ${nama}` })),
+          pencatatLanjutanId: hasilPencatat.rows.map(({ id, namaLapangan }) => ({ value: id, label: namaLapangan })),
+          kecamatanId: kecamatan.rows.map(({ id, kode, nama }) => ({ value: id, label: `${kode} · ${nama}` })),
+          kelurahanId: kelurahan.rows.map(({ id, kode, nama }) => ({ value: id, label: `${kode} · ${nama}` })),
+        });
+        setGalatOpsiPencarian(null);
       })
-      .catch(() => {
-        // Filter pencatat opsional — tabel tetap berfungsi tanpa daftarnya.
-      });
-    ambilList<{ id: string; kode: string }>("/rute", { pageSize: 500 })
-      .then(({ rows }) => {
-        if (!batal) setRutes(rows);
-      })
-      .catch(() => {
-        // Sama seperti pencatat: saringan opsional.
+      .catch((err) => {
+        if (!batal) {
+          setGalatOpsiPencarian(
+            err instanceof ApiError ? err.message : "Gagal memuat data pilihan.",
+          );
+        }
       });
     return () => {
       batal = true;
@@ -191,6 +229,30 @@ export function VerifikasiLapangan({ role }: { role: string }) {
     }
   }
 
+  async function verifikasiLangsung(id: string) {
+    setMengirim(true);
+    try {
+      const hasil = await kirimJson<{ ring: 1 | 2 | 3; laporan: unknown }>(
+        `/laporan-harian/${id}/verifikasi-langsung`,
+        "PATCH",
+        {},
+      );
+      toast.success(`Alamat ditandai diverifikasi pada ring V${hasil.ring}.`);
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Verifikasi gagal dijalankan.");
+    } finally {
+      setMengirim(false);
+    }
+  }
+
+  async function simpanKoreksi(id: string, hasil: HasilKoreksi) {
+    await kirimJson(`/laporan-harian/${id}/koreksi`, "PATCH", hasil);
+    setModalLain(null);
+    setRefreshKey((k) => k + 1);
+    toast.success("Koreksi laporan berhasil disimpan.");
+  }
+
   /// Keadaan tiap item menu menurut tahap baris + role. Susunan dan label
   /// diurus bangunMenuAksi; di sini hanya: boleh/tidak, dan apa yang terjadi.
   function aksiMenu(baris: BarisLaporan): AksiKonteks[] {
@@ -210,16 +272,10 @@ export function VerifikasiLapangan({ role }: { role: string }) {
     };
 
     // Verifikasi = ring BERIKUTNYA yang belum terisi.
-    const ringBerikut: 1 | 2 | 3 | null =
-      tahap === "MENUNGGU_V1" || tahap === "DITOLAK" ? 1
-      : tahap === "MENUNGGU_V2" ? 2
-      : tahap === "MENUNGGU_V3" ? 3
-      : null;
     const bolehRing =
-      ringBerikut === 1 ? bisaV1 && !!baris.pelanggan
-      : ringBerikut === 2 ? bisaV2
-      : ringBerikut === 3 ? bisaV3
-      : false;
+      (ringAkun === 1 && (tahap === "MENUNGGU_V1" || tahap === "DITOLAK")) ||
+      (ringAkun === 2 && tahap === "MENUNGGU_V2") ||
+      (ringAkun === 3 && tahap === "MENUNGGU_V3");
 
     // Unverifikasi = batalkan SATU tahap terakhir.
     const unverif =
@@ -250,11 +306,11 @@ export function VerifikasiLapangan({ role }: { role: string }) {
 
     const k: Record<KunciMenu, KeadaanMenu> = {
       verifikasi: {
-        aktif: ringBerikut !== null && bolehRing,
-        keterangan: ringBerikut ? `Tahap V${ringBerikut}` : "Sudah resmi",
+        aktif: bolehRing,
+        keterangan: ringAkun ? `Tandai sebagai V${ringAkun}` : "Role tidak memiliki izin verifikasi",
         onPilih: () => {
           setMenu(null);
-          setAksi(ringBerikut === 2 ? "v2" : ringBerikut === 3 ? "v3" : "v1");
+          void verifikasiLangsung(id);
         },
       },
       unverifikasi: {
@@ -264,7 +320,7 @@ export function VerifikasiLapangan({ role }: { role: string }) {
           unverif &&
           bukaKonfirmasi({ judul: unverif.judul, deskripsi: unverif.deskripsi, destruktif: true }),
       },
-      edit: { aktif: bisaV1, onPilih: () => bukaModal(profil === "chn" ? "chn" : "edit") },
+      edit: { aktif: bisaEdit, onPilih: () => bukaModal(profil === "chn" ? "chn" : "edit") },
       add: { aktif: bisaV1, onPilih: () => bukaModal("add") },
       kondisiFoto: { aktif: bisaV1, onPilih: () => bukaModal("foto") },
       bacaUlang: {
@@ -318,7 +374,7 @@ export function VerifikasiLapangan({ role }: { role: string }) {
                   />
                 ) : (
                   <PanelLapangan
-                    key={idTerpilih ?? "kosong"}
+                    key={`${idTerpilih ?? "kosong"}-${refreshKey}`}
                     id={idTerpilih}
                     aksi={aksi}
                     ambangAnomali={ambang}
@@ -341,6 +397,8 @@ export function VerifikasiLapangan({ role }: { role: string }) {
                   periodes={stats?.periodes ?? []}
                   pencatats={pencatats}
                   rutes={rutes}
+                  opsiPencarian={opsiPencarian}
+                  galatOpsiPencarian={galatOpsiPencarian}
                   ambangAnomali={ambang}
                   bolehRing={(r) => (r === 1 ? bisaV1 : r === 2 ? bisaV2 : bisaV3)}
                   idTerpilih={idTerpilih}
@@ -379,9 +437,14 @@ export function VerifikasiLapangan({ role }: { role: string }) {
         />
       )}
 
-      {/* Modal formulir baru — tampilan saja, dirender hanya saat diminta. */}
+      {/* Modal edit terhubung ke koreksi laporan petugas; jalur mandiri tetap baca-saja. */}
       {modalLain && (modalLain.jenis === "edit" || modalLain.jenis === "chn") && (
-        <ModalKoreksi data={dataKoreksiDariBaris(modalLain.baris)} onTutup={() => setModalLain(null)} />
+        <ModalKoreksi
+          key={modalLain.baris.id}
+          data={dataKoreksiDariBaris(modalLain.baris)}
+          onTutup={() => setModalLain(null)}
+          onSimpan={(hasil) => simpanKoreksi(modalLain.baris.id, hasil)}
+        />
       )}
       {modalLain?.jenis === "add" && (
         <ModalBacaManual data={dataKoreksiDariBaris(modalLain.baris)} onTutup={() => setModalLain(null)} />

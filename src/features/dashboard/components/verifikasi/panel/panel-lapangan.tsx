@@ -3,9 +3,8 @@
 // features/dashboard/components/verifikasi/panel-lapangan.tsx — panel detail
 // halaman verifikasi laporan petugas lapangan.
 //
-// MURNI PENAMPIL DETAIL. Seluruh aksi (V1/V2/V3, cek ulang, unverify) dipicu
-// dari MENU KLIK KANAN pada baris tabel; halaman meneruskannya lewat prop
-// `aksi`, dan panel merender ModalLapangan begitu detailnya siap.
+// MURNI PENAMPIL DETAIL. Verifikasi V1/V2/V3 langsung dijalankan dari menu
+// klik kanan; modal di panel ini hanya dipakai untuk mengirim cek ulang.
 //
 // Isi panel berupa tumpukan SEKSI LIPAT (kartu). Informasi dan Stand terbuka
 // bawaan; histori, foto, ring, dan lokasi tertutup — dan baru mengambil data
@@ -19,22 +18,22 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPeriode, formatTanggal } from "@/features/public/lib/format";
-import { ambilSatu, ambilList, ApiError } from "../../../lib/api-client";
+import { ambilSatu, ApiError } from "../../../lib/api-client";
 import { LABEL_KONDISI_CATAT, label } from "../../../lib/label";
-import type { LaporanHarianDetail, MeterRingkas } from "../types/tipe";
+import type { LaporanHarianDetail } from "../types/tipe";
 import { tahapLaporanHarian, ringVerif } from "../types/tipe";
 import { GridStand, InfoPelanggan, PanelKosong, Seksi } from "./panel-bagian";
 import { FotoSebelumnya } from "../foto/foto-sebelumnya";
 import { TabFoto } from "../foto/tab-foto";
 import { HistoriPemakaian } from "../histori-pemakaian";
 import { PetaLokasi } from "../peta-lokasi";
-import { ModalLapangan } from "../modal/modal-lapangan";
+import { ModalCekUlang } from "../modal/modal-cek-ulang";
 import { TEKS_RING } from "../types/warna-ring";
 
 /// v2/v3 memakai modal yang SAMA dengan v1: koreksi yang boleh dilakukan
 /// ketiganya identik, dan dua formulir untuk satu pekerjaan selalu berujung
 /// pada salah satunya ketinggalan diperbarui.
-export type AksiLapangan = "v1" | "v2" | "v3" | "cekulang";
+export type AksiLapangan = "cekulang";
 
 /// Baris progres ring V1/V2/V3 — penampil murni. Warna per ring SAMA dengan
 /// kolom Ring di tabel, dan ketiganya diperlakukan setara.
@@ -86,9 +85,9 @@ export function PanelLapangan({
   // Pemicu muat ulang setelah aksi. State awal selalu bersih tiap ganti baris
   // karena parent me-remount panel lewat `key`.
   const [muatKe, setMuatKe] = React.useState(0);
-
-  const [meters, setMeters] = React.useState<MeterRingkas[]>([]);
-  const [meterAwal, setMeterAwal] = React.useState("");
+  const standSumber = detail?.manualProvenance?.standSumber;
+  const nilaiStandSumber =
+    standSumber?.standAwal ?? standSumber?.standAkhir ?? null;
 
   React.useEffect(() => {
     if (!id) return;
@@ -99,27 +98,6 @@ export function PanelLapangan({
         if (batal) return;
         setDetail(row);
         setGalat(null);
-        if (row.pelanggan?.id) {
-          const { rows } = await ambilList<MeterRingkas>("/meter", {
-            pelangganId: row.pelanggan.id,
-            pageSize: 100,
-          });
-          if (batal) return;
-          setMeters(rows);
-          // Prapilih: meter pilihan V1 sebelumnya, lalu meter yang nomornya
-          // cocok dengan laporan, lalu meter aktif.
-          const pilihan = rows.find((m) => m.id === row.meterVerifId);
-          const cocok = rows.find((m) => row.nomorMeter && m.nomorMeter === row.nomorMeter);
-          setMeterAwal(
-            (row.kondisi === "MB"
-              ? rows.find((m) => m.isAktif)
-              : pilihan ?? cocok ?? rows.find((m) => m.isAktif) ?? rows[0]
-            )?.id ?? "",
-          );
-        } else {
-          setMeters([]);
-          setMeterAwal("");
-        }
       } catch (err) {
         if (!batal)
           setGalat(err instanceof ApiError ? err.message : "Gagal memuat detail laporan.");
@@ -156,17 +134,6 @@ export function PanelLapangan({
   const nama = detail.pelanggan?.nama ?? detail.namaPelanggan ?? "Tanpa nama";
   const alamat = detail.pelanggan?.alamat ?? detail.alamatPelanggan;
   const anomali = detail.persentase != null && Math.abs(detail.persentase) > ambangAnomali;
-
-  // Syarat modal PER RING, persis seperti yang ditegakkan server.
-  const bisaModal = (() => {
-    if (detail.pembacaanId) return false;
-    if (aksi === "cekulang") return true;
-    if (!detail.pelanggan) return false;
-    if (aksi === "v1") return !detail.verif1At;
-    if (aksi === "v2") return !!detail.verif1At && !detail.verif2At;
-    if (aksi === "v3") return !!detail.verif1At && !!detail.verif2At && !detail.verif3At;
-    return false;
-  })();
 
   // Tiga angka yang sama di panel Petugas dan Pelanggan.
   const stAkhir = detail.pembacaan?.standAkhir ?? detail.standAkhirRevisi ?? detail.standAkhir;
@@ -222,6 +189,50 @@ export function PanelLapangan({
           )}
         </div>
       </Seksi>
+
+      {detail.jenisInput && detail.jenisInput !== "PETUGAS" && (
+        <Seksi id="sumber-manual" judul="Asal input dan dasar taksasi" awalBuka>
+          <p className="text-[11px] text-muted-foreground">
+            {detail.jenisInput === "MANUAL_MASSAL"
+              ? "Manual Add All · taksasi Pakai dari histori"
+              : "Manual Add satuan · stand dimasukkan operator"}
+          </p>
+          {detail.alasanManual && (
+            <p className="text-xs text-foreground">
+              <span className="font-medium">Alasan:</span> {detail.alasanManual}
+            </p>
+          )}
+          {detail.manualProvenance && (
+            <>
+              <p className="text-[11px] text-muted-foreground">
+                Metode:{" "}
+                {detail.manualProvenance.metode === "RATA_RATA_12_BULAN"
+                  ? "rata-rata 12 bulan"
+                  : detail.manualProvenance.metode === "TIGA_TERTINGGI"
+                    ? "rata-rata tiga pemakaian tertinggi"
+                    : detail.manualProvenance.metode === "RIWAYAT_TERSEDIA"
+                      ? "rata-rata histori valid yang tersedia"
+                      : "tidak ada histori pemakaian valid"}
+                .{" "}
+                {standSumber && nilaiStandSumber !== null
+                  ? `ST Awal sumber: ${nilaiStandSumber.toLocaleString("id-ID")} (${standSumber.periode.slice(0, 7)}).`
+                  : "Tidak ada pencatatan sebelumnya; ST Awal dan ST Akhir memakai 0."}
+              </p>
+              <ul className="max-h-36 overflow-y-auto divide-y divide-border/60 rounded border border-border/60">
+                {detail.manualProvenance.sumberPembacaan.map((sumber) => (
+                  <li
+                    key={sumber.id}
+                    className="flex items-center justify-between gap-2 px-2 py-1 text-[10px] text-muted-foreground"
+                  >
+                    <span>{sumber.periode.slice(0, 7)}</span>
+                    <span>{sumber.pemakaianRiil.toLocaleString("id-ID")} m³</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </Seksi>
+      )}
 
       <Seksi id="histori" judul="Histori pemakaian (3 bulan)">
         <HistoriPemakaian pelangganId={detail.pelanggan?.id} />
@@ -284,13 +295,9 @@ export function PanelLapangan({
         <p className="text-[11px] text-muted-foreground">Catatan verifikasi: “{detail.catatanVerif}”</p>
       )}
 
-      {aksi && bisaModal && (
-        <ModalLapangan
+      {aksi === "cekulang" && !detail.pembacaanId && (
+        <ModalCekUlang
           detail={detail}
-          meters={meters}
-          meterAwal={meterAwal}
-          ring={aksi === "v2" ? 2 : aksi === "v3" ? 3 : 1}
-          tolakAwal={aksi === "cekulang"}
           onTutup={onTutupAksi}
           onSelesai={() => {
             onTutupAksi();

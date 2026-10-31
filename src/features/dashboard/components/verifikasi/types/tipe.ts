@@ -62,6 +62,28 @@ export interface LaporanHarianDetail {
   persentase?: number | null
   kondisi: string
   kategori: string
+  jenisInput?: "PETUGAS" | "MANUAL_SATUAN" | "MANUAL_MASSAL"
+  alasanManual?: string | null
+  manualProvenance?: {
+    metode:
+      | "RATA_RATA_12_BULAN"
+      | "TIGA_TERTINGGI"
+      | "RIWAYAT_TERSEDIA"
+      | "TANPA_HISTORI"
+    standSumber:
+      | {
+          id: string
+          periode: string
+          standAwal?: number
+          standAkhir?: number
+        }
+      | null
+    sumberPembacaan: {
+      id: string
+      periode: string
+      pemakaianRiil: number
+    }[]
+  } | null
   nomorMeter?: string | null
   tanggalCatat?: string | null
   isVerified: boolean

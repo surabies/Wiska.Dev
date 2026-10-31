@@ -25,7 +25,13 @@ import { KotakCari } from "../data-grid/toolbar/kotak-cari"
 import { FilterPilihan } from "../data-grid/toolbar/filter-pilihan"
 import { PenyaringTanggal } from "../data-grid/toolbar/penyaring-tanggal"
 import { TombolFilterLanjutan } from "../data-grid/toolbar/tombol-filter-lanjutan"
-import { ModalPencarian, type KriteriaPencarian, type OpsiPencarian } from "./modal/modal-pencarian"
+import {
+  hitungKriteriaPencarian,
+  ModalPencarian,
+  type KriteriaPencarian,
+  type OpsiPencarian,
+} from "./modal/modal-pencarian"
+import { LABEL_KONDISI_CATAT } from "../../lib/label"
 
 export interface FilterVerifikasi {
   q: string
@@ -37,12 +43,15 @@ export interface FilterVerifikasi {
   tanggalDari: string
   tanggalSampai: string
   hanyaAnomali: boolean
+  kondisi: string
+  kriteriaLanjutan: KriteriaPencarian
   pageSize: number
 }
 
 export const FILTER_AWAL: FilterVerifikasi = {
   q: "", periode: null, statusVerif: "", pencatatId: "", ruteId: "",
-  tanggalDari: "", tanggalSampai: "", hanyaAnomali: false, pageSize: 100,
+  tanggalDari: "", tanggalSampai: "", hanyaAnomali: false, kondisi: "",
+  kriteriaLanjutan: {}, pageSize: 100,
 }
 
 export const PILIHAN_UKURAN = [50, 100, 200, 500, 1000, 2000, 5000] as const
@@ -56,6 +65,7 @@ export function ToolbarVerifikasi({
   aksiKanan,
   opsiPencarian,
   onPencarianLanjutan,
+  galatOpsiPencarian,
 }: {
   filter: FilterVerifikasi
   onGanti: (f: FilterVerifikasi) => void
@@ -73,13 +83,14 @@ export function ToolbarVerifikasi({
   aksiKanan?: React.ReactNode
   /** Pilihan dropdown modal Pencarian Data (wilayah, zonasi, …) dari server. */
   opsiPencarian?: OpsiPencarian
-  /** Dipanggil saat "Cari Data" ditekan. Belum diberikan = modal hanya tampilan. */
-  onPencarianLanjutan?: (kriteria: KriteriaPencarian, jumlah: number) => void
+  /** Dipanggil saat kriteria Cari Lanjutan diterapkan. */
+  onPencarianLanjutan: (kriteria: KriteriaPencarian) => void
+  galatOpsiPencarian?: string | null
 }) {
   const [cari, setCari] = React.useState(filter.q)
   const [panelBuka, setPanelBuka] = React.useState(false)
   const [pencarianBuka, setPencarianBuka] = React.useState(false)
-  const [kriteriaTerapan, setKriteriaTerapan] = React.useState(0)
+  const kriteriaTerapan = hitungKriteriaPencarian(filter.kriteriaLanjutan)
 
   // Pencarian ditunda 350 ms — mengetik 11 digit nomor tidak boleh = 11 permintaan.
   React.useEffect(() => {
@@ -90,6 +101,10 @@ export function ToolbarVerifikasi({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cari])
 
+  React.useEffect(() => {
+    if (cari !== filter.q) setCari(filter.q)
+  }, [filter.q, cari])
+
   const set = <K extends keyof FilterVerifikasi>(k: K, v: FilterVerifikasi[K]) =>
     onGanti({ ...filter, [k]: v })
 
@@ -97,9 +112,11 @@ export function ToolbarVerifikasi({
   const jumlahLanjutan =
     (filter.pencatatId ? 1 : 0) + (filter.ruteId ? 1 : 0) +
     (!modeBelumDibaca && filter.statusVerif ? 1 : 0) +
-    (!modeBelumDibaca && filter.hanyaAnomali ? 1 : 0)
+    (!modeBelumDibaca && filter.hanyaAnomali ? 1 : 0) +
+    (!modeBelumDibaca && filter.kondisi ? 1 : 0)
   const adaFilter =
-    jumlahLanjutan > 0 || filter.q !== "" || filter.tanggalDari !== "" || filter.tanggalSampai !== ""
+    jumlahLanjutan > 0 || kriteriaTerapan > 0 || filter.q !== "" ||
+    filter.tanggalDari !== "" || filter.tanggalSampai !== ""
 
   return (
     <div className="flex flex-col gap-2">
@@ -184,6 +201,17 @@ export function ToolbarVerifikasi({
               onUbah={(v) => set("statusVerif", v)}
             />
           )}
+          {!modeBelumDibaca && (
+            <FilterPilihan
+              filter={{
+                param: "kondisi",
+                label: "Kondisi Catat",
+                opsi: Object.entries(LABEL_KONDISI_CATAT).map(([value, label]) => ({ value, label })),
+              }}
+              nilai={filter.kondisi}
+              onUbah={(v) => set("kondisi", v)}
+            />
+          )}
           <FilterPilihan
             filter={{ param: "pencatatId", label: "Petugas", opsi: pencatats.map((p) => ({ value: p.id, label: p.namaLapangan })) }}
             nilai={filter.pencatatId}
@@ -233,11 +261,14 @@ export function ToolbarVerifikasi({
           buka
           onBuka={(b) => !b && setPencarianBuka(false)}
           opsi={opsiPencarian}
-          onCari={(kriteria, jumlah) => {
-            setKriteriaTerapan(jumlah)
-            onPencarianLanjutan?.(kriteria, jumlah)
-          }}
+          nilaiAwal={filter.kriteriaLanjutan}
+          onCari={(kriteria) => onPencarianLanjutan(kriteria)}
         />
+      )}
+      {galatOpsiPencarian && (
+        <p role="status" className="text-muted-foreground text-xs">
+          Beberapa pilihan Cari Lanjutan gagal dimuat: {galatOpsiPencarian}
+        </p>
       )}
     </div>
   )
