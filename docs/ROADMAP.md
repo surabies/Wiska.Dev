@@ -1,7 +1,7 @@
 # Roadmap — Aplikasi Baca Meter Air
 
-**Versi:** 0.3 (rekonsiliasi dokumentasi 1 November 2026; G0 pilot ditutup; berbasis release gate)
-**Tanggal:** 1 November 2026
+**Versi:** 0.4 (progres implementasi dicatat 2 November 2026; release gate tetap berbasis bukti)
+**Tanggal:** 2 November 2026
 **Status:** urutan kerja usulan; tidak menjanjikan tanggal rilis
 **Dokumen terkait:** [Status dan progres proyek](./STATUS.md), [PRD](./PRD.md), [Definisi MVP](./MVP.md), [Aturan Verifikasi Berjenjang dan Koreksi](./VERIFIKASI.md), [Arsitektur](./ARSITEKTUR.md), [Matriks RBAC](./RBAC.md), [Indeks dokumentasi](./INDEKS.md)
 
@@ -64,6 +64,14 @@
 - **Koreksi workflow Manual Add (aktif):** Manual Add satuan dapat mengganti hasil yang sudah melewati verifikasi hanya pada periode terbuka dan sebelum hasil masuk Tagihan; penggantian wajib beralasan, diaudit before/after, mereset ring, dan mengembalikan laporan ke verifikasi. Manual Add All memfilter Petugas lalu Rute, langsung menampilkan alamat belum disetorkan, menghitung taksasi otomatis, menambahkan hanya pilihan checkbox, serta melaporkan progres batch tersimpan. Rilis tetap menunggu validasi integrasi role/duplikat/race, migration staging, dan uji hasil Manual melalui V1/V2/V3.
 - Histori semua jalur taksasi memakai `Tagihan.pemakaianM3` nonnegatif, termasuk nilai override/minimum; Manual Add All menggunakan 12 bulan tagihan, tiga nilai tertinggi, atau seluruh histori yang tersedia. ST Awal dan ST Akhir sama, menggunakan `standAkhir` dari pembacaan resmi terakhir sebelum periode berjalan (DEC-01; bukan `standLalu`). Jika tidak ada histori tagihan tetapi stand resmi sebelumnya dan meter aktif tersedia, usulkan 5 m³ sesuai minimum Perdir; jika stand atau meter aktif tidak tersedia, tandai Perlu Ditinjau dan jangan izinkan baris dipilih/dikirim (DEC-02). No-history untuk 14 kondisi otomatis tetap OPEN-02. Hasil Manual Add tetap menunggu verifikasi; `MANUAL_ADD` pada hasil resmi mengecualikannya dari histori taksasi berikutnya.
 - Tetapkan dan uji batas kewajaran/manual-review atas angka ekstrem sebelum rilis produksi; jangan menerbitkan atau menagihkan taksasi otomatis sebelum alur verifikasi.
+
+### Kemajuan implementasi tercatat 2 November 2026
+
+- Filter sumber laporan di halaman Verifikasi Petugas tersedia untuk Petugas, Mandiri, Manual Add satuan, dan Manual Add All; filter diterapkan pada endpoint daftar, bukan hanya pada baris yang sedang dimuat.
+- Ikon sumber Mandiri/Manual Add berada di kiri angka ST Akhir, dengan warna berbeda dan label tooltip; label teks sumber di kolom Ket Catat dihapus. Kode rute snapshot/fallback ditampilkan pada rincian pencatatan Info Pelanggan.
+- Perbaikan pemetaan petugas Manual Add satuan dan sinkronisasi Mandiri beserta fallback penugasan rute telah masuk repository.
+- Bukti lokal: commit `a3028f3` (filter dan ikon), commit `44f575a` (pembaruan Manual Add, Mandiri, panel verifikasi, halaman konsumen, rincian rute); `pnpm build`, `pnpm typecheck`, Prettier, `git diff --check`, dan 7 tes `LaporanMandiri.router.test.ts` lulus pada 2 November. E2E Manual Add terhenti sebelum tes berjalan akibat argumen direktori yang salah pada `webServer` Playwright; lint terblokir karena dukungan TypeScript 7 belum tersedia.
+- **Dampak fase:** ini adalah progres implementasi dan validasi lokal pada bagian dari Tahap 1/backlog Manual Add. Exit gate Tahap 1 serta G1–G3 tetap terbuka sampai tes E2E/integrasi, role/race, staging, dan prasyarat lain pada gate terkait memiliki bukti yang disyaratkan. Jadwal pilot juga tetap tunduk pada OPEN-16; tidak ada go/no-go baru yang dicatat.
 
 ## Tahap 2 — migration dan readiness staging
 
@@ -144,7 +152,7 @@
 - Operasi restore, incident, rollback, on-call/support, dan rilis telah diuji.
 - Persetujuan produk, engineering, keamanan, operasi, billing, dan bisnis tersedia.
 
-## Snapshot kesiapan berdasarkan repository (31 Oktober 2026)
+## Snapshot kesiapan berdasarkan repository (diperbarui 2 November 2026)
 
 Ini snapshot pekerjaan kode, bukan penilaian audit independen baru.
 
@@ -158,7 +166,7 @@ Ini snapshot pekerjaan kode, bukan penilaian audit independen baru.
 | Offline sync/idempotensi | Belum dinyatakan selesai | Tetapkan kontrak event, payload hash, checkpoint, attachment resume, konflik, dan test lapangan. |
 | Data legacy dan formula pemakaian | Aturan konservatif pilot disahkan; billing produksi belum | Satu periode CSV menemukan banyak delta stand/tagih berbeda; perlu codebook produksi, data lintas periode, dan sign-off sebelum hasil dipakai untuk tagihan. |
 | Koreksi pasca-tagihan/financial adjustment | Belum diimplementasikan | Tentukan maker-checker, kebijakan billing, invoice terbayar, nota, saldo, dan refund. |
-| Test dan build | Hasil build/test terkini belum diverifikasi pada pembaruan dokumen ini | Periksa hasil CI sebelum tiap gate; buktikan cakupan integration, concurrency, security, performance, dan restore sesuai risiko pilot. |
+| Test dan build | `pnpm build`, `pnpm typecheck`, Prettier, `git diff --check`, dan 7 tes Mandiri lulus lokal 2 November 2026; bukan bukti staging. | E2E Manual Add belum berjalan karena konfigurasi Playwright `webServer`; lint terblokir oleh kompatibilitas TypeScript 7; lanjutkan tes integrasi, concurrency, security, performance, restore, dan CI sesuai gate. |
 | Readiness produksi komersial | Belum tercapai | Lengkapi semua exit gate di atas, termasuk operasi, support, privasi, keamanan, dan penerapan database. |
 
 ## Cadence dan pengelolaan

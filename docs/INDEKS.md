@@ -1,7 +1,7 @@
 # Indeks Dokumentasi Baca Meter Air
 
-**Versi:** 1.1 (pembaruan keputusan kewenangan Tagihan)
-**Tanggal:** 1 November 2026
+**Versi:** 1.2 (progres implementasi dan validasi lokal)
+**Tanggal:** 2 November 2026
 **Status:** indeks dan register; bukan spesifikasi produk
 **Peran dokumen:** sumber kebenaran untuk (a) peta sumber kebenaran per topik, (b) glosarium dan pemetaan peran, (c) log keputusan (DEC) dan (d) register isu terbuka (OPEN). Dokumen lain menaut ke sini dengan ID, bukan menyalin isinya.
 
@@ -162,7 +162,7 @@ Setiap butir mencatat konflik atau celah beserta bukti dokumennya. Opsi hanya us
 
 **OPEN-20 Kewenangan endpoint `POST /pembacaan`.** Klaim audit: jalur ini membuat hasil resmi langsung tanpa V1/V2/V3 dan tanpa pemeriksaan periode terkunci. Perlu diputuskan sebagai jalur impor/admin khusus dengan izin sempit dan audit, atau ditutup.
 
-**OPEN-21 Lint terblokir; format sudah dipulihkan.** Lint masih tertahan karena `typescript-eslint` yang terpasang belum mendukung TypeScript 7.0.2 (lihat STATUS). Prettier sudah dipulihkan 1 November 2026 dengan memasang plugin Tailwind yang dirujuk konfigurasi dan mengaktifkan Format On Save di workspace; verifikasi format lanjutan masih perlu dijalankan sesuai file yang diubah.
+**OPEN-21 Lint terblokir; format sudah dipulihkan.** Pada validasi 2 November 2026, lint file terkait gagal memulai karena `typescript-eslint` 8.70.0 belum mendukung TypeScript 7.0.2 (lihat STATUS). Prettier berjalan dan lulus pada file yang diubah. Jangan menganggap lint lulus; pembaruan tooling tetap memerlukan persetujuan dependency.
 
 ## Konvensi penulisan
 
@@ -178,3 +178,5 @@ Setiap butir mencatat konflik atau celah beserta bukti dokumennya. Opsi hanya us
 **1 November 2026, rekonsiliasi dokumentasi.** Dokumen ini dibuat. Dokumen lain diperbarui secara terarah: kebijakan stand Manual Add All, status klaim ring V2/V3, izin closing STAFF, jadwal pilot, hierarki taksasi, label data, header (versi, tanggal, peran dokumen), dan tautan.
 
 **Yang tidak dilakukan atau tidak diverifikasi:** kode, schema, migration, dan database tidak dibaca atau diubah; tes, build, E2E, pilot, dan deployment tidak dijalankan; `git status` tidak dapat diperiksa karena repo tidak tersedia pada sesi rekonsiliasi. Semua klaim implementasi di dokumen tetap berstatus klaim sampai diverifikasi terhadap repo.
+
+**2 November 2026, progres implementasi dan dokumentasi:** STATUS dan ROADMAP diperbarui dengan perubahan yang masuk pada `a3028f3` dan `44f575a`, hasil build/typecheck/tes lokal, serta blocker lint dan E2E. VERIFIKASI mencatat kontrak ikon dan filter sumber laporan. Tidak ada fase atau release gate yang ditandai selesai; tes staging, PostgreSQL integrasi, dan kesiapan pilot belum dibuktikan.

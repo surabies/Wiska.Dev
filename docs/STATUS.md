@@ -1,6 +1,6 @@
 # Status Proyek — Aplikasi Baca Meter Air
 
-**Tanggal snapshot:** 31 Oktober 2026 (direkonsiliasi 1 November 2026; item historis di bawah tetap perlu dibaca sesuai tanggal bukti)
+**Tanggal snapshot:** 2 November 2026 (baseline 31 Oktober direkonsiliasi 1 November; progres implementasi dan validasi lokal diperbarui 2 November)
 
 **Status keseluruhan:** belum siap dinyatakan layak produksi; kesiapan pilot belum dibuktikan.
 
@@ -12,7 +12,7 @@
 
 **Peran dokumen:** status implementasi, bukti (tes, migration, lingkungan), dan log keputusan G0 untuk pilot. Bukan sumber aturan bisnis: ring dan koreksi ada di [aturan verifikasi](./VERIFIKASI.md), kondisi dan taksasi di [aturan kondisi](./ATURAN-KONDISI.md), role di [RBAC](./RBAC.md). Peta dokumen, glosarium, keputusan (DEC), dan isu terbuka (OPEN): [Indeks](./INDEKS.md#register-open).
 
-**Validasi terakhir (1 November 2026):** refactor struktur dan penamaan Info Pelanggan lulus tes terarah (2 tes), typecheck, dan `git diff --check`. Penataan nama/lapisan feature Verifikasi lulus 15 tes terarah, `pnpm typecheck`, dan `git diff --check`. Audit penamaan/metadata 74 halaman App Router lulus `pnpm typecheck`. Perbaikan Prettier memasang plugin Tailwind yang sebelumnya dirujuk tetapi hilang, mengatur format-on-save workspace, dan memformat file pengaduan publik; cek file tersebut dan typecheck lulus. Ini bukan tes integrasi PostgreSQL/staging dan tidak membuktikan kesiapan produksi.
+**Validasi terakhir (2 November 2026):** `pnpm build` berhasil, termasuk Prisma Client generate, build Next.js produksi, pemeriksaan TypeScript, dan pembuatan halaman statis. `pnpm typecheck`, pemeriksaan Prettier pada file terkait, dan `git diff --check` berhasil. `pnpm exec vitest run src/lib/server/modules/laporan/LaporanMandiri.router.test.ts` lulus (7 tes). Playwright untuk `e2e/manual-add.e2e.test.ts` tidak berjalan karena konfigurasi `webServer` menjalankan `next dev` dengan argumen direktori `--hostname` yang tidak valid; ini bukan hasil tes lulus/gagal. ESLint belum dapat berjalan karena `typescript-eslint` 8.70.0 tidak mendukung TypeScript 7.0.2. Validasi ini lokal, bukan tes integrasi PostgreSQL/staging, dan tidak membuktikan kesiapan produksi.
 
 **Catatan rekonsiliasi 1 November 2026:** bagian bertanda snapshot 31 Oktober mencerminkan kondisi sebelum keputusan DEC-03 (V2/V3 boleh tanpa ring bawah). Bila bertentangan dengan aturan verifikasi (v0.5) atau Indeks, yang terakhir berlaku. Pernyataan "sudah/lulus" di dokumen ini adalah catatan sesi sebelumnya (aturan penulisan status: DEC-07); rekonsiliasi tidak menjalankan tes, migration, atau E2E dan tidak memverifikasinya terhadap kode.
 
@@ -171,6 +171,8 @@ Matriks kondisi lengkap dan aturan pilot ada di [Aturan Domain Kondisi Catat Met
 - [ ] Pemilik data mengonfirmasi definisi, alias, bukti, dan dampak periode/status untuk kode yang masih ambigu. Persetujuan definisi tidak dengan sendirinya mengesahkan formula billing.
 - [ ] Belum dibuktikan kesetaraan V3 satuan/massal atau integrasi PostgreSQL untuk workflow kritis; Manual Add baru diverifikasi manual pada database yang terhubung, belum pada staging representatif.
 - [x] Validasi sebelumnya Manual Add All, pencarian exact, audit hasil resmi, dan V3 massal: tes terarah (18 tes) dan `pnpm typecheck` lulus; tidak mencakup database PostgreSQL/staging.
+- [x] **Progres implementasi 2 November 2026:** penyimpanan petugas Manual Add satuan menggunakan snapshot daftar catat dan mempertahankan petugas laporan lama bila snapshot tidak tersedia; sinkronisasi Mandiri ke antrean Petugas menggunakan snapshot lalu penugasan rute sebagai fallback. Rincian pencatatan Info Pelanggan menampilkan kode rute snapshot/fallback. Panel verifikasi dirapikan; kolom Ket Catat tidak lagi menampilkan label sumber, sedangkan ikon Mandiri/Manual Add tampil di kiri angka ST Akhir dengan tooltip dan warna berbeda. Toolbar Verifikasi Petugas dapat menyaring Petugas, Mandiri, Manual Add satuan, atau Manual Add All melalui filter server-side `jenisInput`. Halaman Stand Konsumen dipindahkan ke `/stand-konsumen`. Perubahan tercatat pada commit `44f575a` dan filter/ikon pada `a3028f3`; build lokal, typecheck, dan 7 tes Mandiri lulus seperti dirinci di atas. Ini progres implementasi, bukan penutupan G1/G2 atau release gate.
+- [ ] **Validasi lanjutan progres 2 November:** E2E Manual Add masih perlu dijalankan setelah konfigurasi Playwright diperbaiki; lint tertahan oleh kompatibilitas TypeScript 7; tes integrasi PostgreSQL/staging, role/duplikat/race, dan verifikasi visual browser belum dibuktikan. Jangan tandai fase atau release gate selesai berdasarkan build lokal saja.
 
 ## Fokus kerja berikutnya — backend correctness
 

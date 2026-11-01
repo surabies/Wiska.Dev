@@ -1,8 +1,10 @@
 # Aturan Verifikasi Berjenjang dan Koreksi
 
-**Versi:** 0.6 (pembaruan kewenangan Tagihan; 1 November 2026)
+**Versi:** 0.7 (indikator dan filter sumber laporan; 2 November 2026)
 
-**Status:** kebijakan bisnis diselaraskan dengan [Matriks RBAC Aplikasi](./RBAC.md) dan keputusan DEC-08. Status implementasi tetap dibedakan dari kebijakan; validasi dilakukan dengan tes.
+**Tanggal:** 2 November 2026
+
+**Status:** kebijakan bisnis diselaraskan dengan [Matriks RBAC Aplikasi](./RBAC.md) dan keputusan DEC-08. Kontrak indikator/filter sumber laporan dicatat 2 November 2026; status implementasi dan validasinya ada di [STATUS](./STATUS.md), bukan dianggap lulus hanya dari kontrak.
 
 **Cakupan:** verifikasi laporan petugas dengan tahap V1/V2/V3, koreksi setelah verifikasi, verifikasi massal, hak administratif STAFF, dan closing.
 
@@ -57,6 +59,14 @@ Kolom berikut adalah spesifikasi kerja berdasarkan klarifikasi pemilik produk. �
 |     16 | Tagihan   | Pemakaian final yang akan ditagihkan dalam m³, bukan nominal rupiah.               | Hanya diisi/ditetapkan V3; kosong sebelum V3. Tetap terpisah dari Pakai/hasil ukur. Nominal rupiah bukan isi kolom ini.                                                                                                                                       |
 |     17 | Petugas   | Nama petugas pencatat lapangan.                                                    | Menampilkan pencatat, bukan verifikator; verifikator terlihat pada detail/audit ring.                                                                                                                                                                         |
 |     18 | Tgl Catat | Tanggal dan waktu pencatatan.                                                      | Tampilkan waktu, bukan tanggal saja; format zona waktu harus konsisten (WIB untuk UI operasional).                                                                                                                                                            |
+
+### Penanda dan filter sumber laporan
+
+- Kolom ST Akhir menampilkan ikon sumber di sisi kiri nilai tanpa menggeser angka: ikon konsumen berwarna biru untuk `KONSUMEN` (Mandiri), ikon pensil berwarna amber untuk `MANUAL_SATUAN` dan `MANUAL_MASSAL` (Manual Add). Laporan `PETUGAS` tidak diberi ikon sumber tambahan.
+- Label aksesibel dan tooltip menyebutkan sumber laporan; warna bukan satu-satunya pembeda.
+- Filter “Asal laporan” pada Verifikasi Petugas memisahkan `PETUGAS`, `KONSUMEN`, `MANUAL_SATUAN`, dan `MANUAL_MASSAL`. Penyaringan dilakukan pada endpoint daftar agar berlaku untuk seluruh hasil periode, bukan hanya baris yang sudah dimuat di browser.
+- Label sumber tidak ditempatkan pada kolom Ket Catat; kolom tersebut tetap menjelaskan kondisi pencatatan.
+- Implementasi dan bukti validasi lokal 2 November 2026 dicatat di [STATUS](./STATUS.md) dan [ROADMAP](./ROADMAP.md). Tes integrasi/staging dan E2E browser belum dibuktikan.
 
 #### Alur Revisi Pencatat dan taksasi yang terkait tabel
 
@@ -146,3 +156,5 @@ Audit dilakukan pada `rbac.ts`, endpoint verifikasi dan unverify di `laporan-har
 | ----- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.4   | 1 November 2026 | Kontrak diselaraskan dengan matriks RBAC. Versi sebelumnya tidak tercatat pada dokumen ini.                                                  |
 | 0.5   | 1 November 2026 | Rekonsiliasi dokumentasi: bagian "Koreksi setelah V3", label klaim implementasi, rujukan DEC/OPEN, klarifikasi kolom Lalu, Pakai, dan Dev %. |
+| 0.6   | 1 November 2026 | Kewenangan Tagihan diselaraskan dengan DEC-08.                                                                                                |
+| 0.7   | 2 November 2026 | Kontrak ikon sumber di ST Akhir dan filter sumber laporan ditambahkan.                                                                       |
