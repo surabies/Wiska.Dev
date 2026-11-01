@@ -7,6 +7,14 @@ export interface TitikAnomali {
   lainnya: number
 }
 
+export interface TitikTren {
+  periode: number
+  status: "terbit" | "berjalan" | "belum-terbit"
+  jumlahTagihan: number
+  nilai: number | null
+  pemakaianM3: number | null
+}
+
 export interface BarisPetugas {
   id: string
   nama: string

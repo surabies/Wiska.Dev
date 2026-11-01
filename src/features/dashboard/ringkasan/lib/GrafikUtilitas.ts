@@ -99,17 +99,6 @@ export function skalaRapi(maks: number, bulat = false) {
   }
 }
 
-/** 1.234.567 → "1,2 jt"; 45.000 → "45 rb". */
-export function ringkasAngka(n: number): string {
-  const f = (x: number) =>
-    x.toLocaleString("id-ID", { maximumFractionDigits: 1 })
-  const a = Math.abs(n)
-  if (a >= 1e9) return `${f(n / 1e9)} M`
-  if (a >= 1e6) return `${f(n / 1e6)} jt`
-  if (a >= 1e3) return `${f(n / 1e3)} rb`
-  return f(n)
-}
-
 /** "Maret 2026" → "Mar 26". Bentuk lain dikembalikan apa adanya. */
 export function singkatPeriode(teks: string): string {
   const [bulan, tahun] = teks.split(" ")

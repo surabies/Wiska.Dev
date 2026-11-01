@@ -16,7 +16,9 @@ import "server-only"
 // pemakai, bukan IP server.
 import { unstable_cache } from "next/cache"
 import { prisma } from "@db"
-import { dateToPeriode } from "@/lib/domain/Periode"
+import { dateToPeriode, periodeToDate } from "@/lib/domain/Periode"
+import { geserPeriode } from "./KueriMeter"
+import type { TitikTren } from "../types/TipeRingkasan"
 // Impor STATIS, bukan `await import()` di dalam fungsi: impor dinamis membuat
 // resolusinya baru diuji saat halaman dijalankan, sehingga kesalahan resolusi
 // lolos dari typecheck DAN build lalu baru meledak di layar operator.
@@ -156,27 +158,48 @@ export async function ambilRingkasan() {
   }
 }
 
-export async function ambilTren() {
-  const terakhir = await periodeTerakhir()
-  if (!terakhir) return []
-  const mulai = new Date(
-    Date.UTC(terakhir.getUTCFullYear(), terakhir.getUTCMonth() - 5, 1)
-  )
+export async function ambilTren(periodeAkhir?: number): Promise<TitikTren[]> {
+  const akhir = periodeAkhir
+    ? periodeToDate(periodeAkhir)
+    : await periodeTerakhir()
+  if (!akhir) return []
+
+  const periodeTerakhirDipilih = dateToPeriode(akhir)
+  const periodeAwal = geserPeriode(periodeTerakhirDipilih, -5)
+  const mulai = periodeToDate(periodeAwal)
 
   const baris = await prisma.tagihan.groupBy({
     by: ["periode"],
-    where: { periode: { gte: mulai, lte: terakhir } },
+    where: { periode: { gte: mulai, lte: akhir } },
     _sum: { totalTagihan: true, pemakaianM3: true },
     _count: true,
     orderBy: { periode: "asc" },
   })
 
-  return baris.map((b) => ({
-    periode: dateToPeriode(b.periode),
-    jumlahTagihan: b._count,
-    nilai: b._sum.totalTagihan ?? 0,
-    pemakaianM3: b._sum.pemakaianM3 ?? 0,
-  }))
+  const peta = new Map<number, TitikTren>()
+  for (let i = 0; i < 6; i++) {
+    const periode = geserPeriode(periodeAwal, i)
+    peta.set(periode, {
+      periode,
+      status: "belum-terbit",
+      jumlahTagihan: 0,
+      nilai: null,
+      pemakaianM3: null,
+    })
+  }
+
+  for (const barisPeriode of baris) {
+    const periode = dateToPeriode(barisPeriode.periode)
+    peta.set(periode, {
+      periode,
+      status: "terbit",
+      jumlahTagihan: barisPeriode._count,
+      nilai: barisPeriode._sum.totalTagihan ?? 0,
+      pemakaianM3: barisPeriode._sum.pemakaianM3 ?? 0,
+    })
+  }
+
+  return [...peta.values()]
 }
 
 export async function ambilPerluTindakan() {

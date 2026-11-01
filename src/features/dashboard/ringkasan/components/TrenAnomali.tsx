@@ -7,18 +7,17 @@
 //   - batang tumpuk: jumlah per periode terbaca langsung, kode kecil tetap
 //     terlihat walau satu kode (mis. "Lainnya") jauh lebih besar
 //   - label sumbu-Y di dalam area → margin kiri = kanan = padding panel
-//   - label sumbu-X disingkat ("Mar 26") dan dijarangkan sesuai lebar, selalu
-//     memuat periode terakhir → tidak pernah meluber
+//   - label sumbu-X menampilkan bulan pada setiap periode
 //   - legenda bisa diklik untuk menyembunyikan/menampilkan kode (minimal satu)
 //   - tooltip memakai TooltipGrafik bersama, mengikuti ujung kursor
 import { useMemo, useState } from "react"
 import { cn } from "@/lib/Utilitas"
 import { formatPeriode } from "@/features/public/lib/Format"
 import type { TitikAnomali } from "../types/TipeRingkasan"
+import { formatAngkaPenuh } from "./AngkaPenuh"
 import { Panel } from "./Panel"
 import { TooltipGrafik, type SeriTooltip } from "./TooltipGrafik"
 import {
-  ringkasAngka,
   singkatPeriode,
   skalaRapi,
   useTooltipKursor,
@@ -39,7 +38,7 @@ const WARNA: Record<Kunci, string> = {
 const LABEL: Record<Kunci, string> = {
   DK: "DK",
   TTB: "TTB",
-  BMK_BMB: "BMB",
+  BMK_BMB: "BMK/BMB",
   MTA: "MTA",
   lainnya: "Lainnya",
 }
@@ -52,7 +51,6 @@ const jumlah = (t: TitikAnomali) => t.DK + t.TTB + t.BMK_BMB + t.MTA + t.lainnya
 
 const ATAS = 16
 const BAWAH = 24
-const LEBAR_LABEL = 44 // perkiraan lebar label sumbu-X ("Mar 26")
 
 const teksSumbu = {
   fill: "var(--muted-foreground)",
@@ -89,11 +87,6 @@ function GrafikBatang({ baris, tampil }: { baris: Baris[]; tampil: Kunci[] }) {
       return [{ k, x: slot * i + (slot - lebar) / 2, y: y1, tinggi: y0 - y1 }]
     })
   })
-
-  // Label sumbu-X dari periode terakhir mundur, selang sesuai lebar slot.
-  const langkah = Math.max(1, Math.ceil(LEBAR_LABEL / Math.max(slot, 1)))
-  const indeksLabel: number[] = []
-  for (let i = n - 1; i >= 0; i -= langkah) indeksLabel.push(i)
 
   function geser(e: React.PointerEvent<SVGSVGElement>) {
     const r = e.currentTarget.getBoundingClientRect()
@@ -158,20 +151,21 @@ function GrafikBatang({ baris, tampil }: { baris: Baris[]; tampil: Kunci[] }) {
 
             {ticks.map((t) => (
               <text key={t} x={0} y={y(t) - 4} fontSize={10} style={teksSumbu}>
-                {ringkasAngka(t)}
+                {formatAngkaPenuh(t)}
               </text>
             ))}
 
-            {indeksLabel.map((i) => (
+            {baris.map((t, i) => (
               <text
-                key={i}
+                key={t.periode}
                 x={slot * i + slot / 2}
                 y={h - 6}
-                fontSize={11}
+                fontSize={10}
                 textAnchor="middle"
                 style={{ fill: "var(--muted-foreground)" }}
               >
-                {singkatPeriode(baris[i].label)}
+                <title>{t.label}</title>
+                {singkatPeriode(t.label)}
               </text>
             ))}
           </svg>

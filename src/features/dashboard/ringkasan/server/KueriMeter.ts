@@ -306,3 +306,26 @@ export async function ambilStatPeriode(periode: number): Promise<StatPeriode> {
     nilai: null,
   }
 }
+
+export async function ambilTagihanAcuan(
+  periode: number
+): Promise<StatPeriode | null> {
+  const [terakhir] = await prisma.tagihan.groupBy({
+    by: ["periode"],
+    where: { periode: { lt: periodeKeTanggal(periode) } },
+    _count: true,
+    _sum: { totalTagihan: true, pemakaianM3: true },
+    orderBy: { periode: "desc" },
+    take: 1,
+  })
+
+  if (!terakhir) return null
+
+  return {
+    periode: dateToPeriode(terakhir.periode),
+    status: "terbit",
+    sl: terakhir._count,
+    kubikasi: terakhir._sum.pemakaianM3 ?? 0,
+    nilai: terakhir._sum.totalTagihan ?? 0,
+  }
+}

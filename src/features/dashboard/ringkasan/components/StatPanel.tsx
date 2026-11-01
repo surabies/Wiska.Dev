@@ -14,6 +14,7 @@ import type { LucideIcon } from "lucide-react"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import { cn } from "@/lib/Utilitas"
 import { Panel } from "./Panel"
+import type { ReactNode } from "react"
 
 type Nada = "netral" | "perhatian" | "peringatan" | "info" | "sukses"
 
@@ -91,8 +92,7 @@ export function StatPanel({
   progres,
 }: {
   label: string
-  /** Sudah diringkas bila berupa uang — lihat formatRupiahRingkas(). */
-  nilai: string
+  nilai: ReactNode
   keterangan?: string
   /** Nilai penuh, muncul sebagai tooltip saat kursor menyentuh angka ringkas. */
   judulLengkap?: string
@@ -129,7 +129,7 @@ export function StatPanel({
         <p
           title={judulLengkap}
           className={cn(
-            "truncate text-xl leading-8 num-display sm:text-2xl",
+            "min-w-0 truncate text-xl leading-8 num-display sm:text-2xl",
             n.angka
           )}
         >

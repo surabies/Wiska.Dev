@@ -137,7 +137,6 @@ export function StatCard({
   progres,
 }: {
   label: string
-  /** Sudah diringkas bila berupa uang — lihat formatRupiahRingkas(). */
   nilai: string
   keterangan?: string
   /** Nilai penuh, muncul sebagai tooltip saat kursor menyentuh angka ringkas. */

@@ -13,6 +13,7 @@ import {
   ambilCapaian,
   ambilProgresPetugas,
   ambilStatPeriode,
+  ambilTagihanAcuan,
   ambilTrenAnomali,
   geserPeriode,
   periodeKerja,
@@ -31,11 +32,8 @@ import { PerluTindakan } from "@/features/dashboard/ringkasan/components/PerluTi
 import { TrenPenjualan } from "@/features/dashboard/ringkasan/components/TrenPenjualan"
 import { TrenAnomali } from "@/features/dashboard/ringkasan/components/TrenAnomali"
 import { ProgresPetugas } from "@/features/dashboard/ringkasan/components/ProgresPetugas"
-import {
-  formatPeriode,
-  formatRupiah,
-  formatRupiahRingkas,
-} from "@/features/public/lib/Format"
+import { formatPeriode, formatRupiah } from "@/features/public/lib/Format"
+import { AngkaPenuh } from "@/features/dashboard/ringkasan/components/AngkaPenuh"
 
 const angka = (n: number, digit = 0) =>
   n.toLocaleString("id-ID", { maximumFractionDigits: digit })
@@ -70,18 +68,36 @@ export async function RingkasanView({
   const diminta = Number(periodeParam)
   const kerja = daftarPeriode.includes(diminta) ? diminta : kerjaTerbaru
 
-  // 2. Data spesifik periode terpilih (`kerja`) dan periode sebelumnya.
-  //    `tren` (grafik 6 bulan tagihan) tetap berbasis periode yang sudah terbit.
-  const [capaian, trenAnomali, petugas, tren, statIni, statLalu] = kerja
+  // 2. Data spesifik periode terpilih dan periode pembanding.
+  const [
+    capaian,
+    trenAnomali,
+    petugas,
+    trenTerbit,
+    statIni,
+    statLalu,
+    tagihanAcuan,
+  ] = kerja
     ? await Promise.all([
         ambilCapaian(kerja),
         ambilTrenAnomali(kerja),
         ambilProgresPetugas(kerja),
-        ambilTren(),
+        ambilTren(kerja),
         ambilStatPeriode(kerja),
         ambilStatPeriode(geserPeriode(kerja, -1)),
+        ambilTagihanAcuan(kerja),
       ])
-    : [null, [], [], [], null, null]
+    : [null, [], [], [], null, null, null]
+
+  const tren = trenTerbit.map((titik) =>
+    titik.periode === kerja && statIni?.status === "berjalan"
+      ? {
+          ...titik,
+          status: "berjalan" as const,
+          pemakaianM3: statIni.kubikasi,
+        }
+      : titik
+  )
 
   const opsiPeriode: OpsiPeriode[] = daftarPeriode.map((p: number) => ({
     value: String(p),
@@ -109,21 +125,34 @@ export async function RingkasanView({
       : selisih(statIni.kubikasi, statLalu?.kubikasi)
     : undefined
 
-  // Tagihan: periode berjalan belum punya tagihan → tampilkan periode lalu sebagai acuan.
-  const tagihanTampil = statIni
-    ? statIni.nilai !== null
+  // Jika periode belum terbit, kartu tetap menampilkan nilai tagihan terakhir
+  // yang sah dan menyebut periode acuan dengan jelas.
+  const memakaiAcuanTagihan = berjalan && tagihanAcuan?.nilai != null
+  const nilaiTagihan = memakaiAcuanTagihan ? tagihanAcuan.nilai : statIni?.nilai
+  const periodeTagihan = memakaiAcuanTagihan
+    ? tagihanAcuan.periode
+    : statIni?.periode
+  const labelTagihan =
+    memakaiAcuanTagihan && periodeTagihan
+      ? `Tagihan (acuan ${formatPeriode(periodeTagihan)})`
+      : kerja
+        ? `Tagihan ${formatPeriode(kerja)}`
+        : "Tagihan"
+  const tagihanTampil =
+    nilaiTagihan !== null && nilaiTagihan !== undefined
       ? {
-          nilai: formatRupiahRingkas(statIni.nilai),
-          penuh: formatRupiah(statIni.nilai),
+          nilai: <AngkaPenuh nilai={nilaiTagihan} awalan="Rp" />,
+          penuh: formatRupiah(nilaiTagihan),
         }
-      : { nilai: "Belum terbit", penuh: undefined }
-    : { nilai: "–", penuh: undefined }
+      : { nilai: berjalan ? "Belum terbit" : "–", penuh: undefined }
   const ketTagihan = statIni
-    ? statIni.nilai !== null
-      ? selisih(statIni.nilai, statLalu?.nilai)
-      : statLalu?.nilai != null
-        ? `${formatPeriode(statLalu.periode)}: ${formatRupiahRingkas(statLalu.nilai)}`
-        : undefined
+    ? memakaiAcuanTagihan
+      ? `${formatPeriode(statIni.periode)} belum terbit`
+      : statIni.nilai !== null
+        ? selisih(statIni.nilai, statLalu?.nilai)
+        : tagihanAcuan
+          ? `${formatPeriode(tagihanAcuan.periode)} adalah tagihan terakhir yang terbit`
+          : "Belum ada tagihan terbit sebagai acuan"
     : undefined
 
   return (
@@ -174,7 +203,7 @@ export async function RingkasanView({
             icon={DropletsIcon}
           />
           <StatPanel
-            label={kerja ? `Tagihan ${formatPeriode(kerja)}` : "Tagihan"}
+            label={labelTagihan}
             nilai={tagihanTampil.nilai}
             judulLengkap={tagihanTampil.penuh}
             keterangan={ketTagihan}

@@ -39,23 +39,6 @@ export function formatRupiah(nilai: number): string {
   return `Rp ${nilai.toLocaleString("id-ID")}`
 }
 
-/** 3012396720 -> "Rp 3,01 M". Untuk kartu statistik & sumbu grafik.
- *
- * Angka penuh TIDAK muat di kartu statistik: nilai tagihan sebulan mencapai
- * ratusan juta–miliar rupiah, dan versi panjangnya terpotong jadi
- * "Rp 3.012.3…" — persis kondisi yang membuat angkanya tak terbaca sama
- * sekali. Bentuk ringkas juga lebih mudah dibandingkan sekilas antar kartu.
- * Nilai penuh tetap dipakai di tabel/rincian, di mana ruangnya ada. */
-export function formatRupiahRingkas(nilai: number): string {
-  if (nilai >= 1_000_000_000)
-    return `Rp ${(nilai / 1_000_000_000).toLocaleString("id-ID", { maximumFractionDigits: 2 })} M`
-  if (nilai >= 1_000_000)
-    return `Rp ${(nilai / 1_000_000).toLocaleString("id-ID", { maximumFractionDigits: 1 })} jt`
-  if (nilai >= 1_000)
-    return `Rp ${(nilai / 1_000).toLocaleString("id-ID", { maximumFractionDigits: 0 })} rb`
-  return `Rp ${nilai}`
-}
-
 /** ISO string -> "1 Juni 2026". Dibaca sebagai UTC karena backend menyimpan
  *  tanggal jatuh tempo sebagai tanggal murni (tengah malam UTC) — memakai
  *  getDate() lokal akan menggeser tanggalnya sehari di zona WIB. */
