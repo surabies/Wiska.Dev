@@ -17,7 +17,7 @@ import {
   ringkasanLaporanPeta,
 } from "@/features/dashboard/lib/peta-queries";
 
-export const metadata: Metadata = { title: "Peta Jaringan · Tirtawening" };
+export const metadata: Metadata = { title: "Peta Jaringan" };
 
 export default async function WilayahPage() {
   const [

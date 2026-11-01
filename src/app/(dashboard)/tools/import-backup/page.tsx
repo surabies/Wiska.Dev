@@ -7,9 +7,9 @@ import { ImporCadanganClient } from "@/features/dashboard/components/import/impo
 
 
 
-export const metadata: Metadata = { title: "Import Backup · Tirtawening" }
+export const metadata: Metadata = { title: "Import Backup" }
 
-export default async function PetugasPage() {
+export default async function ImporBackupPage() {
   const session = await auth()
   if (!session?.user) redirect("/login")
 

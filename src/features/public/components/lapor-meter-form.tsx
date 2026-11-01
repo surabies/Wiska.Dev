@@ -15,13 +15,16 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 import {
   ambilJendelaLaporMandiri,
+  ambilPeriodeUjiLaporMandiri,
   cariPelanggan,
   laporMeter,
   ApiError,
   type PelangganPratinjau,
+  type PeriodeUjiLaporMeter,
 } from "../lib/api"
 import { formatPeriode } from "../lib/format"
 import { PemilihFoto } from "./pemilih-foto"
@@ -33,6 +36,9 @@ export function LaporMeterForm() {
   const [jendela, setJendela] = React.useState<JendelaLaporMandiri | null>(null)
   const [jendelaPending, setJendelaPending] = React.useState(true)
   const [jendelaError, setJendelaError] = React.useState<string | null>(null)
+  const [periodeUji, setPeriodeUji] = React.useState<PeriodeUjiLaporMeter | null>(null)
+  const [periodeUjiError, setPeriodeUjiError] = React.useState<string | null>(null)
+  const [pilihanPeriode, setPilihanPeriode] = React.useState("kalender")
   const [nomorLangganan, setNomorLangganan] = React.useState("")
   const [pratinjau, setPratinjau] = React.useState<PelangganPratinjau | null>(null)
   const [cariPending, setCariPending] = React.useState(false)
@@ -70,18 +76,44 @@ export function LaporMeterForm() {
   }, [muatJendela])
 
   React.useEffect(() => {
+    let batal = false
+    ambilPeriodeUjiLaporMandiri()
+      .then((data) => {
+        if (!batal) {
+          setPeriodeUji(data)
+          setPeriodeUjiError(null)
+        }
+      })
+      .catch((err) => {
+        if (!batal) {
+          setPeriodeUjiError(
+            err instanceof ApiError ? err.message : "Pilihan periode uji gagal dimuat.",
+          )
+        }
+      })
+    return () => {
+      batal = true
+    }
+  }, [])
+
+  React.useEffect(() => {
     return () => {
       if (fotoPreviewUrl) URL.revokeObjectURL(fotoPreviewUrl)
     }
   }, [fotoPreviewUrl])
 
-  const cari = React.useCallback(async (nomor: string) => {
+  const periodeOverride =
+    periodeUji?.aktif && pilihanPeriode !== "kalender"
+      ? Number(pilihanPeriode)
+      : undefined
+
+  const cari = React.useCallback(async (nomor: string, periode?: number) => {
     const id = ++pencarianTerbaru.current
     setCariError(null)
     setPratinjau(null)
     setCariPending(true)
     try {
-      const hasil = await cariPelanggan(nomor)
+      const hasil = await cariPelanggan(nomor, periode)
       if (id === pencarianTerbaru.current) setPratinjau(hasil)
     } catch (err) {
       if (id === pencarianTerbaru.current) setCariError(err instanceof ApiError ? err.message : "Gagal mencari nomor pelanggan.")
@@ -89,6 +121,13 @@ export function LaporMeterForm() {
       if (id === pencarianTerbaru.current) setCariPending(false)
     }
   }, [])
+
+  function ubahPeriode(nilai: string) {
+    setPilihanPeriode(nilai)
+    if (nomorLangganan.length === 11) {
+      void cari(nomorLangganan, nilai === "kalender" ? undefined : Number(nilai))
+    }
+  }
 
   // Auto-cari begitu nomor genap 11 digit — dipicu langsung dari event
   // handler (bukan useEffect yang memantau state): mengikuti pola yang
@@ -98,7 +137,7 @@ export function LaporMeterForm() {
     const digits = value.replace(/\D/g, "").slice(0, 11)
     setNomorLangganan(digits)
     if (digits.length === 11) {
-      cari(digits)
+      cari(digits, periodeOverride)
     } else {
       pencarianTerbaru.current++ // batalkan pencarian yang sedang berjalan
       setPratinjau(null)
@@ -139,6 +178,9 @@ export function LaporMeterForm() {
       form.set("foto", fotoFile)
       form.set("nomorPelapor", nomorPelapor.trim())
       form.set("namaPelapor", namaPelapor.trim())
+      if (periodeOverride !== undefined) {
+        form.set("periodeUji", String(periodeOverride))
+      }
 
       // Respons server DIPAKAI (bukan dibuang) untuk layar sukses di bawah:
       // status & createdAt di situ adalah konfirmasi SUNGGUHAN dari server,
@@ -148,7 +190,7 @@ export function LaporMeterForm() {
       setHasil({
         nomorLangganan: pratinjau.nomorLangganan,
         nama: pratinjau.nama,
-        periodeLabel: formatPeriode(pratinjau.periodeBerjalan),
+        periodeLabel: formatPeriode(respons.periode),
         stand: Number(standInput),
         fotoPreviewUrl,
         status: respons.status,
@@ -198,15 +240,49 @@ export function LaporMeterForm() {
     )
   }
 
+  const pemilihPeriodeUji = periodeUji?.aktif ? (
+    <div className="space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+      <div className="space-y-1">
+        <Label htmlFor="periode-uji">Periode laporan (uji)</Label>
+        <Select value={pilihanPeriode} onValueChange={ubahPeriode}>
+          <SelectTrigger id="periode-uji" className="h-10 rounded-xl">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="kalender">
+              Kalender · {formatPeriode(jendela.periode)}
+            </SelectItem>
+            {periodeUji.periodes.map((periode) => (
+              <SelectItem key={periode} value={String(periode)}>
+                {formatPeriode(periode)} · periode kerja
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <p className="text-xs text-amber-800 dark:text-amber-300">
+        Mode uji development. Periode yang dipilih akan digunakan saat laporan disimpan.
+      </p>
+    </div>
+  ) : periodeUjiError ? (
+    <Alert variant="destructive">
+      <AlertDescription>{periodeUjiError}</AlertDescription>
+    </Alert>
+  ) : null
+
   // `bisaKirimUlang` dari server, BUKAN `!sudahLaporBulanIni`: laporan yang
   // DITOLAK tetap "sudah ada" tapi tidak mengunci bulan berjalan — lihat
   // GET /pelanggan/:nomorLangganan di server/modules/publik/publik.router.ts.
-  const bisaLapor = jendela.boleh && !!pratinjau && pratinjau.bisaKirimUlang
+  const bisaLapor =
+    (periodeOverride !== undefined || jendela.boleh) &&
+    !!pratinjau &&
+    pratinjau.bisaKirimUlang
   const perluKirimUlang = !!pratinjau?.sudahLaporBulanIni && pratinjau.bisaKirimUlang
 
-  if (!jendela.boleh) {
+  if (!jendela.boleh && periodeOverride === undefined) {
     return (
       <div className="space-y-4">
+        {pemilihPeriodeUji}
         <Alert>
           <CalendarClock className="h-4 w-4" />
           <AlertDescription className="space-y-2">
@@ -234,6 +310,7 @@ export function LaporMeterForm() {
 
   return (
     <div className="space-y-5">
+      {pemilihPeriodeUji}
       {/* Pengingat saat jendela HAMPIR tutup. Sengaja hanya muncul di lima hari
           terakhir: spanduk yang selalu ada akan berhenti dibaca. */}
       {jendela.sisaHari !== null && jendela.sisaHari <= 5 && (

@@ -26,11 +26,7 @@ import { JenisPengaduan, KlasifikasiPengaduan, type Prisma } from "@db"
 import { prisma } from "@db"
 import { validate } from "../../lib/validate"
 import { ok, created } from "../../lib/response"
-import {
-  NotFoundError,
-  BadRequestError,
-  ForbiddenError,
-} from "../../lib/errors"
+import { NotFoundError, BadRequestError } from "../../lib/errors"
 import { cekRateLimit, ipKlien } from "../../lib/rate-limit"
 import {
   simpanBerkas,
@@ -53,6 +49,8 @@ import { tandaiWilayah } from "../pengaduan/wilayah"
 import { getSessionUserOpsional } from "../../lib/session"
 import {
   dapatkanJendelaLaporMandiri,
+  daftarPeriodeUjiLaporMandiri,
+  pastikanPeriodeUjiLaporMandiri,
   pastikanLaporanMandiriBolehDikirim,
   pastikanSambunganTertautKeAkun,
   simpanKirimanLaporanMandiri,
@@ -87,7 +85,10 @@ publikRouter.get("/pelanggan/:nomorLangganan", async (c) => {
 
   const pelanggan = await verifikasiPelanggan(parsed.data)
 
-  const periodeBerjalan = (await dapatkanJendelaLaporMandiri()).periode
+  const periodeUji = c.req.query("periodeUji")
+  const periodeBerjalan = periodeUji
+    ? await pastikanPeriodeUjiLaporMandiri(periodeUji)
+    : (await dapatkanJendelaLaporMandiri()).periode
   const laporanBulanIni = await prisma.laporanMandiri.findUnique({
     where: {
       pelangganId_periode: {
@@ -866,6 +867,21 @@ publikRouter.get("/lapor-meter/jendela", async (c) => {
   return ok(c, await dapatkanJendelaLaporMandiri())
 })
 
+publikRouter.get("/lapor-meter/periode-uji", async (c) => {
+  cekRateLimit(ipKlien(c), {
+    nama: "periode-uji-lapor-meter",
+    maks: 60,
+    jendelaMs: 5 * 60 * 1000,
+  })
+  return ok(c, {
+    aktif: process.env.NODE_ENV !== "production",
+    periodes:
+      process.env.NODE_ENV === "production"
+        ? []
+        : await daftarPeriodeUjiLaporMandiri(),
+  })
+})
+
 /// multipart/form-data (bukan JSON) karena membawa berkas foto.
 publikRouter.post("/lapor-meter", async (c) => {
   cekRateLimit(ipKlien(c), {
@@ -877,17 +893,16 @@ publikRouter.post("/lapor-meter", async (c) => {
   // Periksa sesi sebelum membaca multipart body; pemeriksaan Auth.js dapat
   // mengkloning request dan harus berjalan sebelum stream dikonsumsi.
   const sesi = await getSessionUserOpsional(c)
-  if (sesi && sesi.role !== "USER") {
-    throw new ForbiddenError("Jalur ini hanya untuk akun warga.")
-  }
+  // Endpoint ini memang jalur publik/tamu. Sesi warga tetap mendapat
+  // pemeriksaan kepemilikan sambungan; sesi role lain tidak boleh menghalangi
+  // penggunaan formulir publik dan diperlakukan seperti kiriman anonim.
+  const sesiWarga = sesi?.role === "USER" ? sesi : null
 
   // DIPERIKSA PALING AWAL — sebelum form diurai, sebelum foto disentuh.
   // Menolak setelah mengunggah foto berarti menghabiskan kuota penyimpanan
   // dan kuota bandwidth warga untuk berkas yang pasti dibuang.
-  const jendela = await dapatkanJendelaLaporMandiri()
-  if (!jendela.boleh) throw new BadRequestError(jendela.pesan)
-
   const form = await c.req.formData()
+  const periodeUjiRaw = form.get("periodeUji")
   const parsed = z
     .object({
       nomorLangganan: nomorLangganganSchema,
@@ -902,26 +917,36 @@ publikRouter.post("/lapor-meter", async (c) => {
         .trim()
         .min(2, "Nama pelapor wajib diisi")
         .max(150),
+      periodeUji: z.string().regex(/^\d{6}$/).optional(),
     })
     .parse({
       nomorLangganan: form.get("nomorLangganan"),
       standDilaporkan: form.get("standDilaporkan"),
       nomorPelapor: form.get("nomorPelapor"),
       namaPelapor: form.get("namaPelapor"),
+      periodeUji:
+        typeof periodeUjiRaw === "string" && periodeUjiRaw !== ""
+          ? periodeUjiRaw
+          : undefined,
     })
 
+  let periode: number
+  if (parsed.periodeUji) {
+    periode = await pastikanPeriodeUjiLaporMandiri(parsed.periodeUji)
+  } else {
+    const jendela = await dapatkanJendelaLaporMandiri()
+    if (!jendela.boleh) throw new BadRequestError(jendela.pesan)
+    periode = jendela.periode
+  }
+
   const pelanggan = await verifikasiPelanggan(parsed.nomorLangganan)
-  if (sesi) {
-    await pastikanSambunganTertautKeAkun(sesi.id, pelanggan.id)
+  if (sesiWarga) {
+    await pastikanSambunganTertautKeAkun(sesiWarga.id, pelanggan.id)
   }
 
   const foto = form.get("foto")
   if (!(foto instanceof File))
     throw new BadRequestError("Foto meter wajib dilampirkan sebagai bukti.")
-
-  // Periode WIB dihitung oleh server bersama validasi jendela; bukan dari
-  // bulan UTC atau nilai yang dipilih oleh client.
-  const periode = jendela.periode
 
   // Dicek DULU sebelum foto diunggah — percuma menulis berkas kalau barisnya
   // pasti ditolak unique constraint.
@@ -953,7 +978,7 @@ publikRouter.post("/lapor-meter", async (c) => {
     fotoPublicId: simpan.publicId,
     nomorPelapor: parsed.nomorPelapor,
     namaPelapor: parsed.namaPelapor,
-    pengirimId: sesi?.id ?? null,
+    pengirimId: sesiWarga?.id ?? null,
   })
 
   return created(c, {

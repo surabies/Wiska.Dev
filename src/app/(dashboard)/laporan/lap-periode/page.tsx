@@ -1,7 +1,7 @@
 import { MenuPage } from "@/components/layout"
 
-export const metadata = { title: "Laporan Pendapatan · Tirtawening" }
+export const metadata = { title: "Laporan Pendapatan" }
 
-export default function Page() {
+export default function LaporanPeriodePage() {
   return <MenuPage href="/laporan/pendapatan" />
 }

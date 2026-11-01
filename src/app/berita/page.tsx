@@ -17,7 +17,7 @@ const DAFTAR_BERITA: Berita[] = [
   },
 ]
 
-export default function Page() {
+export default function BeritaPage() {
   return (
     <HalamanInfo judul="Berita" deskripsi="Kabar terbaru dan pengumuman resmi dari PERUMDA Tirtawening.">
       <Bagian judul="Berita terbaru">

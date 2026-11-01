@@ -1,7 +1,7 @@
 import { MenuPage } from "@/components/layout"
 
-export const metadata = { title: "Update Zonasi · Tirtawening" }
+export const metadata = { title: "Update Zonasi" }
 
-export default function Page() {
+export default function PerbaruiZonasiPage() {
   return <MenuPage href="/tools-tutup/update-zonasi" />
 }

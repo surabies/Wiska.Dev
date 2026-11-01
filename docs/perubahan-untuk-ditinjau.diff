@@ -1,0 +1,819 @@
+--- a/src/docs/MVP-baca-meter-air.md
++++ b/src/docs/MVP-baca-meter-air.md
+@@ -1,9 +1,11 @@
+ # Definisi MVP — Aplikasi Baca Meter Air
+ 
+-**Versi:** 0.2 (batas pilot disetujui; acceptance criteria masih harus dibuktikan)
+-**Tanggal:** 31 Oktober 2026
++**Versi:** 0.3 (rekonsiliasi dokumentasi 1 November 2026; batas pilot disetujui; acceptance criteria masih harus dibuktikan)
++**Tanggal:** 1 November 2026
+ **Status:** ruang lingkup dan kebijakan pilot disetujui Wiska Prayoga pada 31 Oktober 2026; belum berarti siap mulai pilot atau siap produksi
+-**Dokumen terkait:** [Status dan progres proyek](./STATUS-baca-meter-air.md), [PRD](./PRD-baca-meter-air.md), [Roadmap](./ROADMAP-baca-meter-air.md), [Aturan Verifikasi Berjenjang dan Koreksi](./aturan-verifikasi-berjenjang.md), [Arsitektur](./arsitektur-awal-baca-meter.md)
++**Dokumen terkait:** [Status dan progres proyek](./STATUS-baca-meter-air.md), [PRD](./PRD-baca-meter-air.md), [Roadmap](./ROADMAP-baca-meter-air.md), [Aturan Verifikasi Berjenjang dan Koreksi](./aturan-verifikasi-berjenjang.md), [Arsitektur](./arsitektur-awal-baca-meter.md), [Matriks RBAC](./matriks-rbac-aplikasi.md), [Indeks dokumentasi](./INDEKS-dokumentasi-baca-meter.md)
++
++**Peran dokumen:** kontrak penerimaan pilot (batas pilot dan acceptance criteria). Bukan sumber aturan domain atau status implementasi; ID DEC dan OPEN dikelola di [Indeks](./INDEKS-dokumentasi-baca-meter.md#register-open).
+ 
+ Aturan perlakuan kondisi pembacaan dan taksasi selama pilot dirinci di [Matriks Aturan Domain Kondisi Catat](./aturan-kondisi-catatan-meter.md). Verifikasi satuan/massal V1/V2/V3 adalah satu workflow; V3 menerbitkan hasil resmi. Taksasi dapat dipicu oleh 14 kondisi kelainan atau Manual ADD saat rute tidak tercatat; prioritas histori adalah 12 bulan → 3 pemakaian terbesar → 3 bulan terakhir/riwayat yang tersedia, dibulatkan ke atas tanpa minimum. Validitas histori masih perlu ditetapkan.
+ 
+@@ -13,6 +15,8 @@
+ 
+ MVP adalah **pilot terbatas**, bukan klaim sistem sudah memenuhi seluruh kebutuhan produksi komersial. Keputusan pilot yang disetujui: rute CD112 di Wilayah Pelayanan 5, 1–7 November 2026, sekitar 20–30 sambungan, satu petugas, dan satu HP Android. Output hanya untuk shadow/paralel serta rekonsiliasi, bukan untuk menerbitkan atau mengubah tagihan resmi; isolasi dari proses closing/tagihan harus dibuktikan sebelum pilot. Lihat [catatan keputusan G0](./STATUS-baca-meter-air.md).
+ 
++**Status jadwal per 1 November 2026:** jadwal 1–7 November disetujui pada G0, tetapi gerbang G1–G3 dan prasyarat pra-pilot di STATUS tercatat belum selesai dan tidak ada bukti go/no-go. Menurut aturan STATUS, pilot tidak dimulai sebelum prasyarat lulus. Penundaan formal atau bukti kelulusan: OPEN-16.
++
+ ## 2. Pengguna MVP
+ 
+ - Petugas/pencatat yang ditugaskan pada rute pilot.
+@@ -59,12 +63,12 @@
+ - [ ] Kiriman ulang menyimpan bukti terpisah, dan penolakan memuat alasan yang dapat dipahami warga.
+ - [ ] Persetujuan menghasilkan tepat satu pembacaan resmi yang terkait dengan meter milik sambungan dan periode yang benar.
+ - [ ] `NORMAL` memakai delta stand; 14 kondisi kelainan memakai prioritas taksasi yang disepakati. Kondisi lain mengikuti keputusan per kode: simpan pembacaan aktual, tetapkan nilai manual, atau tahan untuk review. Nilai minus dipertahankan apa adanya, tidak dijepit menjadi nol atau disubstitusi taksasi.
+-- [ ] Taksasi otomatis mencatat provenance histori dan terpisah dari delta stand; ST Awal/ST Akhir memakai stand resmi terakhir, Pakai menampilkan taksasi yang dibulatkan ke atas tanpa minimum; taksasi tidak menerbitkan tagihan resmi pada pilot. Histori tidak valid/kosong ditangani eksplisit.
++- [ ] Taksasi otomatis mencatat provenance histori dan terpisah dari delta stand; ST Awal/ST Akhir memakai stand resmi terakhir, Pakai menampilkan taksasi yang dibulatkan ke atas tanpa minimum; taksasi tidak menerbitkan tagihan resmi pada pilot. Histori tidak valid/kosong ditangani eksplisit (tidak ditampilkan sebagai pembacaan riil 0 yang valid; DEC-02). Bergantung pada OPEN-03 dan OPEN-04.
+ - [ ] Tabel verifikasi menampilkan kolom Checkbox, Ring, Status, No. Pel, Nama, Alamat, Rute, Kondisi/Ket Catat, ST Awal, ST Akhir, ST Revisi, ST Resmi, Pakai, Lalu, Dev %, Tagihan (m³), Petugas, dan Tgl Catat (tanggal+waktu). Revisi ST Awal menyimpan audit before/after; ST Revisi dibedakan dari ST Resmi.
+ - [ ] Verifikasi satuan dan massal mengizinkan V1/V2/V3 memproses sesuai role tanpa mensyaratkan ring bawah; ikon hanya menampilkan ring aktor terakhir dan riwayat ring lama tetap tersedia.
+ - [ ] Hasil V1 tidak resmi; hasil V2 menunggu V3; V3 dapat memproses langsung dan menghasilkan tepat satu `PembacaanMeter` resmi.
+ - [ ] Hasil V3 dapat dikembalikan ke review oleh V3 sendiri atau role yang berwenang; koreksi/reopen mencatat alasan dan before/after serta tidak mengubah hasil yang sudah masuk Tagihan.
+-- [ ] Tes otorisasi membuktikan V1/V2 tidak dapat membuka tahap sendiri; STAFF tidak dapat verifikasi, dapat mengoreksi administratif hanya sebelum Tagihan, dan dapat menjalankan final closing sesuai prasyarat yang ditetapkan.
++- [ ] Tes otorisasi membuktikan V1/V2 tidak dapat membuka tahap sendiri dan STAFF tidak dapat verifikasi (P0). Bagian P1 (FR-16/FR-17): STAFF mengoreksi administratif hanya sebelum Tagihan dan hanya pada hasil yang belum resmi atau sedang di-reopen (DEC-06; syarat tambahan OPEN-09). Izin final closing STAFF belum disepakati (OPEN-01), jadi tes closing mengikuti keputusan itu setelah ditetapkan.
+ - Manual Add/Manual Add All bukan acceptance criteria pilot. Sebelum dirilis di luar pilot, verifikasi bahwa Manual Add satuan hanya dapat mengganti laporan yang sudah melewati ring verifikasi dengan alasan/konfirmasi, audit before/after, reset ring, dan blokir periode terkunci/hasil bertagihan; Manual Add All harus menampilkan petugas sebelum rute, langsung menampilkan alamat belum disetorkan tanpa pratinjau, menghitung taksasi otomatis, memproses baris yang dicentang, melaporkan progres batch tersimpan, menyimpan provenance, serta mengirim hasil bertanda Manual ke antrean verifikasi.
+ - [ ] Pembacaan petugas memiliki foto yang diambil petugas; laporan mandiri warga memiliki foto unggahan. GPS/akurasi disimpan saat tersedia; kegagalan GPS tidak menggagalkan submit dan dapat ditinjau.
+ - [ ] OTP akses data hanya menuju nomor terverifikasi pada data resmi; nomor yang dimasukkan sendiri tidak membuka data. Kiriman anonim tetap pending dan tidak membuka informasi sambungan.
+--- a/src/docs/PRD-baca-meter-air.md
++++ b/src/docs/PRD-baca-meter-air.md
+@@ -1,9 +1,11 @@
+ # PRD — Aplikasi Baca Meter Air
+ 
+-**Versi:** 0.2 (keputusan pilot dicatat; kebutuhan produksi masih perlu validasi)
+-**Tanggal:** 31 Oktober 2026
++**Versi:** 0.3 (rekonsiliasi dokumentasi 1 November 2026; keputusan pilot dicatat; kebutuhan produksi masih perlu validasi)
++**Tanggal:** 1 November 2026
+ **Status:** draft; keputusan ruang lingkup dan kebijakan pilot disetujui 31 Oktober 2026; kebijakan billing produksi belum disahkan
+-**Dokumen terkait:** [Status dan progres proyek](./STATUS-baca-meter-air.md), [Definisi MVP](./MVP-baca-meter-air.md), [Roadmap](./ROADMAP-baca-meter-air.md), [Aturan Verifikasi Berjenjang dan Koreksi](./aturan-verifikasi-berjenjang.md), [Arsitektur](./arsitektur-awal-baca-meter.md)
++**Dokumen terkait:** [Status dan progres proyek](./STATUS-baca-meter-air.md), [Definisi MVP](./MVP-baca-meter-air.md), [Roadmap](./ROADMAP-baca-meter-air.md), [Aturan Verifikasi Berjenjang dan Koreksi](./aturan-verifikasi-berjenjang.md), [Arsitektur](./arsitektur-awal-baca-meter.md), [Matriks RBAC](./matriks-rbac-aplikasi.md), [Indeks dokumentasi](./INDEKS-dokumentasi-baca-meter.md)
++
++**Peran dokumen:** spesifikasi kebutuhan produk (FR-xx dan kriteria penerimaan). Bukan sumber untuk aturan kondisi (lihat [aturan kondisi](./aturan-kondisi-catatan-meter.md)), ring V1/V2/V3 (lihat [aturan verifikasi](./aturan-verifikasi-berjenjang.md)), role (lihat [RBAC](./matriks-rbac-aplikasi.md)), atau status implementasi (lihat [STATUS](./STATUS-baca-meter-air.md)). Keputusan (DEC) dan isu terbuka (OPEN) dirujuk dengan ID dan dikelola di [Indeks](./INDEKS-dokumentasi-baca-meter.md#register-open).
+ 
+ Aturan perilaku pilot per kondisi `KondisiCatat` ada di [Matriks Aturan Domain Kondisi Catat](./aturan-kondisi-catatan-meter.md). Definisi kode, label legacy, dan pertanyaan yang menunggu pengesahan pemilik data dicatat di [Codebook Kondisi Catat Meter](./codebook-kondisi-catatan-meter.md).
+ 
+@@ -36,14 +38,14 @@
+ - Mengganti core billing, payment gateway, atau pencatatan akuntansi.
+ - Menghitung nota debit/kredit, saldo kredit, refund, atau ledger koreksi tanpa kebijakan yang disahkan.
+ - Menjamin kepemilikan sambungan hanya dari tautan `LanggananWarga`; tautan tersebut adalah klaim asosiasi, bukan verifikasi identitas.
+-- Menetapkan sendiri rumus taksiran, pemakaian minimum, arti kode legacy, atau kebijakan tarif.
+-- Mengubah layanan air menjadi sistem kelistrikan.
++- Menetapkan rumus taksiran, pemakaian minimum, arti kode legacy, atau kebijakan tarif di luar yang disahkan pemilik produk. Aturan taksasi pilot ada di [aturan kondisi](./aturan-kondisi-catatan-meter.md); yang masih terbuka tercatat di [register OPEN](./INDEKS-dokumentasi-baca-meter.md#register-open).
++- Memperluas produk ke utilitas lain (listrik, gas); aplikasi ini hanya untuk meter air (lihat MVP bagian 4).
+ 
+ ### Keputusan G0 untuk pilot
+ 
+ Pilot berlangsung 1–7 November 2026 di rute CD112, Wilayah Pelayanan 5, untuk sekitar 20–30 sambungan, dengan satu petugas dan satu HP Android. Hasil hanya untuk shadow/paralel dan rekonsiliasi, bukan untuk menerbitkan atau mengubah tagihan resmi; sebelum pilot, harus dibuktikan secara teknis bahwa data pilot tidak dapat masuk ke proses closing/tagihan resmi. Wiska Prayoga memegang akuntabilitas produk, data/billing, engineering, keamanan/privasi, dan operasi; supervisor yang menyetujui koreksi harus memiliki akun terpisah dari petugas lapangan dan ditunjuk sebelum pilot.
+ 
+-Untuk pembacaan `NORMAL`, sistem memakai selisih stand dengan stand terakhir resmi. Empat belas kondisi kelainan telah diklasifikasikan sebagai kandidat taksasi otomatis, tetapi validasi histori dan runtime kelompok itu belum selesai. Manual Add All merupakan alur terpisah dengan kriteria histori yang disepakati: pembacaan aktual resmi nonnegatif tanpa `alasanTaksir`, taksasi/override dikecualikan. Setelah Petugas dan Rute dipilih, daftar alamat yang belum disetorkan ditampilkan langsung. Taksasi memakai rata-rata histori valid yang tersedia; jika tidak ada histori pemakaian valid, Pakai bernilai 0. ST Awal dan ST Akhir selalu sama, memakai field ST Awal dari pencatatan resmi terakhir (`PembacaanMeter.standLalu`) pada meter aktif terbaru; tanpa pencatatan resmi sebelumnya atau meter aktif, keduanya 0. Hanya alamat yang dicentang yang ditambahkan ke antrean verifikasi, bukan langsung menjadi hasil resmi/tagihan.
++Untuk pembacaan `NORMAL`, sistem memakai selisih stand dengan stand terakhir resmi. Empat belas kondisi kelainan telah diklasifikasikan sebagai kandidat taksasi otomatis, tetapi validasi histori dan runtime kelompok itu belum selesai. Manual Add All merupakan alur terpisah dengan kriteria histori yang disepakati: pembacaan aktual resmi nonnegatif tanpa `alasanTaksir`, taksasi/override dikecualikan. Setelah Petugas dan Rute dipilih, daftar alamat yang belum disetorkan ditampilkan langsung. Taksasi memakai rata-rata histori valid yang tersedia. ST Awal dan ST Akhir selalu sama, memakai `standAkhir` dari pembacaan resmi terakhir sebelum periode berjalan pada meter aktif terbaru (DEC-01; bukan `standLalu`). Perilaku bila tidak ada histori pemakaian valid, pembacaan resmi sebelumnya, atau meter aktif belum final: versi lama dokumen menulis Pakai 0 dan stand 0, tetapi nilai 0 tidak boleh ditampilkan sebagai pembacaan riil yang valid (DEC-02); baris ditandai perlu ditinjau sampai OPEN-02 diputuskan. Hanya alamat yang dicentang yang ditambahkan ke antrean verifikasi, bukan langsung menjadi hasil resmi/tagihan.
+ 
+ Warga dapat mengirim laporan baca meter melalui jalur akun atau anonim; kiriman selalu menunggu verifikasi dan foto menjadi bukti (foto petugas untuk pencatatan lapangan, foto unggahan warga untuk laporan mandiri). OTP untuk membuka data sambungan hanya dikirim ke nomor yang sudah terverifikasi pada data resmi. Tautan `LanggananWarga` bukan bukti kepemilikan. Pelaporan kerusakan umum tidak termasuk alur baru pilot dan tetap memakai kanal pengaduan yang tersedia.
+ 
+@@ -89,11 +91,11 @@
+ - V1/V2/V3 adalah penanda role yang benar-benar melakukan tindakan, bukan ring bawah wajib yang harus dilalui berurutan. V2/V3 dapat langsung memproses alamat yang belum memiliki ring sebelumnya.
+ - Hasil V1 tidak resmi; hasil V2 menunggu V3. V3 adalah persetujuan final dan membuat satu `PembacaanMeter` resmi. Aksi massal mengikuti aturan yang sama dengan aksi satuan.
+ - Ikon progres hanya menampilkan ring tindakan efektif/terakhir: jika V2 memproses, bar V2 terisi dan V1 kosong; jika V3 memproses, hanya bar V3 terisi. Riwayat aktor/ring terdahulu tetap disimpan dan tidak dihapus.
+-- Setelah V3, Senior Manager/Direksi atau role setara/lebih tinggi dapat mengembalikan hasil ke review untuk koreksi dan penerbitan ulang. Bila hasil sudah dipakai tagihan, perubahan memerlukan workflow koreksi finansial yang disahkan; jangan menghapusnya diam-diam.
++- Setelah V3, Senior Manager/Direksi atau role setara/lebih tinggi dapat mengembalikan hasil ke review untuk koreksi dan penerbitan ulang. Bila hasil sudah dipakai tagihan, perubahan memerlukan workflow koreksi finansial yang disahkan; jangan menghapusnya diam-diam. Koreksi setelah V3 hanya lewat reopen dan verifikasi ulang (DEC-06); alur yang tersedia beserta celahnya ada di [aturan verifikasi](./aturan-verifikasi-berjenjang.md#koreksi-setelah-v3-alur-yang-berlaku-dan-celah), dan apakah reopen boleh menghapus `PembacaanMeter` tercatat di OPEN-08.
+ - Untuk 14 kondisi kelainan yang ditetapkan pemilik produk pada laporan petugas, sistem menghitung taksasi dengan prioritas rata-rata 12 bulan → rata-rata 3 pemakaian terbesar → rata-rata 3 bulan terakhir/riwayat yang tersedia. Taksasi dibulatkan ke atas tanpa minimum otomatis; ST Awal/ST Akhir memakai stand resmi terakhir dan Pakai menyimpan taksasi terpisah. Validitas histori, nilai saat tidak ada histori, dan pemetaan alias harus disahkan sebelum runtime.
+ - Manual ADD/Manual ADD All tetap opsi jika petugas tidak mencatat rute/periode, misalnya petugas sakit. Sistem dapat membuat taksasi per item dari histori; verifikator menilai dan menyesuaikan dengan alasan/audit sesuai kewenangan.
+ - Kasus nilai minus tidak boleh diubah menjadi nol atau diganti taksasi sebagai fallback. Simpan angka sumber/delta bertanda dan minta review sebelum hasil resmi. Kondisi yang otomatis ditaksasi, dicatat apa adanya, atau ditahan review dirinci pada [Matriks Aturan Kondisi Catat Meter](./aturan-kondisi-catatan-meter.md).
+-- Tabel verifikasi mengikuti urutan dan semantik kolom pada [Kontrak Tabel Halaman Verifikasi](./aturan-verifikasi-berjenjang.md); termasuk ST Revisi sebagai koreksi ST Awal, Tagihan dalam m³, Alamat, serta tanggal dan waktu pencatatan.
++- Tabel verifikasi mengikuti urutan dan semantik kolom pada [Aturan Verifikasi Berjenjang dan Koreksi, bagian Kontrak tabel](./aturan-verifikasi-berjenjang.md#kontrak-tabel-halaman-verifikasi); termasuk ST Revisi sebagai koreksi ST Awal, Tagihan dalam m³, Alamat, serta tanggal dan waktu pencatatan.
+ 
+ ## 6. Kebutuhan fungsional dan kriteria penerimaan
+ 
+@@ -103,11 +105,11 @@
+ |---|---|---|---|
+ | FR-01 | P0 | Mendukung beberapa sambungan untuk satu akun warga dengan akses berbasis OTP. | Akses data sambungan memerlukan OTP yang dikirim ke nomor HP terverifikasi pada data resmi; nomor yang diklaim sendiri tidak cukup. API menolak sambungan yang tidak tertaut ke akun aktif. Tautan tidak ditampilkan sebagai verifikasi kepemilikan. Bila nomor tidak cocok/tersedia, arahkan ke verifikasi petugas tanpa membuka data. |
+ | FR-02 | P0 | Menyediakan jendela laporan mandiri yang dapat diatur. | Admin berwenang membaca/mengubah tanggal 1–28; tanggal buka tidak melewati tanggal tutup; perubahan kedua nilai atomik; periode dan tanggal menggunakan WIB; UI publik menampilkan nilai server. |
+-| FR-03 | P0 | Memisahkan jalur laporan mandiri anonim dan akun. | Jalur anonim tetap pending dan tidak membuka data sambungan; jalur akun memerlukan role warga, OTP ke nomor resmi terverifikasi untuk akses data, serta tautan sambungan; keduanya menyimpan ke model antrean canonical yang sama. |
++| FR-03 | P0 | Memisahkan jalur laporan mandiri anonim dan akun. | Jalur anonim tetap pending dan tidak membuka data sambungan; jalur akun memerlukan role warga (role teknis `USER`; cakupan portal belum dikonfirmasi, OPEN-19), OTP ke nomor resmi terverifikasi untuk akses data, serta tautan sambungan; keduanya menyimpan ke model antrean canonical yang sama. |
+ | FR-04 | P0 | Menyimpan bukti setiap percobaan kirim. | Kirim pertama dan kirim ulang mempunyai arsip/foto terpisah; retry/status konflik tidak menimpa arsip lama. |
+ | FR-05 | P0 | Memastikan verifikasi adalah gerbang hasil resmi. | Sebelum verifikasi tidak ada pembacaan resmi/tagihan dari kiriman mandiri; verifikasi memastikan sambungan, meter aktif, periode, status antrean, dan aktor secara konsisten. |
+-| FR-06 | P0 | Menggunakan satu model hasil resmi untuk semua sumber. | Petugas dan warga menghasilkan `PembacaanMeter`; constraint mencegah duplikasi resmi untuk kunci domain yang disahkan. Sumber dan nilai terukur/tagih tetap dapat dibedakan. |
+-| FR-07 | P0 | Menangani kondisi pembacaan, taksasi, dan nilai minus sesuai kebijakan yang disahkan. | `NORMAL`/`STAND_TEMPEL`/`STAND_KONSUMEN` menghitung delta; 14 kondisi kelainan memakai prioritas histori 12 bulan → 3 pemakaian terbesar → 3 bulan terakhir/riwayat tersedia, dibulatkan ke atas tanpa minimum; `TIDAK_ADA_AIR`/`TIDAK_DIPAKAI` ditetapkan manusia; MB/rollover memakai rumus khusus. Nilai minus dipertahankan dan tidak dijepit menjadi nol. Histori/provenance serta kondisi tanpa histori diuji; pilot tidak menerbitkan tagihan resmi dari taksasi. |
++| FR-06 | P0 | Menggunakan satu model hasil resmi untuk semua sumber. | Petugas dan warga menghasilkan `PembacaanMeter`; constraint mencegah duplikasi resmi untuk kunci domain yang disahkan (kunci domain belum final; lihat OPEN-06). Sumber dan nilai terukur/tagih tetap dapat dibedakan. |
++| FR-07 | P0 | Menangani kondisi pembacaan, taksasi, dan nilai minus sesuai kebijakan yang disahkan. | `NORMAL`/`STAND_TEMPEL`/`STAND_KONSUMEN` menghitung delta; 14 kondisi kelainan memakai prioritas histori 12 bulan → 3 pemakaian terbesar → 3 bulan terakhir/riwayat tersedia, dibulatkan ke atas tanpa minimum; `TIDAK_ADA_AIR`/`TIDAK_DIPAKAI` ditetapkan manusia; MB/rollover memakai rumus khusus. Nilai minus dipertahankan dan tidak dijepit menjadi nol. Histori/provenance serta kondisi tanpa histori diuji; pilot tidak menerbitkan tagihan resmi dari taksasi. Mode pilot untuk 14 kondisi (taksasi otomatis atau review-only) menunggu OPEN-03; titik terbuka hierarki taksasi di OPEN-04. |
+ | FR-08 | P0 | Mengotorisasi objek, bukan hanya endpoint. | Uji negatif membuktikan role, akun, penugasan/rute, periode, dan sambungan yang tidak berhak tidak bisa dibaca/diubah. |
+ | FR-09 | P0 | Menyediakan audit tindakan kritis. | Approve/reject, pengubahan hasil, konfigurasi jendela, dan closing mencatat aktor, waktu server, referensi objek, alasan, serta before/after yang diperlukan. |
+ | FR-10 | P1 | Menyediakan koreksi formal pasca-tagihan tanpa mengubah dokumen lama. | Di pilot koreksi hanya manual, tercatat, disetujui supervisor yang berbeda dari petugas, dan direkonsiliasi; tidak ada penyesuaian finansial otomatis. Workflow formal pasca-tagihan hanya dirilis setelah maker-checker, alasan, bukti, histori append-only, dan perlakuan tagihan terdampak disahkan; invoice historis tetap dapat direkonstruksi. |
+@@ -115,10 +117,10 @@
+ | FR-12 | P0 | Menyediakan observabilitas minimum untuk operasi pilot. | Operator dapat menemukan backlog, kegagalan sinkronisasi/upload, error closing, dan perubahan kritis melalui log/metric/alert tanpa menampilkan rahasia atau data pribadi berlebih. Perluasan dashboard, SLO, dan alert untuk operasi berskala tetap menjadi pekerjaan sebelum produksi berskala. |
+ | FR-13 | P2 | Mendukung analisis kualitas pembacaan. | Laporan pemakaian nol/ekstrem/koreksi dapat dipilah berdasarkan periode, rute, kondisi, sumber, dan versi aturan tanpa menyamakan semua perbedaan dengan kesalahan. |
+ | FR-14 | P0 | Memastikan verifikasi satuan/massal mencatat ring aktor dan menampilkan indikator progres yang benar. | V1/V2/V3 dapat memproses sesuai role tanpa mewajibkan ring bawah; hanya ring aktor terakhir yang tampil di ikon dan ring terdahulu tetap di histori audit. V2 menunggu V3; hanya V3 membuat satu pembacaan resmi. Reopen V3 mencatat alasan dan before/after; hasil yang sudah masuk Tagihan tidak dapat diubah lewat jalur koreksi biasa. |
+-| FR-15 | P1 | Manual Add satuan dan Manual Add All untuk dasar pencatatan saat kunjungan tidak dapat dilakukan. | Satuan mencari pelanggan berdasarkan nomor langganan dan menerima ST Awal/ST Akhir manual. Hasil yang telah melewati ring V1/V2/V3 boleh diganti hanya dengan alasan dan konfirmasi eksplisit; simpan audit before/after, reset semua ring/koreksi, dan kembalikan ke antrean verifikasi. Tolak periode terkunci, laporan pending yang belum diverifikasi, serta hasil resmi yang sudah dipakai Tagihan. Massal memfilter periode, petugas, lalu rute; setelah filter dipilih, langsung tampilkan alamat daftar kerja yang belum disetorkan tanpa langkah pratinjau; alamat yang sudah memiliki laporan/pembacaan resmi dikecualikan. Tampilkan checkbox per alamat, hitung taksasi otomatis, dan tambahkan hanya baris yang dicentang. Proses batch dengan progres yang mencerminkan batch tersimpan. Perhitungan memakai pembacaan resmi dengan `pemakaianRiil` nonnegatif serta `alasanTaksir` kosong: rata-rata 12 bulan kalender sebelumnya bila lengkap, lalu rata-rata tiga penggunaan valid tertinggi, lalu rata-rata seluruh histori valid yang tersedia; bulatkan ke atas tanpa minimum. ST Awal = ST Akhir = field `standLalu` dari pencatatan resmi terakhir pada meter aktif terbaru; tanpa pencatatan atau meter, stand 0. Tanpa histori pemakaian valid, Pakai 0 m³. Tidak ada status siap/ditahan per baris. Simpan alasan dan provenance; hasil ditandai sebagai Manual dan menunggu verifikasi, bukan langsung menjadi hasil resmi/tagihan. |
+-| FR-16 | P1 | Mengizinkan STAFF melakukan koreksi administratif tanpa menjadi verifikator. | STAFF tidak dapat menjalankan V1/V2/V3; koreksi hasil terverifikasi sebelum Tagihan melalui endpoint/izin administratif tersendiri, dengan before/after, alasan, aktor, waktu. Hasil yang telah masuk Tagihan tidak diubah; penyesuaian memerlukan workflow terpisah. |
+-| FR-17 | P1 | Memberikan hak final closing kepada STAFF. | STAFF dapat menjalankan final closing sesuai prasyarat periode yang disahkan; izin API, audit, transaksi, race, dan kegagalan parsial diuji. Izin melihat/pratinjau tidak dianggap pengganti izin final. |
+-| FR-18 | P0 | Menampilkan tabel verifikasi dengan kolom dan makna yang konsisten dengan keputusan operasional. | Urutan kolom checkbox, Ring, Status, No. Pel, Nama, Alamat, Rute, Kondisi, ST Awal, ST Akhir, ST Revisi, ST Resmi, Pakai, Lalu, Dev %, Tagihan (m³), Petugas, dan Tgl Catat (tanggal+waktu) tersedia; koreksi ST Awal tersimpan dengan audit before/after dan dibedakan dari ST Resmi. |
++| FR-15 | P1 | Manual Add satuan dan Manual Add All untuk dasar pencatatan saat kunjungan tidak dapat dilakukan. | Satuan mencari pelanggan berdasarkan nomor langganan dan menerima ST Awal/ST Akhir manual. Hasil yang telah melewati ring V1/V2/V3 boleh diganti hanya dengan alasan dan konfirmasi eksplisit; simpan audit before/after, reset semua ring/koreksi, dan kembalikan ke antrean verifikasi. Tolak periode terkunci, laporan pending yang belum diverifikasi, serta hasil resmi yang sudah dipakai Tagihan. Massal memfilter periode, petugas, lalu rute; setelah filter dipilih, langsung tampilkan alamat daftar kerja yang belum disetorkan tanpa langkah pratinjau; alamat yang sudah memiliki laporan/pembacaan resmi dikecualikan. Tampilkan checkbox per alamat, hitung taksasi otomatis, dan tambahkan hanya baris yang dicentang. Proses batch dengan progres yang mencerminkan batch tersimpan. Perhitungan memakai pembacaan resmi dengan `pemakaianRiil` nonnegatif serta `alasanTaksir` kosong: rata-rata 12 bulan kalender sebelumnya bila lengkap, lalu rata-rata tiga penggunaan valid tertinggi, lalu rata-rata seluruh histori valid yang tersedia; bulatkan ke atas tanpa minimum. ST Awal = ST Akhir = `standAkhir` dari pembacaan resmi terakhir sebelum periode berjalan pada meter aktif terbaru (DEC-01; bukan `standLalu`). Tanpa histori pemakaian valid, pembacaan resmi sebelumnya, atau meter aktif: nilai tidak ditampilkan sebagai pembacaan riil yang valid dan baris ditandai perlu ditinjau/keputusan manual sampai OPEN-02 diputuskan (versi lama: Pakai 0 m³ dan stand 0). Interaksi dengan keputusan "tidak ada status siap/ditahan per baris" perlu dikonfirmasi di OPEN-02. Tidak ada status siap/ditahan per baris. Simpan alasan dan provenance; hasil ditandai sebagai Manual dan menunggu verifikasi, bukan langsung menjadi hasil resmi/tagihan. |
++| FR-16 | P1 | Mengizinkan STAFF melakukan koreksi administratif tanpa menjadi verifikator. | STAFF tidak dapat menjalankan V1/V2/V3; koreksi hasil terverifikasi sebelum Tagihan melalui endpoint/izin administratif tersendiri, dengan before/after, alasan, aktor, waktu. Hasil yang telah masuk Tagihan tidak diubah; penyesuaian memerlukan workflow terpisah. Syarat tambahan bukti foto dan persetujuan supervisor (G0) serta batas koreksi atas hasil V3 resmi: OPEN-09; hasil V3 resmi aktif hanya diubah lewat reopen dan verifikasi ulang (DEC-06). |
++| FR-17 | P1 | Menetapkan dan menegakkan izin final closing. **Izin untuk STAFF belum disepakati (DEC-05, OPEN-01); jangan dianggap keputusan.** | Setelah OPEN-01 diputuskan: peran yang diizinkan dapat menjalankan final closing sesuai prasyarat periode yang disahkan; izin API, audit, transaksi, race, dan kegagalan parsial diuji; peran lain ditolak (`403`). Izin melihat/pratinjau tidak dianggap pengganti izin final. |
++| FR-18 | P0 | Menampilkan tabel verifikasi dengan kolom dan makna yang konsisten dengan keputusan operasional. | Urutan kolom checkbox, Ring, Status, No. Pel, Nama, Alamat, Rute, Kondisi, ST Awal, ST Akhir, ST Revisi, ST Resmi, Pakai, Lalu, Dev %, Tagihan (m³), Petugas, dan Tgl Catat (tanggal+waktu) tersedia; koreksi ST Awal tersimpan dengan audit before/after dan dibedakan dari ST Resmi. Rumus Dev % belum ditetapkan (OPEN-12); sampai ditetapkan, nilainya tidak dipakai untuk keputusan otomatis. |
+ 
+ ## 7. Aturan domain yang harus dijaga
+ 
+@@ -142,7 +144,7 @@
+ | Sinkronisasi | Batch dapat diulang parsial, melaporkan hasil per item, dan tidak kehilangan data lokal sebelum server mengonfirmasi penerimaan. |
+ | Keamanan | TLS, least privilege, secret management, rate limit endpoint publik, object-level authorization, backup terenkripsi, dan pencabutan akses. |
+ | Auditabilitas | Waktu server dan actor tercatat untuk aksi bernilai bisnis; log operasional punya correlation/request ID. |
+-| Privasi | Pilot: foto, GPS, kontak, dan log operasional berisi data pribadi dihapus/dianonimkan tiga bulan setelah dikumpulkan; akses terbatas dan pemberitahuan diberikan sebelum pengumpulan. Jadwal retensi audit resmi harus ditetapkan sebelum go-live. |
++| Privasi | Pilot: foto, GPS, kontak, dan log operasional berisi data pribadi dihapus/dianonimkan tiga bulan setelah dikumpulkan; akses terbatas dan pemberitahuan diberikan sebelum pengumpulan. Jadwal retensi audit resmi harus ditetapkan sebelum go-live. Konflik penghapusan 3 bulan dengan arsip kiriman yang immutable, dan dampaknya pada bukti koreksi: OPEN-07. |
+ | Pemulihan | RPO/RTO ditetapkan; backup/PITR diuji dengan restore drill ke lingkungan terisolasi. |
+ | Kompatibilitas | Browser/perangkat target, versi OS, penggunaan offline, batas upload, dan kebijakan pembaruan aplikasi ditentukan sebelum pilot. |
+ 
+@@ -163,9 +165,13 @@
+ - Tetapkan jadwal retensi catatan audit resmi dan dasar/prosedur privasi yang berlaku sebelum go-live.
+ - Tentukan SLO/SLA produksi, volume puncak, RPO/RTO, dan kapasitas berdasarkan hasil staging/pilot.
+ - Tinjau kembali keputusan OTP saat implementasi: nomor tujuan harus bersumber dari data resmi yang status verifikasinya dapat dibuktikan.
++- Putuskan butir pada [register OPEN](./INDEKS-dokumentasi-baca-meter.md#register-open) yang memblokir implementasi, terutama OPEN-01 (closing STAFF), OPEN-02 (tanpa histori), OPEN-03 (mode pilot 14 kondisi), OPEN-06 (kunci hasil resmi), dan OPEN-07 (retensi).
+ 
+ ## 11. Referensi internal dan eksternal
+ 
++- [Indeks dokumentasi: sumber kebenaran, glosarium, keputusan, register OPEN](./INDEKS-dokumentasi-baca-meter.md)
++- [Matriks RBAC Aplikasi](./matriks-rbac-aplikasi.md)
++- [Codebook Kondisi Catat Meter](./codebook-kondisi-catatan-meter.md)
+ - [Hasil audit kode](./hasil-audit-baca-meter.md)
+ - [Rekonsiliasi CSV ProgresCater](./rekonsiliasi-data-progrescater.md)
+ - [Arsitektur dan batas implementasi](./arsitektur-awal-baca-meter.md)
+--- a/src/docs/ROADMAP-baca-meter-air.md
++++ b/src/docs/ROADMAP-baca-meter-air.md
+@@ -1,9 +1,11 @@
+ # Roadmap — Aplikasi Baca Meter Air
+ 
+-**Versi:** 0.2 (G0 pilot ditutup; berbasis release gate)
+-**Tanggal:** 31 Oktober 2026
++**Versi:** 0.3 (rekonsiliasi dokumentasi 1 November 2026; G0 pilot ditutup; berbasis release gate)
++**Tanggal:** 1 November 2026
+ **Status:** urutan kerja usulan; tidak menjanjikan tanggal rilis
+-**Dokumen terkait:** [Status dan progres proyek](./STATUS-baca-meter-air.md), [PRD](./PRD-baca-meter-air.md), [Definisi MVP](./MVP-baca-meter-air.md), [Aturan Verifikasi Berjenjang dan Koreksi](./aturan-verifikasi-berjenjang.md), [Arsitektur](./arsitektur-awal-baca-meter.md)
++**Dokumen terkait:** [Status dan progres proyek](./STATUS-baca-meter-air.md), [PRD](./PRD-baca-meter-air.md), [Definisi MVP](./MVP-baca-meter-air.md), [Aturan Verifikasi Berjenjang dan Koreksi](./aturan-verifikasi-berjenjang.md), [Arsitektur](./arsitektur-awal-baca-meter.md), [Matriks RBAC](./matriks-rbac-aplikasi.md), [Indeks dokumentasi](./INDEKS-dokumentasi-baca-meter.md)
++
++**Peran dokumen:** urutan kerja dan release gate. Bukan bukti penyelesaian; status implementasi ada di [STATUS](./STATUS-baca-meter-air.md); ID DEC dan OPEN dikelola di [Indeks](./INDEKS-dokumentasi-baca-meter.md#register-open).
+ 
+ ## Prinsip roadmap
+ 
+@@ -46,7 +48,7 @@
+ - Selesaikan uji akses object-level, validasi meter aktif/pelanggan/periode, race pada verify/reject/closing, dan audit before/after.
+ - Implementasikan matriks per kondisi: `NORMAL` memakai delta; 14 anomali memakai prioritas taksasi rata-rata 12 bulan → 3 pemakaian terbesar → 3 bulan terakhir/riwayat tersedia, dibulatkan ke atas tanpa minimum; kondisi lain dicatat aktual atau ditahan untuk review; nilai minus tidak dijepit menjadi nol. Manual ADD tetap opsi jika rute/periode tidak tercatat.
+ - Sesuaikan verifikasi satuan/massal dengan kontrak ring berbasis aktor: V2/V3 boleh langsung memproses tanpa ring bawah; V2 menunggu V3 dan V3 membuat hasil resmi. Ikon menampilkan hanya ring terakhir, sedangkan audit mempertahankan histori.
+-- Tutup gap pada [audit ring verifikasi dan koreksi](./aturan-verifikasi-berjenjang.md): larang self-reopen V1/V2; sediakan koreksi administratif STAFF hanya sebelum Tagihan; berikan STAFF final closing dengan prasyarat teruji.
++- Tutup gap pada [audit ring verifikasi dan koreksi](./aturan-verifikasi-berjenjang.md): larang self-reopen V1/V2; sediakan koreksi administratif STAFF hanya sebelum Tagihan dan hanya pada hasil yang belum resmi atau sedang di-reopen (DEC-06; syarat tambahan OPEN-09). Izin final closing STAFF belum disepakati (OPEN-01): implementasikan hanya setelah diputuskan; sampai itu final closing mengikuti implementasi yang ada (klaim dokumen: `SENIOR_UP`).
+ - Tutup pengalaman warga: jadwal server, linked account constraint, pending/reject/retry, foto terpisah, dan akses minimal terhadap data.
+ - Uji kasus rollover, meter diganti, meter rusak, rumah terkunci, stand nol/abnormal; aturan yang belum disetujui tetap ke review manual.
+ - Berikan laporan rekonsiliasi dan tampilan pengecualian sebelum closing.
+@@ -60,7 +62,7 @@
+ ### Backlog lanjutan di luar pilot
+ 
+ - **Koreksi workflow Manual Add (aktif):** Manual Add satuan dapat mengganti hasil yang sudah melewati verifikasi hanya pada periode terbuka dan sebelum hasil masuk Tagihan; penggantian wajib beralasan, diaudit before/after, mereset ring, dan mengembalikan laporan ke verifikasi. Manual Add All memfilter Petugas lalu Rute, langsung menampilkan alamat belum disetorkan, menghitung taksasi otomatis, menambahkan hanya pilihan checkbox, serta melaporkan progres batch tersimpan. Rilis tetap menunggu validasi integrasi role/duplikat/race, migration staging, dan uji hasil Manual melalui V1/V2/V3.
+-- Histori Manual Add All dibatasi ke pembacaan resmi aktual nonnegatif tanpa `alasanTaksir`; gunakan 12 bulan, tiga tertinggi, atau seluruh histori valid yang tersedia. Tanpa histori pemakaian valid, Pakai 0 m³. ST Awal dan ST Akhir sama, menggunakan `standLalu` dari pencatatan resmi terakhir; tanpa pencatatan atau meter, stand 0. Tidak ada status siap/ditahan per baris. Hasil Manual Add tetap menunggu verifikasi; `MANUAL_ADD` pada hasil resmi mengecualikannya dari histori aktual berikutnya.
++- Histori Manual Add All dibatasi ke pembacaan resmi aktual nonnegatif tanpa `alasanTaksir`; gunakan 12 bulan, tiga tertinggi, atau seluruh histori valid yang tersedia. ST Awal dan ST Akhir sama, menggunakan `standAkhir` dari pembacaan resmi terakhir sebelum periode berjalan (DEC-01; bukan `standLalu`). Perilaku tanpa histori pemakaian valid, pembacaan resmi, atau meter aktif belum final (OPEN-02): versi lama menulis Pakai 0 m³ dan stand 0, tetapi 0 tidak boleh ditampilkan sebagai pembacaan riil yang valid (DEC-02). Tidak ada status siap/ditahan per baris. Hasil Manual Add tetap menunggu verifikasi; `MANUAL_ADD` pada hasil resmi mengecualikannya dari histori aktual berikutnya.
+ - Tetapkan dan uji batas kewajaran/manual-review atas angka ekstrem sebelum rilis produksi; jangan menerbitkan atau menagihkan taksasi otomatis sebelum alur verifikasi.
+ 
+ ## Tahap 2 — migration dan readiness staging
+@@ -87,6 +89,8 @@
+ 
+ **Tujuan:** memvalidasi produk, kualitas data, dan kesiapan tim dengan risiko terbatasi.
+ 
++**Catatan jadwal per 1 November 2026:** jadwal pilot 1–7 November disetujui pada G0, tetapi prasyarat pra-pilot dan gerbang G1–G3 belum tercatat lulus dan tidak ada bukti go/no-go. Roadmap tidak menetapkan tanggal baru; penundaan formal atau bukti kelulusan: OPEN-16.
++
+ ### Pekerjaan
+ 
+ - Jalankan pada area/periode/jumlah sambungan dan petugas yang disetujui.
+@@ -149,7 +153,7 @@
+ | Keputusan G0 pilot | Selesai untuk scope dan kebijakan pilot | Disetujui Wiska Prayoga 31 Oktober 2026; supervisor, OTP, pemberitahuan, acceptance criteria, dan staging tetap prasyarat mulai pilot. |
+ | Arsitektur dan scope air | Sebagian besar dirancang | Dokumen menyelaraskan sumber model aktual; validasi kebutuhan operasional masih diperlukan. |
+ | Laporan mandiri dan jendela tanggal | Implementasi awal tersedia | Backend memakai periode WIB, arsip kiriman, UI jadwal, dan halaman admin; uji integrasi dan hak akses di staging masih perlu dilakukan. |
+-| Skema dan migration arsip | Model Prisma dan migration sudah ada di repository; penerapan database belum diverifikasi | Review migration, jalankan preflight konflik, lalu uji pada staging yang representatif. Keberadaan file migration bukan bukti bahwa staging atau produksi sudah dimigrasikan. |
++| Skema dan migration arsip | Model Prisma dan migration sudah ada di repository; penerapan database belum diverifikasi | Review migration, jalankan preflight konflik, lalu uji pada staging yang representatif. Keberadaan file migration bukan bukti bahwa staging atau produksi sudah dimigrasikan. STATUS menyebut migration "diterapkan ke Neon" tanpa label lingkungan (OPEN-17); itu tidak mengubah status "belum diverifikasi" untuk staging/produksi. |
+ | Pembacaan resmi petugas/warga | Alur existing dan perubahan awal tersedia | Buktikan semua jalur serta retry/race memakai aturan dan model canonical yang sama. |
+ | Offline sync/idempotensi | Belum dinyatakan selesai | Tetapkan kontrak event, payload hash, checkpoint, attachment resume, konflik, dan test lapangan. |
+ | Data legacy dan formula pemakaian | Aturan konservatif pilot disahkan; billing produksi belum | Satu periode CSV menemukan banyak delta stand/tagih berbeda; perlu codebook produksi, data lintas periode, dan sign-off sebelum hasil dipakai untuk tagihan. |
+--- a/src/docs/STATUS-baca-meter-air.md
++++ b/src/docs/STATUS-baca-meter-air.md
+@@ -1,6 +1,6 @@
+ # Status Proyek — Aplikasi Baca Meter Air
+ 
+-**Tanggal snapshot:** 31 Oktober 2026
++**Tanggal snapshot:** 31 Oktober 2026 (direkonsiliasi 1 November 2026; klaim implementasi dan hasil tes di bawah tidak dijalankan ulang pada rekonsiliasi)
+ 
+ **Status keseluruhan:** belum siap dinyatakan layak produksi; kesiapan pilot belum dibuktikan.
+ 
+@@ -8,7 +8,11 @@
+ 
+ **Fokus kerja aktif:** membuktikan dan memperbaiki kebenaran backend/domain/schema terlebih dahulu. Pilot bukan pekerjaan aktif sampai alur hitung, verifikasi, hasil resmi, dan closing lulus tes integrasi.
+ 
+-Kontrak peran, audit endpoint V1/V2/V3, closing, serta spesifikasi tabel verifikasi ada di [Aturan Verifikasi Berjenjang dan Koreksi](./aturan-verifikasi-berjenjang.md). Aturan per kode untuk taksasi, nilai minus, dan review ada di [Aturan Domain Kondisi Catat Meter](./aturan-kondisi-catatan-meter.md).
++**Peran dokumen:** status implementasi, bukti (tes, migration, lingkungan), dan log keputusan G0 untuk pilot. Bukan sumber aturan bisnis: ring dan koreksi ada di [aturan verifikasi](./aturan-verifikasi-berjenjang.md), kondisi dan taksasi di [aturan kondisi](./aturan-kondisi-catatan-meter.md), role di [RBAC](./matriks-rbac-aplikasi.md). Peta dokumen, glosarium, keputusan (DEC), dan isu terbuka (OPEN): [Indeks](./INDEKS-dokumentasi-baca-meter.md#register-open).
++
++**Catatan rekonsiliasi 1 November 2026:** bagian bertanda snapshot 31 Oktober mencerminkan kondisi sebelum keputusan DEC-03 (V2/V3 boleh tanpa ring bawah). Bila bertentangan dengan aturan verifikasi (v0.5) atau Indeks, yang terakhir berlaku. Pernyataan "sudah/lulus" di dokumen ini adalah catatan sesi sebelumnya (aturan penulisan status: DEC-07); rekonsiliasi tidak menjalankan tes, migration, atau E2E dan tidak memverifikasinya terhadap kode.
++
++Kontrak peran, audit endpoint V1/V2/V3, closing, serta spesifikasi tabel verifikasi ada di [Aturan Verifikasi Berjenjang dan Koreksi](./aturan-verifikasi-berjenjang.md); kebijakan akses per role ada di [Matriks RBAC](./matriks-rbac-aplikasi.md). Aturan per kode untuk taksasi, nilai minus, dan review ada di [Aturan Domain Kondisi Catat Meter](./aturan-kondisi-catatan-meter.md).
+ 
+ ## Ringkasan untuk pengambilan keputusan
+ 
+@@ -24,6 +28,8 @@
+ | [Definisi MVP](./MVP-baca-meter-air.md) | Batas pilot disetujui untuk uji coba 1–7 November 2026 | Kriteria penerimaan teknis/operasional tetap harus lulus sebelum pilot. |
+ | [Roadmap](./ROADMAP-baca-meter-air.md) | Urutan kerja dan release gate; bukan bukti penyelesaian | Mengatur dependensi dari keputusan produk sampai kesiapan produksi. |
+ | [Codebook kondisi catat](./codebook-kondisi-catatan-meter.md) | Draf untuk 22 nilai enum; belum disahkan pemilik data | Label legacy dan kandidat makna dicatat dengan jelas terpisah dari definisi resmi; kode ambigu perlu dikonfirmasi sebelum menjadi aturan runtime/billing. |
++| [Matriks RBAC](./matriks-rbac-aplikasi.md) | Aksi per role disepakati menurut dokumen; cakupan data masih usulan | Sumber kebenaran role dan izin; izin closing STAFF belum diputuskan (OPEN-01). |
++| [Indeks dokumentasi](./INDEKS-dokumentasi-baca-meter.md) | Peta sumber kebenaran, glosarium, log keputusan, register OPEN | Dibuat pada rekonsiliasi 1 November 2026. |
+ | Dokumen status ini | Snapshot progres | Menautkan bukti saat ini dan pekerjaan berikutnya; perbarui setelah ada hasil implementasi, tes, staging, atau keputusan. |
+ 
+ **G0 — keputusan ruang lingkup/kebijakan untuk pilot: SELESAI pada 31 Oktober 2026.** Keputusan di bawah dicatat dari persetujuan Wiska Prayoga dalam sesi kerja ini. Ini bukan persetujuan bahwa implementasi sudah memenuhi keputusan tersebut. Pekerjaan pra-pilot—misalnya menunjuk akun supervisor, memeriksa kesiapan OTP, memasang pemberitahuan, dan meluluskan acceptance criteria—tetap harus dikerjakan pada G1–G3.
+@@ -41,8 +47,8 @@
+ | Nilai resmi | Taksasi tidak langsung menjadi tagihan; review dan otorisasi V3 tetap gerbang hasil resmi. Data yang sudah ditagihkan tidak diubah lewat jalur koreksi biasa. |
+ | Akses warga | OTP untuk akses data sambungan hanya ke nomor HP yang sudah terverifikasi pada data resmi. Jika tidak cocok/tersedia, jangan buka data; arahkan ke verifikasi petugas. Tautan `LanggananWarga` bukan bukti kepemilikan. Kiriman baca meter warga tetap mencakup jalur anonim dan akun, menggunakan foto sebagai bukti, dan menunggu verifikasi; warga tidak mendapat akses data sambungan hanya dari klaim tautan. |
+ | Foto/GPS | Petugas wajib mengambil foto pada setiap pencatatan lapangan; kiriman mandiri warga menyertakan foto unggahan warga. GPS dan akurasi dicatat saat tersedia; kegagalan GPS tidak memblokir submit dan dapat ditandai untuk review. Pemberitahuan sebelum pengumpulan mencakup tujuan, akses terbatas, dan retensi. |
+-| Retensi | Foto, GPS, kontak pelapor, dan log operasional yang mengandung data pribadi dihapus/dianonimkan 3 bulan sejak dikumpulkan. Catatan audit resmi mengikuti jadwal terpisah yang harus ditetapkan sebelum go-live. |
+-| Koreksi | Tidak ada penyesuaian finansial/tagihan otomatis. Koreksi manual wajib mencatat alasan, bukti foto, aktor, persetujuan supervisor, audit, dan rekonsiliasi; petugas tidak boleh menyetujui koreksinya sendiri. |
++| Retensi | Foto, GPS, kontak pelapor, dan log operasional yang mengandung data pribadi dihapus/dianonimkan 3 bulan sejak dikumpulkan. Catatan audit resmi mengikuti jadwal terpisah yang harus ditetapkan sebelum go-live. Mekanisme penghapusan terhadap arsip yang immutable: OPEN-07. |
++| Koreksi | Tidak ada penyesuaian finansial/tagihan otomatis. Koreksi manual wajib mencatat alasan, bukti foto, aktor, persetujuan supervisor, audit, dan rekonsiliasi; petugas tidak boleh menyetujui koreksinya sendiri. Apakah syarat ini berlaku juga untuk koreksi administratif STAFF (FR-16/RBAC): OPEN-09. |
+ | Pelaporan kerusakan umum | Di luar alur baru pilot; gunakan kanal pengaduan yang sudah ada. Fokus MVP pilot tetap pembacaan meter. |
+ | Pemisahan tugas | Wiska bertanggung jawab menunjuk Supervisor Operasional/Admin Utama dengan akun terpisah dari petugas lapangan sebelum pilot dimulai. |
+ 
+@@ -54,7 +60,9 @@
+ 4. Nilai taksasi disimpan terpisah dari delta; nilai stand minus tidak diubah jadi nol. `TIDAK_ADA_AIR`/`TIDAK_DIPAKAI` memerlukan keputusan manusia; `MB` memakai hitungan segmen meter dan `MUDA_KEMBALI` memakai rollover sesuai kapasitas meter.
+ 5. Audit kode mengonfirmasi UI massal memanggil `/laporan-harian/verif-massal` untuk V1/V2/V3; V3 massal membuat hasil resmi. Taksasi saat pencatatan adalah perilaku terpisah dari verifikasi ring, meski nilainya tetap harus diverifikasi sebelum resmi.
+ 
+-### Audit awal kewenangan role — 31 Oktober 2026
++### Audit awal kewenangan role — 31 Oktober 2026 (sebagian usang; digantikan audit 1 November)
++
++> **Catatan 1 November 2026:** tabel ini adalah snapshot sebelum DEC-03. Baris 1 (V2 mensyaratkan V1; V3 mensyaratkan V1/V2) dan baris STAFF closing sudah usang: [Aturan Verifikasi Berjenjang dan Koreksi](./aturan-verifikasi-berjenjang.md) v0.5 mencatat endpoint satuan, form, dan massal membolehkan V2/V3 tanpa ring bawah (klaim dokumen; belum diverifikasi terhadap kode oleh rekonsiliasi ini), dan izin closing STAFF belum disepakati (OPEN-01). Celah self-unverify V1/V2 dan reopen V3 tanpa before/after tetap diakui sebagai belum selesai.
+ 
+ | Aturan yang diminta | Hasil audit |
+ |---|---|
+@@ -63,10 +71,10 @@
+ | V1 tidak mengubah hasil V1 setelah submit; V2/V3 dapat menangani koreksi sesuai role | `verif1` menolak submit ulang, tetapi `/unverify` V1 mengizinkan `SUPERVISOR_UP`, termasuk aktor V1 sendiri, membatalkan tahap. **Tidak sesuai**; self-reopen harus ditolak. |
+ | V2 tidak mengubah hasil V2 setelah submit; V3 mengoreksi | `verif2` menolak submit ulang, tetapi `/unverify` V2 mengizinkan `MANAGEMENT_UP`, termasuk aktor V2 sendiri, membatalkan tahap. **Tidak sesuai**; self-reopen harus ditolak. |
+ | V3 bisa mengoreksi hasil V3 sendiri | Role `SENIOR_UP` dapat membuka ulang V3 sebelum hasil terkait Tagihan. **Sebagian sesuai**; before/after dan alasan reopen belum tercatat eksplisit di route yang ditinjau. |
+-| STAFF administratif/closing/koreksi saja, tanpa V1/V2/V3 | STAFF memang tidak masuk ring verifikasi. Tidak ditemukan endpoint koreksi administratif STAFF; final close `/closing/:periode/tutup` dibatasi `SENIOR_UP`, bukan STAFF. **Belum sesuai**; STAFF harus dapat closing dan koreksi administratif hanya sebelum Tagihan. |
++| STAFF administratif/closing/koreksi saja, tanpa V1/V2/V3 | STAFF memang tidak masuk ring verifikasi. Tidak ditemukan endpoint koreksi administratif STAFF; final close `/closing/:periode/tutup` dibatasi `SENIOR_UP`, bukan STAFF. **Usang sebagian**: izin closing STAFF belum disepakati (OPEN-01), jadi "belum sesuai" pada closing bukan temuan; koreksi administratif STAFF hanya sebelum Tagihan (lihat aturan verifikasi). |
+ | Verifikasi massal setara dengan satuan | Guard ring sama dan V3 massal membuat hasil resmi. **Belum terbukti sesuai penuh**; cek prasyarat ring bawah dan ikon perilaku yang sama, serta uji race/atomic transition. |
+ 
+-Audit lebih rinci dan acceptance tests ada di [Aturan Ring Verifikasi dan Koreksi](./aturan-verifikasi-berjenjang.md). Ini audit statis; otorisasi runtime belum diubah dan skenario role tersebut belum diuji melalui endpoint/integrasi.
++Audit lebih rinci dan acceptance tests ada di [Aturan Verifikasi Berjenjang dan Koreksi](./aturan-verifikasi-berjenjang.md). Ini audit statis; otorisasi runtime belum diubah dan skenario role tersebut belum diuji melalui endpoint/integrasi.
+ 
+ ### Tindakan wajib sebelum pilot dimulai
+ 
+@@ -80,31 +88,33 @@
+ 
+ Item di atas adalah **prasyarat mulai pilot**, bukan perubahan kebijakan G0. Jika tidak selesai, tanggal pilot harus ditunda; jangan menganggap risikonya diterima hanya karena G0 telah disetujui.
+ 
++**Status jadwal per 1 November 2026 (hari pertama jadwal pilot):** seluruh item pra-pilot di atas dan gerbang G1–G3 tercatat belum selesai (`[ ]`), dan tidak ada bukti go/no-go dalam dokumen. Menurut aturan dokumen ini sendiri, pilot belum boleh dimulai pada kondisi tersebut. Dokumen ini tidak menetapkan tanggal baru; penundaan formal atau bukti kelulusan gerbang dicatat sebagai OPEN-16.
++
+ ## Apa yang sudah dikerjakan di repository
+ 
+ | Area | Bukti yang ada | Batas klaim |
+ |---|---|---|
+ | Definisi produk | PRD, batas MVP, roadmap, rancangan arsitektur, hasil audit, dan analisis rekonsiliasi data tersedia di `src/docs/`. | Belum berarti keputusan pemilik produk, billing, keamanan, dan operasional telah disahkan. |
+ | Model data | Model canonical mencakup pelanggan, meter, pembacaan, tagihan, periode, laporan petugas, dan laporan mandiri. Model `KirimanLaporanMandiri` tersedia di schema Prisma. | Perubahan schema tidak membuktikan penerapan database produksi/staging atau validitas semua data historis. |
+-| Arsip kiriman warga | Migration `20261031000000_laporan_mandiri_kiriman_immutable` membuat tabel arsip, menyalin data lama, dan mencegah perubahan/penghapusan melalui trigger. | Belum ada bukti migration diuji pada salinan staging representatif atau diterapkan pada target produksi. |
++| Arsip kiriman warga | Migration `20261031000000_laporan_mandiri_kiriman_immutable` membuat tabel arsip, menyalin data lama, dan mencegah perubahan/penghapusan melalui trigger. Trigger ini berbenturan dengan kewajiban hapus/anonimkan data pribadi setelah 3 bulan (OPEN-07). | Belum ada bukti migration diuji pada salinan staging representatif atau diterapkan pada target produksi. |
+ | Laporan mandiri | Kode layanan menyimpan kiriman dan arsip bukti dalam transaksi; ada pemeriksaan sambungan tertaut untuk alur akun dan pengaturan tanggal jendela. | Perlu tes integrasi dan otorisasi seluruh jalur; arsip append-only tidak otomatis berarti keseluruhan workflow aman. |
+ | Alur hasil resmi | Model `PembacaanMeter` digunakan sebagai hasil resmi dan ada service bersama untuk pembacaan resmi pada alur laporan. | Perlu membuktikan seluruh jalur petugas, warga, impor, retry, dan closing menjaga invariant yang sama. |
+ | Audit kode | [Hasil audit](./hasil-audit-baca-meter.md) mencatat kontrol yang terlihat baik serta risiko prioritas tinggi/menengah dan tindakan sebelum produksi. | Audit tersebut pemeriksaan statis repository, bukan penetration test, audit database live, atau verifikasi bahwa temuan masih terbuka setelah perubahan. |
+ 
+ ## Pemeriksaan awal backend dan domain
+ 
+-Pemeriksaan ini adalah bukti teknis awal, bukan sign-off produksi:
++Pemeriksaan ini adalah bukti teknis awal, bukan sign-off produksi (snapshot 31 Oktober; tidak dijalankan ulang pada rekonsiliasi 1 November; baris yang bertentangan dengan aturan verifikasi v0.5 sudah usang):
+ 
+ | Pemeriksaan | Hasil | Makna |
+ |---|---|---|
+ | `pnpm exec prisma validate` | Lulus; Prisma memvalidasi schema di `prisma/schema`. | Sintaks, model, tipe, dan relasi Prisma dapat diparse; belum membuktikan constraints domain cukup atau database aktual cocok. |
+ | `pnpm exec vitest run src/docs/pemakaian-meter.test.ts` | 31 tes lulus. | Hanya membuktikan fungsi murni di `src/docs/pemakaian-meter.ts`; fungsi tersebut tidak ditemukan dipakai jalur backend verifikasi. |
+-| `pnpm test` | 4 file dan 90 tes lulus pada 31 Oktober 2026 setelah kontrak dipisahkan. | Seluruh tes repository saat ini lulus, tetapi belum ada tes integrasi backend/PostgreSQL yang ditemukan untuk jalur verifikasi/closing yang ditinjau. |
++| `pnpm test` | 4 file dan 90 tes lulus pada 31 Oktober 2026 setelah kontrak dipisahkan (angka awal; item Manual Add di bawah mencatat 94 tes pada langkah berikutnya, tanpa commit/CI yang tertaut: jalankan ulang sebelum dijadikan bukti gate). | Seluruh tes repository saat ini lulus, tetapi belum ada tes integrasi backend/PostgreSQL yang ditemukan untuk jalur verifikasi/closing yang ditinjau. |
+ | `pnpm typecheck` | Lulus. | TypeScript dapat dikompilasi tanpa error tipe; ini tidak membuktikan perilaku domain/runtime benar. |
+ | Jalur V3 satuan dan massal | Keduanya menggunakan kalkulasi lokal untuk pemakaian riil dan nilai laporan/override untuk pemakaian tagih; sebagian jalur memakai `Math.max(0, ...)`. | Perlu mempertahankan pemisahan antara verifikasi pembacaan dengan pembuatan taksasi Manual ADD. Stand mundur yang diubah menjadi nol tetap perlu dikoreksi. |
+ | Verifikasi massal dan V3 final | UI memanggil endpoint V1/V2/V3; V3 membuat hasil resmi. `unverify` V3 memerlukan `SENIOR_UP` dan menolak pembatalan jika pembacaan telah terkait dengan Tagihan. | V3 final sesuai; prasyarat ring bawah untuk V2/V3 dan ikon yang hanya menampilkan ring terakhir belum sesuai/terbukti. Tes integrasi harus menguji audit koreksi, race, dan perlindungan hasil yang sudah ditagihkan. |
+ | Pratinjau verifikasi UI | Menghitung delta sendiri dan juga membatasi nilai negatif menjadi nol. | UI, endpoint satuan, dan endpoint massal belum memakai satu fungsi domain yang menjadi sumber aturan bersama. |
+-| Kunci hasil resmi | Schema unik pada `[meterId, periode]`; pembatasan satu hasil per pelanggan/periode dilakukan melalui query aplikasi sebelum tulis. | Belum terbukti aman untuk request bersamaan; perlu integration/concurrency test dan keputusan apakah invariant perlu dijaga database. |
++| Kunci hasil resmi | Schema unik pada `[meterId, periode]`; pembatasan satu hasil per pelanggan/periode dilakukan melalui query aplikasi sebelum tulis. | Belum terbukti aman untuk request bersamaan; perlu integration/concurrency test dan keputusan apakah invariant perlu dijaga database. Kunci domain target (pelanggan/periode atau meter/periode) dan kasus MB: OPEN-06. |
+ | Pemetaan kondisi | Enum Prisma `KondisiCatat` memakai kode legacy; fungsi domain uji punya enum/kondisi yang berbeda. | Integrasi harus memetakan kondisi berdasarkan kebijakan yang disetujui, bukan mengasumsikan dua enum tersebut sama. |
+ | Endpoint pembacaan langsung | `POST /pembacaan` menghitung selisih di endpoint dan membuat hasil resmi langsung. | Jalur ini tidak memakai workflow V1/V2/V3; pemeriksaan periode terkunci juga belum tampak di handler. Harus diputuskan sebagai jalur impor/admin khusus atau ditutup dari alur operasional. |
+ | Verifikasi massal | Jalur V3 melakukan `PembacaanMeter.create` sendiri, tidak melalui `simpanPembacaanResmi`. | Aturan satu hasil per pelanggan/periode dan konsistensi dengan V3 satuan tidak dijaga oleh helper bersama di jalur massal. |
+@@ -119,16 +129,18 @@
+ 
+ ## Posisi pekerjaan saat ini — 31 Oktober 2026
+ 
++> **Catatan lingkungan (1 November 2026):** beberapa item di bawah menyebut migration "diterapkan ke Neon" tanpa label lingkungan (dev/staging/prod). ROADMAP tetap menyatakan penerapan ke staging/produksi belum diverifikasi; jangan membaca klaim tersebut sebagai bukti staging atau produksi (OPEN-17).
++
+ - [x] Matriks aturan pilot mendokumentasikan seluruh 22 enum `KondisiCatat`, termasuk kondisi yang dihitung, ditahan untuk review, atau memengaruhi status sambungan.
+ - [x] Codebook draf mencakup seluruh 22 enum dan label legacy yang ditemukan pada sampel; makna kandidat/ambigu ditandai, belum disahkan pemilik data.
+ - [x] Fondasi kontrak domain awal dibuat dan diuji untuk hitung `NORMAL` serta review 21 kondisi lain; 30 tes kontrak, 90 tes total, dan `pnpm typecheck` lulus pada 31 Oktober 2026. **Kontrak ini mendahului klarifikasi taksasi kondisi tertentu dan nilai minus; belum menjadi aturan final yang siap runtime.**
+ - [x] Peran aksi massal telah diluruskan: ia menjalankan ring V1/V2/V3; V3 membuat hasil resmi dan bukan taksasi otomatis.
+-- [x] Kontrak ring berbasis role, indikator ring terakhir, larangan STAFF memverifikasi, izin STAFF closing, serta batas koreksi pasca-Tagihan diklarifikasi dan didokumentasikan.
++- [x] Kontrak ring berbasis role, indikator ring terakhir, larangan STAFF memverifikasi, serta batas koreksi pasca-Tagihan diklarifikasi dan didokumentasikan (izin STAFF closing belum disepakati: OPEN-01).
+ - [x] Spesifikasi kolom tabel verifikasi, fungsi ST Revisi, makna Tagihan (m³), serta kebutuhan alamat dan waktu catat didokumentasikan.
+ - [x] Modal Cari Lanjutan untuk kriteria yang memiliki field sumber dan filter toolbar Kondisi Catat tersambung ke query daftar; susunan kolom tabel verifikasi dan ekspor CSV diperbarui.
+ - [x] Field nullable `standAwalRevisi`/`kondisiRevisi` dan migration additive sudah diterapkan ke Neon setelah persetujuan eksplisit; status migration up to date dan kedua kolom terverifikasi ada.
+ - [x] Modal Edit laporan petugas tersambung ke `PATCH /laporan-harian/:id/koreksi`, termasuk ST Awal revisi, ST Akhir, kondisi koreksi, MB, meter tujuan, alasan wajib, dan audit before/after. Jalur laporan mandiri masih baca-saja.
+-- [x] Aksi Verifikasi menu klik-kanan laporan petugas tidak lagi membuka modal: request langsung menandai ring akun; server dan UI menjaga urutan V1 → V2 → V3. V3 tetap membuat hasil resmi.
++- [x] Aksi Verifikasi menu klik-kanan laporan petugas tidak lagi membuka modal: request langsung menandai ring akun; ~~server dan UI menjaga urutan V1 → V2 → V3~~ (digantikan DEC-03: V2/V3 tanpa ring bawah; lihat aturan verifikasi). V3 tetap membuat hasil resmi.
+ - [x] Aksi cek ulang dipisahkan dari verifikasi langsung dan memerlukan catatan alasan.
+ - [ ] Definisikan field sumber sebelum menambahkan kriteria Jenis Pelanggan dan Deposit Range ke Cari Lanjutan.
+ - [x] `pnpm run typecheck`, `prisma validate`, dan `prisma generate` lulus setelah perubahan Manual Add.
+@@ -136,18 +148,18 @@
+ - [x] Migration `20261031140000_manual_add_laporan` diterapkan setelah persetujuan eksplisit; `prisma migrate status` menyatakan database up to date.
+ - [x] Verifikasi lokal 31 Oktober: GET `/api/v1/laporan-harian?pageSize=100&periode=202608&ringkas=true` kembali 200 dan UI menampilkan 100 dari 1.992 laporan. Akar 500 adalah proses Next dev yang masih memakai Prisma Client hasil generate lama (field `kondisiRevisi` tidak dikenal); restart proses memuat client baru dan menyelesaikan error.
+ - [x] Filter Manual Add All pernah diverifikasi pada UI lokal memakai periode daftar kerja terbaru `202608`, dengan 125 opsi rute dan 9 opsi petugas. Verifikasi interaksi sebelumnya memakai tombol pratinjau dan tidak lagi mewakili alur UI terbaru; tidak ada data manual yang dikirim saat pemeriksaan tersebut.
+-- [ ] Lint file terubah belum dapat dijalankan: `typescript-eslint` yang terpasang belum mendukung TypeScript 7.0.2. Ini blocker kompatibilitas tooling, bukan hasil lint bersih.
++- [ ] Lint file terubah belum dapat dijalankan: `typescript-eslint` yang terpasang belum mendukung TypeScript 7.0.2. Ini blocker kompatibilitas tooling, bukan hasil lint bersih. Jangan memasang atau memperbarui dependency tanpa persetujuan (OPEN-21).
+ - [ ] Pemeriksaan format memakai konfigurasi proyek belum dapat dijalankan karena `prettier-plugin-tailwindcss` yang direferensikan `.prettierrc.json` tidak tersedia.
+ - [x] Pemilik produk mengklarifikasi taksasi otomatis pada kondisi kelainan tertentu, Manual ADD sebagai opsi jika tidak ada pencatatan, penanda Revisi Pencatat, dan penyimpanan audit nilai sebelum/sesudah.
+ - [x] Pemilik produk mengklasifikasikan 14 kode untuk taksasi otomatis, 3 kode untuk delta aktual, 2 kode untuk nilai manual, serta MB/rollover/Revisi Pencatat sebagai jalur khusus.
+ - [x] Pemilik produk menetapkan prioritas histori 12 bulan → 3 pemakaian terbesar → 3 bulan terakhir/riwayat tersedia, pembulatan ke atas tanpa minimum, stand resmi terakhir sebagai ST Awal/ST Akhir taksasi, dan batas aktif periode untuk DICABUT.
+ - [ ] Tetapkan definisi kode legacy/alias `TAA` dan `RK`, serta keputusan/batas kewajaran untuk nilai ekstrem.
+-- [x] Endpoint verifikasi langsung dan indikator menu menjaga prasyarat ring sebelumnya; V2 menunggu V1 dan V3 menunggu V1/V2.
++- ~~Endpoint verifikasi langsung dan indikator menu menjaga prasyarat ring sebelumnya; V2 menunggu V1 dan V3 menunggu V1/V2.~~ **Digantikan 1 November 2026 (DEC-03):** V2/V3 boleh memproses tanpa ring bawah; aturan verifikasi v0.5 mencatat UI dan endpoint sudah mengikuti (klaim dokumen; belum diverifikasi E2E).
+ - [x] Susun ulang tabel verifikasi sesuai urutan kolom, pisahkan Ring dari Status, tampilkan alamat, Tagihan m³, dan waktu catat; filter Kondisi Catat/Cari Lanjutan yang didukung juga diteruskan ke backend.
+-- [ ] Perbaiki self-unverify V1/V2; uji jalur koreksi administratif STAFF sebelum Tagihan; berikan STAFF izin final closing dengan prasyarat yang diuji.
++- [ ] Perbaiki self-unverify V1/V2; uji jalur koreksi administratif STAFF sebelum Tagihan; izin final closing STAFF menunggu keputusan OPEN-01 (jangan diimplementasikan atas asumsi).
+ - [ ] Tes integrasi memastikan koreksi setelah V3 hanya melalui role setara/lebih tinggi, tercatat, dan tidak mengubah hasil yang sudah dipakai Tagihan.
+ - [ ] Taksasi otomatis pada kondisi kelainan masih memerlukan implementasi runtime dan validasi histori; workflow koreksi ST Awal juga masih perlu diuji integrasi.
+-- [x] Kriteria histori Manual Add All: pembacaan resmi aktual nonnegatif, `alasanTaksir` kosong; data taksasi/override dikecualikan; fallback tiga tertinggi lalu seluruh histori tersedia. Keputusan terbaru: tanpa histori/meter pakai 0 m³ dan stand 0; jika meter aktif ganda pilih yang terbaru.
++- [x] Kriteria histori Manual Add All: pembacaan resmi aktual nonnegatif, `alasanTaksir` kosong; data taksasi/override dikecualikan; fallback tiga tertinggi lalu seluruh histori tersedia. Catatan 31 Oktober: tanpa histori/meter pakai 0 m³ dan stand 0 (ditinjau ulang 1 November: stand mengacu `standAkhir` resmi terakhir dan 0 tidak boleh tampil sebagai pembacaan riil valid; lihat DEC-01, DEC-02, OPEN-02). Jika meter aktif ganda pilih yang terbaru.
+ - [x] Halaman Manual Add satuan/All, endpoint pencarian/daftar/penyimpanan, alasan wajib, provenance dan audit telah diimplementasikan; laporan massal menunggu verifikasi, dan hasil V3 ditandai `MANUAL_ADD` agar tidak menjadi histori aktual.
+ - [x] Migration provenance Manual Add diterapkan ke Neon.
+ - [ ] Integrasi PostgreSQL/staging representatif, tes role/duplikat/race, dan uji seluruh alur pemilihan otomatis/submit masih perlu dilakukan.
+@@ -157,7 +169,7 @@
+ 
+ ## Fokus kerja berikutnya — backend correctness
+ 
+-1. Tutup gap implementasi pada [audit ring verifikasi dan koreksi](./aturan-verifikasi-berjenjang.md): larangan self-reopen V1/V2, final closing STAFF dengan prasyarat, dan konsistensi verifikasi massal.
++1. Tutup gap implementasi pada [audit ring verifikasi dan koreksi](./aturan-verifikasi-berjenjang.md): larangan self-reopen V1/V2, celah koreksi/reopen pasca-V3 (DEC-06), dan konsistensi verifikasi massal; final closing STAFF menunggu OPEN-01.
+ 2. Tambahkan audit append-only before/after dan tes endpoint/integrasi untuk koreksi, reopen, role setara/lebih tinggi, status Tagihan, dan race.
+ 3. Uji workflow V1/V2/V3 satuan dan massal; V2 menunggu V3, V3 langsung membuat satu hasil resmi, ikon selalu mencerminkan ring terakhir, dan koreksi V3 melalui reopen/review.
+ 4. Sahkan allowlist per kondisi untuk taksasi otomatis, pencatatan aktual (termasuk minus), atau review; pastikan nilai minus tidak dijepit menjadi nol.
+@@ -182,7 +194,7 @@
+ - [ ] Verifikasi temuan lain: identitas pencatat dari client, state transition yang bersamaan, histori koreksi, periode invalid, rollover, dan meter pengganti.
+ - [ ] Tegakkan invariant penting pada transaksi/database bila sesuai; tentukan aturan satu hasil resmi untuk pelanggan/periode dan kasus pergantian meter.
+ - [ ] Tambahkan tes negatif lintas akun/objek/role, tes transisi bersamaan, retry, dan rekonsiliasi hasil terhadap tagihan.
+-- **Bukti lulus:** setiap temuan memiliki status (fixed/not applicable/accepted), referensi perubahan, dan tes yang lulus; tidak ada temuan blocker tanpa risk owner yang menyetujui.
++- **Bukti lulus:** setiap temuan memiliki status (fixed/not applicable/accepted; status awal per temuan ada di [hasil-audit](./hasil-audit-baca-meter.md#status-temuan-diperbarui-1-november-2026)), referensi perubahan, dan tes yang lulus; tidak ada temuan blocker tanpa risk owner yang menyetujui.
+ 
+ ### G2 — Buktikan vertical slice MVP
+ 
+@@ -234,7 +246,7 @@
+ 
+ - Manual Add satuan mengizinkan penggantian hanya atas laporan yang pernah melewati ring V1/V2/V3. Penggantian mengharuskan alasan, menyimpan audit before/after, menghapus pembacaan resmi yang terhubung jika belum ditagihkan, mereset seluruh ring/koreksi, dan mengembalikan laporan ke verifikasi. Periode terkunci, laporan pending, pembacaan lain yang tidak terkait, atau hasil yang sudah masuk Tagihan ditolak.
+ - Manual Add All memfilter Petugas terlebih dahulu lalu Rute. Setelah keduanya dipilih, daftar kerja berstatus belum dicatat langsung ditampilkan beserta taksasi yang dihitung server; alamat dengan laporan/pembacaan resmi dikecualikan. Checkbox menentukan alamat yang akan ditambahkan ke antrean verifikasi.
+-- Tabel Manual Add All tidak menampilkan kolom Status, memisahkan ST Awal dan ST Akhir, serta menampilkan nilai stand yang sama. Semua alamat yang tampil dapat dipilih; tidak ada klasifikasi siap/ditahan. Pakai 0 hanya jika tidak ada histori pemakaian valid; stand mengambil `standAkhir` dari pencatatan resmi terakhir, atau 0 jika belum ada pencatatan/meter aktif.
++- Tabel Manual Add All tidak menampilkan kolom Status, memisahkan ST Awal dan ST Akhir, serta menampilkan nilai stand yang sama. Semua alamat yang tampil dapat dipilih; tidak ada klasifikasi siap/ditahan. Pakai 0 hanya jika tidak ada histori pemakaian valid; stand mengambil `standAkhir` dari pencatatan resmi terakhir, atau 0 jika belum ada pencatatan/meter aktif. (Ditinjau 1 November: perilaku tanpa histori/pencatatan/meter berbeda dari DEC-02 dan dicatat sebagai celah/OPEN-02; rekonsiliasi tidak mengubah kode.)
+ - Tombol proses hanya nonaktif saat belum ada pilihan atau proses sedang berjalan; alasan audit memiliki nilai umum otomatis sehingga tidak menghalangi aksi setelah checkbox dipilih.
+ - Batch massal diproses per 25 alamat. Progress diperbarui setelah setiap batch sukses disimpan; kegagalan parsial menyebut jumlah alamat yang selesai dan mempertahankan pilihan yang belum diproses.
+ - Hasil batch tetap dicatat sebagai `MANUAL_MASSAL` dengan alasan/provenance, masuk ke alur verifikasi, dan tidak langsung membuat pembacaan/tagihan resmi.
+--- a/src/docs/arsitektur-awal-baca-meter.md
++++ b/src/docs/arsitektur-awal-baca-meter.md
+@@ -1,10 +1,12 @@
+ # Rancangan Arsitektur Awal Aplikasi Baca Meter Air
+ 
+-**Versi:** 0.2 — scope dan model direkonsiliasi dengan aplikasi saat ini
+-**Tanggal:** 31 Oktober 2026
++**Versi:** 0.3 — scope dan model direkonsiliasi dengan aplikasi saat ini; diselaraskan dengan keputusan dokumentasi 1 November 2026
++**Tanggal:** 1 November 2026
+ **Konteks repository:** implementasi saat ini menggunakan Next.js 16, Hono pada route API Next.js, PostgreSQL, Prisma ORM 7, dashboard web, dan alur aplikasi petugas yang bekerja offline.
+ 
+-Dokumen kebutuhan produk dan rencana rilis: [PRD](./PRD-baca-meter-air.md), [Definisi MVP](./MVP-baca-meter-air.md), dan [Roadmap](./ROADMAP-baca-meter-air.md).
++Dokumen kebutuhan produk dan rencana rilis: [PRD](./PRD-baca-meter-air.md), [Definisi MVP](./MVP-baca-meter-air.md), dan [Roadmap](./ROADMAP-baca-meter-air.md). Aturan domain: [kondisi catat](./aturan-kondisi-catatan-meter.md), [verifikasi](./aturan-verifikasi-berjenjang.md), [RBAC](./matriks-rbac-aplikasi.md). Peta dokumen dan register OPEN: [Indeks](./INDEKS-dokumentasi-baca-meter.md#register-open).
++
++**Peran dokumen:** rancangan target teknis. Bukan status implementasi (lihat [STATUS](./STATUS-baca-meter-air.md)) dan bukan aturan bisnis (lihat dokumen aturan).
+ 
+ ## 1. Tujuan dan keputusan awal
+ 
+@@ -25,7 +27,7 @@
+ 
+ `LanggananWarga` saat ini adalah klaim tautan dan belum membuktikan kepemilikan. API akun harus memastikan `pelangganId` yang dikirim memang tertaut ke `userId` yang login, tetapi tautan itu bukan pengganti verifikasi identitas. Sampai mekanisme verifikasi kepemilikan diputuskan, laporan akun maupun tamu tetap berstatus menunggu dan tidak langsung mengubah hasil/tagihan.
+ 
+-**Belum disahkan:** rumus taksiran dan pemakaian minimum, mapping operasional untuk kode legacy yang ambigu, SLA verifikasi, otoritas/ring persetujuan koreksi, kebijakan retensi foto/GPS, dan penanganan finansial bila pembacaan dikoreksi setelah tagihan terbit. Rancangan ini tidak menetapkan kebijakan tarif atau refund.
++**Belum disahkan (diperbarui 1 November 2026):** rumus taksiran dan pemakaian minimum untuk billing produksi, mapping operasional untuk kode legacy yang ambigu (OPEN-10), SLA verifikasi, otoritas persetujuan koreksi pasca-tagihan, jadwal retensi catatan audit resmi, dan penanganan finansial bila pembacaan dikoreksi setelah tagihan terbit. **Sudah diputuskan untuk pilot (G0, 31 Oktober; lihat [STATUS](./STATUS-baca-meter-air.md)):** ring V1/V2/V3 (sumber: [aturan verifikasi](./aturan-verifikasi-berjenjang.md)), retensi foto/GPS/kontak/log pribadi 3 bulan, dan OTP ke nomor yang terverifikasi pada data resmi. Konflik retensi 3 bulan dengan arsip immutable: OPEN-07. Rancangan ini tidak menetapkan kebijakan tarif atau refund.
+ 
+ ## 2. Batas konteks dan model domain
+ 
+@@ -58,7 +60,7 @@
+ | Periode dan rute kerja | `PeriodePenagihan` (`periode_penagihan`), `DaftarCatat` | `PeriodePenagihan` hanya punya status `BERJALAN/TERKUNCI`; jendela laporan warga disimpan di `Konfigurasi`, bukan tabel periode baru. |
+ | Intake petugas | `LaporanHarianPetugas` (`laporan_harian_petugas`) | Tetap menjadi sumber petugas; pencatat ditautkan lewat `Pencatat`, bukan langsung ke `User`. |
+ | Intake warga | `LaporanMandiri` (`laporan_mandiri`), `KirimanLaporanMandiri` (`kiriman_laporan_mandiri`) | Tabel pertama adalah status antrean terkini; tabel kedua menyimpan setiap percobaan/bukti secara append-only. |
+-| Hasil resmi | `PembacaanMeter` (`pembacaan_meter`) | Satu sumber hasil resmi untuk petugas dan mandiri; pemakaian tagih berbeda dari delta stand pada banyak data historis. |
++| Hasil resmi | `PembacaanMeter` (`pembacaan_meter`) | Satu sumber hasil resmi untuk petugas dan mandiri; pemakaian tagih berbeda dari delta stand pada banyak data historis. Kunci unik yang dilaporkan STATUS adalah `[meterId, periode]`; kunci domain target dan kasus MB: OPEN-06. |
+ | Tagihan | `Tagihan` (`tagihan`) | Dokumen historis; tidak diperbarui otomatis saat koreksi hasil baca. |
+ | Audit | `AuditLog` (`audit_log`) | SQL harus memakai nama tabel hasil `@@map`, bukan `"AuditLog"`. |
+ 
+@@ -90,7 +92,7 @@
+ 
+ ### Indeks awal berdasarkan query
+ 
+-Mulai dari kebutuhan query nyata, bukan menambahkan indeks ke semua kolom:
++Mulai dari kebutuhan query nyata, bukan menambahkan indeks ke semua kolom (nama kolom pada daftar berikut ilustratif berbahasa Inggris; padankan dengan nama model/kolom aktual di `prisma/schema` sebelum dibuat):
+ 
+ - `(billing_period_id, route_id, work_status)` untuk daftar kerja petugas/supervisor.
+ - `(service_connection_id, period)` untuk riwayat pembacaan dan pemeriksaan duplikasi.
+@@ -132,7 +134,7 @@
+ | **Rollover counter** | Periksa digit/kapasitas register perangkat dan jenis meter. Hitung konsumsi lintas rollover hanya bila nilainya masuk akal dan sesuai konfigurasi. Simpan flag/metode kalkulasi; jika data alat tidak cukup, kirim ke review, bukan menjadikan pemakaian nol. |
+ | **Meter diganti** | Pertahankan baris meter lama dan buat baris meter baru; simpan waktu efektif, stand cabut/pasang, serta segel. Kalkulasi pemakaian periode menjadi jumlah segmen yang sah. Jangan menyamakan ini dengan counter mundur biasa. |
+ | **Meter rusak/mati/terbalik** | Catat kondisi dan bukti; hasil terukur dan nilai tagih/taksiran adalah dua atribut berbeda. Gunakan kebijakan taksiran yang disahkan, alasan, dasar periode pembanding, rentang berlakunya, dan approval. |
+-| **Rumah terkunci/tidak ada akses** | Catat `NO_ACCESS`/alasan, waktu dan bukti sesuai kebijakan. Jangan membuat angka stand/pemakaian palsu; jadwalkan kunjungan ulang atau gunakan metode estimasi yang disetujui. |
++| **Rumah terkunci/tidak ada akses** | Catat kondisi akses yang tersedia pada enum `KondisiCatat` (lihat [codebook](./codebook-kondisi-catatan-meter.md); mis. `TERHALANG`) beserta alasan, waktu, dan bukti sesuai kebijakan; `NO_ACCESS` pada rancangan awal bukan nilai enum aplikasi. Jangan membuat angka stand/pemakaian palsu; jadwalkan kunjungan ulang atau gunakan metode estimasi yang disetujui. |
+ | **Rumah kosong/tidak dipakai** | Bedakan dari rumah terkunci. Angka nol hanya jika aturan dan bukti mendukung; jangan menghapus bea tetap secara otomatis kecuali tarif mengaturnya. |
+ | **Foto tidak tersedia** | Simpan status kegagalan unggah secara eksplisit, retry terukur, dan kebijakan pengecualian berdasarkan kondisi. Foto tidak boleh membuat pembacaan tampak lengkap bila upload gagal. |
+ | **GPS tidak akurat/offline** | Simpan koordinat, akurasi, waktu pengambilan dan status izin bila tersedia. Tandai sebagai sinyal review, bukan satu-satunya bukti kehadiran. Perangkat dapat dimanipulasi dan GPS indoor bisa meleset. |
+@@ -187,7 +189,7 @@
+ 
+ ### Transaksi dan konkurensi
+ 
+-Gunakan transaksi untuk perubahan yang harus berhasil/gagal sebagai satu kesatuan: approval + revision + audit; penciptaan invoice + invoice lines; pembayaran + ledger update. Pakai conditional update untuk mencegah dua persetujuan atas status lama:
++Gunakan transaksi untuk perubahan yang harus berhasil/gagal sebagai satu kesatuan: approval + revision + audit; penciptaan invoice + invoice lines; pembayaran + ledger update. Pakai conditional update untuk mencegah dua persetujuan atas status lama (nama pada contoh ilustratif: `readingSubmission` kira-kira `LaporanMandiri`/`KirimanLaporanMandiri`, `PENDING_REVIEW` kira-kira `MENUNGGU`; sesuaikan dengan enum dan model aktual):
+ 
+ ```ts
+ const changed = await tx.readingSubmission.updateMany({
+@@ -263,6 +265,8 @@
+ 
+ ## 8. Roadmap implementasi
+ 
++> Penomoran Tahap 0–4 di bagian ini adalah urutan kerja teknis awal. Bukan penomoran Tahap 0–5 pada [ROADMAP](./ROADMAP-baca-meter-air.md) maupun gerbang G0–G5 pada [STATUS](./STATUS-baca-meter-air.md); gunakan keduanya untuk urutan rilis.
++
+ ### Tahap 0 — rekonsiliasi data dan kebijakan
+ 
+ Scope air, multi-sambungan akun, dua jalur intake mandiri, serta default jendela 1–25 sudah ditetapkan. Validasi mapping `ketcatat` dan alasan `pakai_drd` dengan pemilik data; sepakati aturan taksiran, retensi bukti, serta siapa pengaju/penyetuju koreksi. Jangan menebak makna kode historis yang belum memiliki codebook.
+--- a/src/docs/aturan-kondisi-catatan-meter.md
++++ b/src/docs/aturan-kondisi-catatan-meter.md
+@@ -1,13 +1,15 @@
+ # Aturan Domain Kondisi Catat Meter
+ 
+-**Versi:** 0.3 (hierarki taksasi dan stand acuan; 31 Oktober 2026)  
++**Versi:** 0.4 (rekonsiliasi dokumentasi 1 November 2026; sebelumnya 0.3: hierarki taksasi dan stand acuan, 31 Oktober 2026)  
+ **Status:** pemilik produk menetapkan klasifikasi kondisi, prioritas histori, pembulatan, dan stand acuan. Histori valid/no-history untuk Manual Add All sudah diputuskan; histori untuk taksasi otomatis 14 kondisi, pemetaan alias, tes integrasi, dan implementasi runtime aturan kondisi masih terbuka.
+ **Sumber enum:** `prisma/schema/tagihan.prisma`, enum `KondisiCatat`.  
+ **Tujuan:** menetapkan apa yang boleh dihitung otomatis, apa yang harus ditahan, bukti yang dibutuhkan, dan dampak terhadap hasil resmi/tagihan. Ini kontrak domain untuk menyatukan backend, UI verifikasi, impor, dan tes.
+ 
++**Peran dokumen:** sumber kebenaran untuk perlakuan per kondisi catat, taksasi, dan aturan Manual Add / Manual Add All. Makna kode: [codebook](./codebook-kondisi-catatan-meter.md); ring dan koreksi: [aturan verifikasi](./aturan-verifikasi-berjenjang.md); keputusan (DEC) dan isu terbuka (OPEN): [Indeks](./INDEKS-dokumentasi-baca-meter.md#register-open).
++
+ Makna dan alias kode legacy yang diketahui atau masih perlu dikonfirmasi dicatat terpisah dalam [Codebook Kondisi Catat Meter](./codebook-kondisi-catatan-meter.md). Dokumen ini membedakan pembacaan terukur, taksasi otomatis pada kondisi yang disahkan, nilai minus yang dipertahankan, dan kondisi yang harus direview.
+ 
+-Fondasi kontrak domain awal telah dibuat di [`aturan-kondisi-catatan.ts`](../lib/domain/aturan-kondisi-catatan.ts) dengan tes tabel-driven di [`aturan-kondisi-catatan.test.ts`](../lib/domain/aturan-kondisi-catatan.test.ts). Kontrak ini hanya menghitung pembacaan `NORMAL`; kondisi lain, termasuk `METER_RUSAK`, diarahkan ke review. Modul ini **belum dipakai oleh endpoint atau UI**, jadi implementasi runtime masih belum terbukti mengikuti matriks.
++Fondasi kontrak domain awal telah dibuat di [`aturan-kondisi-catatan.ts`](../lib/domain/aturan-kondisi-catatan.ts) dengan tes tabel-driven di [`aturan-kondisi-catatan.test.ts`](../lib/domain/aturan-kondisi-catatan.test.ts). Kontrak ini hanya menghitung pembacaan `NORMAL`; kondisi lain, termasuk `METER_RUSAK`, diarahkan ke review. Modul ini **belum dipakai oleh endpoint atau UI**, jadi implementasi runtime masih belum terbukti mengikuti matriks. Bedakan dua hal: kontrak kode saat ini (klaim) = review-only untuk semua kondisi selain `NORMAL`, yang aman untuk pilot shadow; target aturan = allowlist di bawah. Mana yang berlaku pada pilot: OPEN-03.
+ 
+ Urutan kewenangan V1/V2/V3, koreksi setelah verifikasi, serta audit implementasinya didokumentasikan terpisah di [Aturan Verifikasi Berjenjang dan Koreksi](./aturan-verifikasi-berjenjang.md).
+ 
+@@ -24,7 +26,7 @@
+ 
+ - **Klarifikasi terbaru pemilik produk:** 14 kode kelainan ditetapkan sebagai kandidat taksasi otomatis dengan prioritas histori 12 bulan → rata-rata 3 pemakaian terbesar → rata-rata 3 bulan terakhir/riwayat yang tersedia. ST Awal dan ST Akhir memakai stand resmi terakhir; Pakai menyimpan taksasi secara terpisah. Hasil dibulatkan ke atas tanpa minimum otomatis. Runtime untuk kelompok ini belum diaktifkan.
+ - **Manual ADD/Manual ADD All:** tetap menjadi opsi jika rute tidak tercatat sama sekali, misalnya petugas sakit; bukan satu-satunya jalur taksasi.
+-- **Perlakuan minus:** nilai minus dari stand/pemakaian dicatat apa adanya, tidak dijepit menjadi nol atau diganti taksasi otomatis sebagai fallback, lalu ditahan untuk review sebelum pengesahan.
++- **Perlakuan minus:** nilai minus dari stand/pemakaian dicatat apa adanya, tidak dijepit menjadi nol atau diganti taksasi otomatis sebagai fallback, lalu ditahan untuk review sebelum pengesahan. Dua jalur yang tampak berbeda dan perlu dikonfirmasi (OPEN-05): (a) petugas memilih kondisi `METER_MUNDUR`, yang masuk allowlist taksasi; (b) stand minus muncul pada `NORMAL`/`STAND_TEMPEL`/`STAND_KONSUMEN`, yang disimpan, tidak ditaksasi, dan ditahan untuk review. Penafsiran ini konsisten dengan kedua aturan tetapi belum tertulis sebagai keputusan.
+ - **Keputusan per kategori:** pembacaan/delta untuk `NORMAL`, `STAND_TEMPEL`, dan `STAND_KONSUMEN`; nilai ditentukan manusia untuk `TIDAK_ADA_AIR` dan `TIDAK_DIPAKAI`; rumus khusus untuk `MB` dan `MUDA_KEMBALI`; serta taksasi otomatis untuk kode anomali yang didaftar di bawah.
+ - **Untuk taksasi otomatis 14 kondisi, belum disahkan:** definisi histori valid (termasuk apakah taksasi/koreksi lama dikecualikan), nilai tak wajar, dan pemetaan `TAA`/`RK` ke kode/alias sumber yang tepat. Manual Add All memiliki kriteria histori dan no-history tersendiri pada bagian berikut.
+ - **Bukan aturan pilot:** rumus minimum 5 m³, taksiran bulan lalu otomatis, atau keputusan nol otomatis. Fungsi lama/legacy boleh tetap diperlukan untuk reproduksi tagihan historis, tetapi tidak menjadi kebijakan workflow pilot.
+@@ -52,6 +54,8 @@
+ - DICABUT hanya dapat ditaksasi jika sambungan aktif pada periode terkait dan tanggal efektifnya tervalidasi.
+ - Saat Revisi Pencatat mengubah ST Awal, hitung ulang Pakai berdasarkan stand yang direvisi; simpan nilai taksasi dan hasil sebelum/sesudah di audit.
+ - Kriteria histori valid (termasuk taksasi atau koreksi lama, meter aktif, dan perubahan sambungan) masih perlu ditetapkan; jangan mengasumsikan record mana pun otomatis layak.
++- **Titik terbuka hierarki (OPEN-04):** (a) tingkat 3 ("rata-rata tiga bulan terakhir atau seluruh histori valid") hanya tercapai bila nilai kurang dari 3, jadi praktis "seluruh histori yang ada"; 14 kondisi dan Manual Add All menuliskannya berbeda dan perlu disamakan; (b) tingkat 2 (rata-rata tiga pemakaian terbesar) tidak pernah lebih rendah daripada rata-rata seluruh nilai yang sama, sehingga condong ke atas; konfirmasi memang dikehendaki; (c) "stand resmi terakhir" pada 14 kondisi diasumsikan sama dengan `standAkhir` pembacaan resmi terakhir sebelum periode berjalan (seperti DEC-01), belum tertulis; (d) hasil taksasi ber-ST Awal = ST Akhir harus dapat dibedakan dari pemakaian riil 0 yang valid (pada Manual Add: `AlasanTaksir.MANUAL_ADD`), dan penanda untuk 14 kondisi belum ditetapkan.
++- **Tanpa histori sama sekali (OPEN-02):** minta keputusan manusia; tidak ada nilai default 0 untuk 14 kondisi.
+ 
+ ## Matriks seluruh enum `KondisiCatat`
+ 
+@@ -60,37 +64,37 @@
+ | Enum | Makna/interpretasi yang tersedia | Aturan hitung sesuai klarifikasi | Tindakan dan data wajib | Status |
+ |---|---|---|---|---|
+ | `NORMAL` | Pembacaan lapangan normal. | `pemakaianRiil = standKini - standResmiTerakhir`. Delta minus disimpan apa adanya dan ditahan untuk review, bukan dijepit menjadi nol atau ditaksir otomatis. | Foto wajib; simpan stand sebelumnya yang dipakai, stand kini, meter, periode, petugas, waktu server, dan GPS/akurasi bila tersedia. Nilai tagih tetap terpisah dan tidak diterbitkan selama pilot. | Ditetapkan; minus perlu tes |
+-| `METER_RUSAK` | Meter ada tetapi angka tidak dapat dipercaya. | Taksasi otomatis rata-rata 3 bulan pada pencatatan; nilai harus diberi sumber taksasi dan tetap menunggu review/pengesahan. Jangan langsung menerbitkan tagihan resmi. | Foto kondisi meter; riwayat tiga bulan yang digunakan; catatan verifikasi dan setiap koreksi manual. | Klasifikasi owner; formula rinci perlu dites |
++| `METER_RUSAK` | Meter ada tetapi angka tidak dapat dipercaya. | Taksasi otomatis sesuai hierarki taksasi (lihat kontrak taksasi otomatis di atas) pada pencatatan; nilai harus diberi sumber taksasi dan tetap menunggu review/pengesahan. Jangan langsung menerbitkan tagihan resmi. | Foto kondisi meter; riwayat tiga bulan yang digunakan; catatan verifikasi dan setiap koreksi manual. | Klasifikasi owner; formula rinci perlu dites |
+ 
+ ### B. Kode kondisi lain
+ 
+ | Enum | Makna/interpretasi yang tersedia | Aturan hitung sesuai klarifikasi | Tindakan dan data wajib | Status |
+ |---|---|---|---|---|
+-| `TIDAK_DIPAKAI` | Pemilik produk menetapkan jumlah pemakaian ditentukan manusia; label saja tidak membuktikan penggunaan nol. | Bukan taksasi rata-rata otomatis. Pengguna berwenang menetapkan nilai pemakaian, default nol tidak boleh diasumsikan tanpa keputusan manusia. | Catat nilai dan alasan manual, aktor, waktu, bukti, dan approval sesuai ring. | Klasifikasi owner; workflow manual perlu dibuat |
+-| `RUMAH_KOSONG` | Label sumber `RMH/TANAH KSG`; aplikasi mengelompokkan sebagai diduga kosong. | Taksasi otomatis rata-rata 3 bulan; jangan otomatis mengubah menjadi nol. | Verifikasi bukti/kondisi sambungan dan tinjau taksasi; beri label estimasi. | Klasifikasi owner; formula rinci perlu dites |
+-| `STAND_TEMPEL` | Angka stand dibaca dari stiker/label yang ditinggalkan pelanggan. | Hitung delta aktual `ST Akhir - ST Awal`; simpan sumber stand, jangan taksir rata-rata. | Pertahankan foto/bukti dan kategori sumber; review bila stand minus/tidak valid. | Klasifikasi owner; codebook bukti perlu dilengkapi |
++| `TIDAK_DIPAKAI` | Pemilik produk menetapkan jumlah pemakaian ditentukan manusia; label saja tidak membuktikan penggunaan nol. | Bukan taksasi rata-rata otomatis. Pengguna berwenang menetapkan nilai pemakaian, default nol tidak boleh diasumsikan tanpa keputusan manusia. | Catat nilai dan alasan manual, aktor, waktu, bukti, dan approval sesuai ring. | Klasifikasi owner; workflow manual perlu dibuat (OPEN-11) |
++| `RUMAH_KOSONG` | Label pada sampel `202601`: `RUMAH KOSONG` (1.284 baris). Teks `RMH/TANAH KSG` disebut dokumen sebelumnya sebagai label sumber tetapi tidak ditemukan pada sampel (belum terbukti). Aplikasi mengelompokkan sebagai diduga kosong. | Taksasi otomatis sesuai hierarki taksasi (lihat kontrak taksasi otomatis di atas); jangan otomatis mengubah menjadi nol. | Verifikasi bukti/kondisi sambungan dan tinjau taksasi; beri label estimasi. | Klasifikasi owner; formula rinci perlu dites |
++| `STAND_TEMPEL` | Interpretasi sementara, belum disahkan (codebook menyatakan maknanya belum jelas): angka stand dibaca dari stiker/label yang ditinggalkan pelanggan. | Hitung delta aktual `ST Akhir - ST Awal`; simpan sumber stand, jangan taksir rata-rata. | Pertahankan foto/bukti dan kategori sumber; review bila stand minus/tidak valid. | Klasifikasi owner; codebook bukti perlu dilengkapi |
+ | `STAND_KONSUMEN` | Angka stand dilaporkan konsumen/offsite. | Hitung delta aktual `ST Akhir - ST Awal`; tidak ditaksasi rata-rata, tetapi hasil tetap menunggu verifikasi sesuai alur sumber. | Pertahankan sumber input konsumen dan bukti kiriman. | Klasifikasi owner |
+-| `METER_MATI_ADA_AIR` | Meter tidak bergerak saat air tersedia; masalah alat/hasil tidak terukur. | Taksasi otomatis rata-rata 3 bulan; nilai tetap berstatus taksasi dan menunggu review/pengesahan. | Bukti kondisi meter, riwayat tiga bulan, serta catatan verifikator. | Klasifikasi owner; formula rinci perlu dites |
+-| `METER_MUNDUR` | Stand lebih kecil dari stand sebelumnya. | Taksasi otomatis rata-rata 3 bulan sesuai klasifikasi owner; simpan stand mentah dan label taksasi, jangan mengganti input stand. | Audit stand mentah, histori yang mendasari taksasi, dan review; jangan mengubah delta minus mentah menjadi nol. | Klasifikasi owner; beda dari kebijakan lama, perlu tes |
+-| `METER_TERBALIK` | Label sumber menyatakan meter terpasang/aliran terbalik. | Taksasi otomatis rata-rata 3 bulan; tetap catat kondisi dan bukti teknis. | Review teknis/kunjungan ulang dan audit taksasi. | Klasifikasi owner; codebook perlu konfirmasi |
+-| `METER_DALAM_AIR` | Kode legacy tentang meter terkait air; definisi operasional perlu disahkan. | Taksasi otomatis rata-rata 3 bulan sesuai klasifikasi owner. | Bukti/keterangan kondisi dan audit nilai histori yang digunakan. | Klasifikasi owner; codebook perlu dilengkapi |
+-| `LOS_METER` | Akronim/istilah legacy belum didefinisikan secara resmi. | Taksasi otomatis rata-rata 3 bulan; tidak menambahkan faktor 1,25 atau denda tanpa keputusan terpisah. | Simpan kode mentah, taksasi/provenance, dan minta definisi codebook. | Klasifikasi owner; rumus legacy 1,25 tidak disahkan |
+-| `BMK_BMB` | Kode gabungan; arti masing-masing unsur belum disahkan. | Taksasi otomatis rata-rata 3 bulan; jangan menambahkan denda atau membagi kode tanpa keputusan. | Simpan kode mentah, taksasi/provenance, dan konfirmasi apakah BMK/BMB perlu dipisah. | Klasifikasi owner; codebook perlu dilengkapi |
+-| `TTB` | Akronim legacy belum terdefinisi; dokumen legacy mengartikan rumah terkunci, belum disahkan. | Taksasi otomatis rata-rata 3 bulan sesuai klasifikasi owner. | Simpan kode mentah dan bukti hambatan akses; codebook tetap perlu sign-off. | Klasifikasi owner; definisi perlu disahkan |
+-| `MTA` | Akronim legacy belum terdefinisi; dokumen legacy mengusulkan meter tidak ada/hilang, belum disahkan. | Taksasi otomatis rata-rata 3 bulan sesuai klasifikasi owner. | Simpan kode mentah dan bukti kondisi; codebook tetap perlu sign-off. | Klasifikasi owner; definisi perlu disahkan |
+-| `TERHALANG` | Hambatan akses/keterjangkauan; aplikasi mengelompokkan sebagai tak terjangkau. | Taksasi otomatis rata-rata 3 bulan sesuai klasifikasi owner. | Jadwalkan ulang/akses lain bila perlu; simpan bukti dan provenance taksasi. | Klasifikasi owner |
+-| `ADA_ANJING` | Hambatan kunjungan menurut label; bukan pembacaan meter. | Taksasi otomatis rata-rata 3 bulan sesuai klasifikasi owner. | Terapkan prosedur keselamatan/kunjungan ulang; simpan bukti dan provenance. | Klasifikasi owner |
+-| `DK` | Akronim legacy belum terdefinisi; aplikasi mengelompokkannya sebagai terhalang/terkunci. | Taksasi otomatis rata-rata 3 bulan sesuai klasifikasi owner. | Simpan kode mentah dan bukti; codebook perlu mengesahkan arti. | Klasifikasi owner; definisi perlu disahkan |
++| `METER_MATI_ADA_AIR` | Meter tidak bergerak saat air tersedia; masalah alat/hasil tidak terukur. | Taksasi otomatis sesuai hierarki taksasi (lihat kontrak taksasi otomatis di atas); nilai tetap berstatus taksasi dan menunggu review/pengesahan. | Bukti kondisi meter, riwayat tiga bulan, serta catatan verifikator. | Klasifikasi owner; formula rinci perlu dites |
++| `METER_MUNDUR` | Stand lebih kecil dari stand sebelumnya. | Taksasi otomatis sesuai hierarki taksasi (lihat kontrak taksasi otomatis di atas) sesuai klasifikasi owner; simpan stand mentah dan label taksasi, jangan mengganti input stand. | Audit stand mentah, histori yang mendasari taksasi, dan review; jangan mengubah delta minus mentah menjadi nol. | Klasifikasi owner; beda dari kebijakan lama, perlu tes |
++| `METER_TERBALIK` | Label sumber menyatakan meter terpasang/aliran terbalik. | Taksasi otomatis sesuai hierarki taksasi (lihat kontrak taksasi otomatis di atas); tetap catat kondisi dan bukti teknis. | Review teknis/kunjungan ulang dan audit taksasi. | Klasifikasi owner; codebook perlu konfirmasi |
++| `METER_DALAM_AIR` | Kode legacy tentang meter terkait air; definisi operasional perlu disahkan. | Taksasi otomatis sesuai hierarki taksasi (lihat kontrak taksasi otomatis di atas) sesuai klasifikasi owner. | Bukti/keterangan kondisi dan audit nilai histori yang digunakan. | Klasifikasi owner; codebook perlu dilengkapi |
++| `LOS_METER` | Akronim/istilah legacy belum didefinisikan secara resmi. | Taksasi otomatis sesuai hierarki taksasi (lihat kontrak taksasi otomatis di atas); tidak menambahkan faktor 1,25 atau denda tanpa keputusan terpisah. | Simpan kode mentah, taksasi/provenance, dan minta definisi codebook. | Klasifikasi owner; rumus legacy 1,25 tidak disahkan |
++| `BMK_BMB` | Kode gabungan; arti masing-masing unsur belum disahkan. | Taksasi otomatis sesuai hierarki taksasi (lihat kontrak taksasi otomatis di atas); jangan menambahkan denda atau membagi kode tanpa keputusan. | Simpan kode mentah, taksasi/provenance, dan konfirmasi apakah BMK/BMB perlu dipisah. | Klasifikasi owner; codebook perlu dilengkapi |
++| `TTB` | Akronim legacy belum terdefinisi; dokumen legacy mengartikan rumah terkunci, belum disahkan. | Taksasi otomatis sesuai hierarki taksasi (lihat kontrak taksasi otomatis di atas) sesuai klasifikasi owner. | Simpan kode mentah dan bukti hambatan akses; codebook tetap perlu sign-off. | Klasifikasi owner; definisi perlu disahkan |
++| `MTA` | Akronim legacy belum terdefinisi; dokumen legacy mengusulkan meter tidak ada/hilang, belum disahkan. | Taksasi otomatis sesuai hierarki taksasi (lihat kontrak taksasi otomatis di atas) sesuai klasifikasi owner. | Simpan kode mentah dan bukti kondisi; codebook tetap perlu sign-off. | Klasifikasi owner; definisi perlu disahkan |
++| `TERHALANG` | Hambatan akses/keterjangkauan; aplikasi mengelompokkan sebagai tak terjangkau. | Taksasi otomatis sesuai hierarki taksasi (lihat kontrak taksasi otomatis di atas) sesuai klasifikasi owner. | Jadwalkan ulang/akses lain bila perlu; simpan bukti dan provenance taksasi. | Klasifikasi owner |
++| `ADA_ANJING` | Hambatan kunjungan menurut label; bukan pembacaan meter. | Taksasi otomatis sesuai hierarki taksasi (lihat kontrak taksasi otomatis di atas) sesuai klasifikasi owner. | Terapkan prosedur keselamatan/kunjungan ulang; simpan bukti dan provenance. | Klasifikasi owner |
++| `DK` | Akronim legacy belum terdefinisi; aplikasi mengelompokkannya sebagai terhalang/terkunci. | Taksasi otomatis sesuai hierarki taksasi (lihat kontrak taksasi otomatis di atas) sesuai klasifikasi owner. | Simpan kode mentah dan bukti; codebook perlu mengesahkan arti. | Klasifikasi owner; definisi perlu disahkan |
+ | `MB` | Dalam jalur aplikasi diperlakukan sebagai penggantian meter dan memerlukan stand meter lama/baru. | Bukan rata-rata 3 bulan. Hitung konsumsi segmen lama+baru melalui modal: `(standAngkatLama - standAwalLama) + (standAkhirBaru - standAwalMeterBaru)`. Jangan jepit nilai segmen minus menjadi nol; tandai perlu koreksi/review. | Validasi meter lama/baru, tanggal mutasi, stand angkat/pasang, foto, dan audit; perilaku pemakaian di modal harus mendukung tindak lanjut manusia. | Klasifikasi owner; implementasi/formula perlu diselaraskan |
+ | `MUDA_KEMBALI` | Kode legacy untuk rollover/reset meter setelah mencapai kapasitas. | Bukan rata-rata 3 bulan. Rumus contoh meter 4 digit: `(10000 - ST Awal) + ST Akhir`; gunakan kapasitas meter aktual, bukan mengasumsikan semua meter 4 digit. | Modal perlu menampilkan stand awal/akhir, kapasitas digit yang tervalidasi, dan hasil rollover; nilai sebelum/sesudah serta alasan dicatat. | Klasifikasi owner; rumus tersedia di dokumen lama, kapasitas perlu disahkan |
+ | `REV_PENCATAT` | Menurut klarifikasi pemilik produk, ini penanda workflow bahwa ST Awal pada alamat perlu direvisi manusia, bukan kondisi meter dan bukan pengganti kondisi asli. | Bukan pemicu rumus/taksasi; jangan mengganti kondisi sumber. Update ST Awal aktif dan ST Revisi dengan audit before/after. | Simpan kondisi awal, nilai ST Awal sebelum/sesudah, alasan, aktor, waktu, dan relasi ke hasil resmi; cek kompatibilitas enum legacy. | Semantik workflow diklarifikasi; implementasi/model belum selaras |
+-| `TIDAK_ADA_AIR` | Kondisi layanan; “TAA” disebut pemilik produk sebagai istilah terkait, tetapi pemetaan sumber harus dikonfirmasi. | Nilai pemakaian ditentukan manusia; bukan taksasi otomatis rata-rata dan bukan default nol diam-diam. | Catat nilai dan alasan manual, aktor, waktu, bukti gangguan, dan periode yang terdampak; hasil menunggu review. | Klasifikasi owner; alias TAA dan workflow manual perlu disahkan |
++| `TIDAK_ADA_AIR` | Kondisi layanan; “TAA” disebut pemilik produk sebagai istilah terkait, tetapi pemetaan sumber harus dikonfirmasi. | Nilai pemakaian ditentukan manusia; bukan taksasi otomatis rata-rata dan bukan default nol diam-diam. | Catat nilai dan alasan manual, aktor, waktu, bukti gangguan, dan periode yang terdampak; hasil menunggu review. | Klasifikasi owner; alias TAA dan workflow manual perlu disahkan (OPEN-10, OPEN-11) |
+ 
+ ### C. Kondisi yang memengaruhi status sambungan/tagihan
+ 
+ | Enum | Makna/interpretasi yang tersedia | Aturan hitung sesuai klarifikasi | Tindakan dan data wajib | Status |
+ |---|---|---|---|---|
+-| `DICABUT` | Sambungan/meter dicabut; tanggal efektif dan status historis harus dapat ditelusuri. | Menurut klasifikasi owner, taksasi otomatis rata-rata 3 bulan; bukan otomatis nol. Periode setelah pencabutan dan data historis perlu ditinjau sebelum pengesahan. | Cocokkan tanggal efektif dengan mutasi/penutupan sambungan; audit taksasi dan pastikan tidak mengubah tagihan historis. | Klasifikasi owner baru; bertentangan dengan logika billing historis, perlu kontrol periode |
++| `DICABUT` | Sambungan/meter dicabut; tanggal efektif dan status historis harus dapat ditelusuri. | Menurut klasifikasi owner, taksasi otomatis sesuai hierarki taksasi (lihat kontrak taksasi otomatis di atas); bukan otomatis nol. Periode setelah pencabutan dan data historis perlu ditinjau sebelum pengesahan. | Cocokkan tanggal efektif dengan mutasi/penutupan sambungan; audit taksasi dan pastikan tidak mengubah tagihan historis. | Klasifikasi owner baru; bertentangan dengan logika billing historis, perlu kontrol periode |
+ 
+ ## Batas antara verifikasi bertingkat dan Manual ADD
+ 
+@@ -99,8 +103,8 @@
+ 3. Setelah V3, koreksi dilakukan melalui unverify/review ulang oleh role yang setara atau lebih tinggi dari persetujuan final (misalnya Senior Manager atau Direksi), lalu hasil diperiksa dan diterbitkan ulang. Hasil yang sudah dipakai tagihan tidak boleh dihapus/diubah tanpa workflow koreksi finansial yang disahkan.
+ 4. Empat belas kondisi yang tercantum pada klasifikasi pemilik produk dapat memicu taksasi otomatis saat pencatatan. Taksasi bukan verifikasi final dan tidak boleh langsung mengubah tagihan resmi.
+ 5. **Manual Add satuan** mencari pelanggan dengan nomor langganan dan menerima ST Awal/ST Akhir yang dimasukkan operator. Pakai adalah selisih stand; alasan dan asal input disimpan. **Manual Add All** memilih periode, petugas, lalu rute dari daftar catat yang dibekukan, menghitung rata-rata pemakaian per pelanggan, dan hanya menambahkan alamat yang dicentang. Keduanya menunggu verifikasi dan tidak langsung membuat pembacaan resmi/tagihan.
+-6. Histori valid untuk taksasi Manual Add All adalah pembacaan resmi dengan `pemakaianRiil` nonnegatif dan `alasanTaksir` kosong. Data taksasi/override dikecualikan. Gunakan rata-rata 12 bulan kalender sebelum periode target jika lengkap; jika tidak, rata-rata tiga pemakaian valid tertinggi; jika kurang dari tiga, rata-rata seluruh histori valid yang tersedia. Bulatkan ke atas tanpa minimum. Jika histori pemakaian valid tidak tersedia, Pakai 0 m³.
+-7. Pada Manual Add All, ST Awal dan ST Akhir bernilai sama: gunakan field ST Akhir (`PembacaanMeter.standAkhir`) dari pencatatan resmi terakhir pada meter aktif terbaru. Nilai ini tetap dipakai walaupun pencatatan terakhir bukan histori pemakaian yang layak untuk taksasi. Jika tidak ada pencatatan resmi sebelumnya atau meter aktif, kedua stand bernilai 0. Sumber dan alasan Manual Add terlihat pada baris verifikasi. Saat V3 mengesahkan hasil itu, `PembacaanMeter.alasanTaksir` menyimpan `MANUAL_ADD` agar angka tersebut tidak dipakai sebagai histori aktual berikutnya.
++6. Histori valid untuk taksasi Manual Add All adalah pembacaan resmi dengan `pemakaianRiil` nonnegatif dan `alasanTaksir` kosong. Data taksasi/override dikecualikan. Gunakan rata-rata 12 bulan kalender sebelum periode target jika lengkap; jika tidak, rata-rata tiga pemakaian valid tertinggi; jika kurang dari tiga, rata-rata seluruh histori valid yang tersedia. Bulatkan ke atas tanpa minimum. Jika histori pemakaian valid tidak tersedia: versi 0.3 menulis Pakai 0 m³, tetapi 0 tidak boleh ditampilkan sebagai pembacaan riil yang valid (DEC-02); baris ditandai perlu ditinjau sampai OPEN-02 diputuskan.
++7. Pada Manual Add All, ST Awal dan ST Akhir bernilai sama: gunakan field ST Akhir (`PembacaanMeter.standAkhir`) dari pembacaan resmi terakhir sebelum periode berjalan pada meter aktif terbaru (DEC-01; bukan `standLalu`, dan bukan kolom "Lalu" yang berarti pemakaian periode pembanding). Nilai ini tetap dipakai walaupun pencatatan terakhir bukan histori pemakaian yang layak untuk taksasi. Jika tidak ada pembacaan resmi sebelumnya atau meter aktif: nilai stand tidak boleh dikarang; baris ditandai perlu ditinjau/keputusan manual sampai OPEN-02 diputuskan (versi 0.3 menulis kedua stand bernilai 0). Sumber dan alasan Manual Add terlihat pada baris verifikasi. Saat V3 mengesahkan hasil itu, `PembacaanMeter.alasanTaksir` menyimpan `MANUAL_ADD` agar angka tersebut tidak dipakai sebagai histori aktual berikutnya.
+ 8. Petugas dapat memilih `Revisi Pencatat` saat pencatatan; verifikator juga dapat mengaktifkannya saat mengubah kondisi di modal. Hanya alamat bertanda ini yang membuka koreksi ST Awal. Koreksi menghitung ulang Pakai dan mengaudit nilai lama/baru, kondisi sumber, alasan, aktor, serta waktu; kondisi sumber tidak ditimpa.
+ 9. Batas kewajaran angka usulan Manual Add belum ditetapkan. Nilai ekstrem harus tetap terlihat dan ditinjau; jangan mengubahnya menjadi nol atau mengganti dengan taksasi lain secara diam-diam.
+ 
+@@ -117,7 +121,7 @@
+ 
+ - [ ] Pemilik data mengesahkan definisi dan tindakan untuk kode ambigu: `DK`, `BMK_BMB`, `TTB`, `MTA`, `MB`, `MUDA_KEMBALI`, `REV_PENCATAT`, `LOS_METER`, `METER_DALAM_AIR`.
+ - [ ] Petakan alias sumber `TAA` ke `TIDAK_ADA_AIR`; validasi tanggal efektif `DICABUT` dan pastikan keputusan baru tidak mengubah tagihan historis.
+-- [x] Pemilik produk menetapkan histori valid Manual Add All: pemakaian aktual resmi nonnegatif; taksasi/override dikecualikan; tanpa histori valid ditahan untuk penanganan manual. Hierarki 12 bulan → tiga tertinggi → histori tersedia dan ceiling tanpa minimum juga ditetapkan.
++- [x] Pemilik produk menetapkan histori valid Manual Add All: pemakaian aktual resmi nonnegatif; taksasi/override dikecualikan; perilaku tanpa histori valid tercatat dalam dua versi yang bertentangan (butir 6 versi 0.3: Pakai 0; baris ini: ditahan untuk penanganan manual) dan dikembalikan ke OPEN-02 pada rekonsiliasi 1 November. Hierarki 12 bulan → tiga tertinggi → histori tersedia dan ceiling tanpa minimum juga ditetapkan.
+ - [ ] Tetapkan input ST Awal/ST Akhir taksasi dan tes bahwa koreksi ST Awal menghitung ulang Pakai sesuai aturan serta mengaudit before/after.
+ - [x] Kebijakan Manual Add satuan/massal dicatat: alasan wajib, asal-usul, histori valid, metode pembulatan, hasil tanpa histori, status menunggu verifikasi, dan tidak langsung menjadi hasil resmi/tagihan.
+ - [ ] Verifikasi satuan/massal mengikuti ring V1/V2/V3 dan actor/role yang sama; V3 menghasilkan satu pembacaan resmi. Koreksi pasca-V3 harus melalui unverify/review ulang sesuai role dan status tagihan.
+@@ -133,3 +137,10 @@
+ - [Aturan tagihan historis/seed](../lib/domain/tagihan.ts)
+ - [Helper hitung terisolasi yang belum dipakai backend](./pemakaian-meter.ts)
+ - [Status progres dan audit teknis](./STATUS-baca-meter-air.md)
++
++## Riwayat perubahan
++
++| Versi | Tanggal | Perubahan |
++|---|---|---|
++| 0.3 | 31 Oktober 2026 | Hierarki taksasi dan stand acuan (menurut header versi sebelumnya; riwayat rinci tidak tercatat). |
++| 0.4 | 1 November 2026 | Rekonsiliasi: stand Manual Add All = `standAkhir` (DEC-01); perilaku tanpa histori dikembalikan ke OPEN-02; matriks per kode merujuk hierarki taksasi; titik terbuka OPEN-04/OPEN-05; koreksi label `RUMAH_KOSONG` dan status `STAND_TEMPEL`; peran dokumen dan tautan Indeks. |
+--- a/src/docs/aturan-verifikasi-berjenjang.md
++++ b/src/docs/aturan-verifikasi-berjenjang.md
+@@ -1,12 +1,14 @@
+ # Aturan Verifikasi Berjenjang dan Koreksi
+ 
+-**Versi:** 0.4 (kontrak diselaraskan dengan matriks RBAC; 1 November 2026)
++**Versi:** 0.5 (rekonsiliasi dokumentasi; 1 November 2026; sebelumnya 0.4: kontrak diselaraskan dengan matriks RBAC)
+ 
+ **Status:** kebijakan bisnis diselaraskan dengan [Matriks RBAC Aplikasi](./matriks-rbac-aplikasi.md). Status implementasi tetap dibedakan dari kebijakan; validasi dilakukan dengan tes.
+ 
+ **Cakupan:** verifikasi laporan petugas dengan tahap V1/V2/V3, koreksi setelah verifikasi, verifikasi massal, hak administratif STAFF, dan closing.
+ 
+-**Terkait:** [Status proyek](./STATUS-baca-meter-air.md), [PRD](./PRD-baca-meter-air.md), [MVP](./MVP-baca-meter-air.md), [Roadmap](./ROADMAP-baca-meter-air.md).
++**Terkait:** [Status proyek](./STATUS-baca-meter-air.md), [PRD](./PRD-baca-meter-air.md), [MVP](./MVP-baca-meter-air.md), [Roadmap](./ROADMAP-baca-meter-air.md), [Matriks RBAC](./matriks-rbac-aplikasi.md), [Aturan kondisi](./aturan-kondisi-catatan-meter.md), [Indeks dokumentasi](./INDEKS-dokumentasi-baca-meter.md).
++
++**Peran dokumen:** sumber kebenaran untuk ring V1/V2/V3, reopen, koreksi setelah verifikasi, dan kontrak tabel halaman verifikasi. Role teknis dan cakupan data: [RBAC](./matriks-rbac-aplikasi.md). Perlakuan per kondisi dan taksasi: [aturan kondisi](./aturan-kondisi-catatan-meter.md). Keputusan (DEC) dan isu terbuka (OPEN): [Indeks](./INDEKS-dokumentasi-baca-meter.md#register-open).
+ 
+ ## Kontrak perilaku yang diminta
+ 
+@@ -16,7 +18,7 @@
+ | V2 — Manager | Boleh memproses langsung tanpa V1 atau meninjau hasil V1; hanya ring V2 yang menandai tindakan Manager. | V2 bukan hasil resmi dan menunggu V3. Tidak boleh mengulang V2 yang sudah terisi tanpa workflow pembatalan yang sah. |
+ | V3 — Senior Manager/Direksi | Boleh memproses langsung tanpa V1/V2 atau meninjau ring sebelumnya; hanya ring V3 yang menandai tindakan. Direksi dapat melakukan taksasi pemakaian besar/potensial melalui workflow aplikasi. | V3 adalah tahap akhir dan satu-satunya tahap yang membuat `PembacaanMeter` resmi. Tidak ada persetujuan Direksi setelah V3. |
+ | SUPER_ADMIN | Akses penuh ke semua modul dan melewati guard role, termasuk akses administratif pada modul Verifikasi. Pada UI aksi cepat, role ini dipetakan ke V3. | Akses penuh tidak menghapus invariant bisnis: status resmi, validasi meter/stand, status tagihan, dan periode terkunci tetap dijaga. Aksi dicatat atas akun Super Admin. |
+-| STAFF / Operator Admin | Input/impor data, Manual ADD satuan/ALL, serta edit nilai hasil koreksi V1/V2/V3 melalui workflow dengan alasan dan audit before/after. | Tidak mengesahkan ring. Edit ditolak setelah hasil masuk tagihan. Izin closing belum disepakati dan tidak diturunkan dari kewenangan ini. |
++| STAFF / Operator Admin | Input/impor data, Manual ADD satuan/ALL, serta edit nilai hasil koreksi V1/V2/V3 melalui workflow dengan alasan dan audit before/after. | Tidak mengesahkan ring. Edit ditolak setelah hasil masuk tagihan. Edit atas hasil V3 resmi aktif hanya lewat reopen oleh role berwenang (DEC-06); syarat bukti dan persetujuan tambahan: OPEN-09. Izin closing belum disepakati (OPEN-01) dan tidak diturunkan dari kewenangan ini. |
+ 
+ ### Semantik ring dan ikon progres
+ 
+@@ -47,9 +49,9 @@
+ | 10 | ST Akhir | Stand akhir yang dicatat petugas atau nilai operasional pada pencatatan taksasi. | Pada taksasi yang disetujui, ST Awal dan ST Akhir diset sama; pemakaian taksasi disimpan terpisah dari selisih stand. |
+ | 11 | ST Revisi | Nilai ST Awal hasil revisi manusia untuk periode berjalan. | Terisi saat alamat ditandai “Revisi Pencatat” oleh petugas atau verifikator lalu ST Awal dikoreksi. Hanya alamat bertanda ini yang mengaktifkan input ST Awal. Nilai setelah revisi sama dengan ST Awal aktif; nilai sebelum/sesudah tetap disimpan di audit. |
+ | 12 | ST Resmi | Stand akhir yang disahkan sebagai hasil resmi. | Kosong/belum resmi sebelum V3; jangan menyamakan dengan ST Revisi (koreksi ST Awal). |
+-| 13 | Pakai | Pemakaian periode ini yang sedang ditinjau. | Dapat berupa delta terukur atau taksasi sesuai kondisi dan kebijakan yang disahkan; jangan mengubah nilai negatif menjadi nol diam-diam. |
+-| 14 | Lalu | Pemakaian periode pembanding sebelumnya. | Sumber periode pembanding harus konsisten dan ditampilkan dalam satuan yang sama dengan Pakai. |
+-| 15 | Dev % | Perbandingan Pakai terhadap Lalu. | Rumus, perilaku jika Lalu nol/kosong, dan pembulatan perlu ditetapkan sebelum dipakai sebagai keputusan otomatis. |
++| 13 | Pakai | Pemakaian periode ini yang sedang ditinjau. | Dapat berupa delta terukur atau taksasi sesuai kondisi dan kebijakan yang disahkan; jangan mengubah nilai negatif menjadi nol diam-diam. Kolom penyimpanan taksasi: OPEN-14. |
++| 14 | Lalu | Pemakaian periode pembanding sebelumnya. | Sumber periode pembanding harus konsisten dan ditampilkan dalam satuan yang sama dengan Pakai. Bukan stand meter; stand sumber Manual Add All adalah `standAkhir` (DEC-01). |
++| 15 | Dev % | Perbandingan Pakai terhadap Lalu. | Rumus, perilaku jika Lalu nol/kosong, dan pembulatan perlu ditetapkan sebelum dipakai sebagai keputusan otomatis (OPEN-12). |
+ | 16 | Tagihan | Pemakaian yang akan ditagihkan dalam m³, bukan nominal rupiah. | Tetap terpisah dari Pakai/hasil ukur; nominal rupiah bukan isi kolom ini. |
+ | 17 | Petugas | Nama petugas pencatat lapangan. | Menampilkan pencatat, bukan verifikator; verifikator terlihat pada detail/audit ring. |
+ | 18 | Tgl Catat | Tanggal dan waktu pencatatan. | Tampilkan waktu, bukan tanggal saja; format zona waktu harus konsisten (WIB untuk UI operasional). |
+@@ -59,18 +61,31 @@
+ - Taksasi dapat terbentuk otomatis saat petugas mencatat salah satu dari 14 kondisi yang ditetapkan pada [matriks kondisi](./aturan-kondisi-catatan-meter.md); Manual ADD/Manual ADD All tetap opsi jika petugas tidak mencatat rute, misalnya sakit.
+ - Prioritas taksasi adalah rata-rata 12 bulan; jika data tak cukup, rata-rata tiga pemakaian terbesar; jika tiga nilai belum tersedia, rata-rata tiga bulan terakhir atau histori valid yang tersedia. Taksasi dibulatkan ke atas tanpa minimum otomatis. ST Awal dan ST Akhir memakai stand resmi terakhir, sementara Pakai menyimpan hasil taksasi terpisah.
+ - “Revisi Pencatat” dapat ditandai saat petugas mencatat atau oleh verifikator yang mengubah kondisi di modal. Hanya alamat dengan penanda ini yang mengaktifkan input ST Awal; koreksi menghitung ulang Pakai dari stand terkoreksi dan menyimpan before/after, alasan, aktor, serta waktu di audit.
+-- “Revisi Pencatat” bukan perubahan terhadap kondisi asal: kondisi petugas harus tetap tersimpan. Jika kode legacy `REV_PENCATAT` masih ada untuk kompatibilitas data, jangan gunakan sebagai pengganti kondisi asli pada data baru tanpa keputusan migrasi.
+-- Rumus belum siap dipakai runtime: kriteria histori valid, pengecualian nilai taksasi/koreksi lama, dan perilaku jika tidak ada histori sama sekali perlu ditetapkan pada matriks kondisi.
++- “Revisi Pencatat” bukan perubahan terhadap kondisi asal: kondisi petugas harus tetap tersimpan. Jika kode legacy `REV_PENCATAT` masih ada untuk kompatibilitas data, jangan gunakan sebagai pengganti kondisi asli pada data baru tanpa keputusan migrasi. Penanganan 490 baris legacy: OPEN-18.
++- Rumus belum siap dipakai runtime: kriteria histori valid, pengecualian nilai taksasi/koreksi lama, dan perilaku jika tidak ada histori sama sekali perlu ditetapkan pada matriks kondisi (OPEN-02, OPEN-04).
+ 
+-**Status implementasi UI/backend:** UI dan endpoint satu-klik mengizinkan Manager melakukan V2 saat menunggu V1 atau V2, dan V3 saat menunggu V1/V2/V3; tahap yang sudah disimpan dan data resmi tetap menolak pengulangan. Aksi V3 tetap membuat hasil resmi. Endpoint form `/verif2` dan `/verif3` juga menerima tindakan tanpa ring bawah. UI cepat memetakan Direksi, Senior Manager, dan Super Admin ke V3. Menu Edit menyambung ke koreksi petugas yang memerlukan alasan, audit before/after, dan menolak data tertagih/periode terkunci. Aksi klik-kanan membuka menu; status tahap menentukan aksi yang aktif.
++**Status implementasi UI/backend (klaim dokumen per 1 November; belum diverifikasi terhadap kode oleh rekonsiliasi dokumentasi):** UI dan endpoint satu-klik mengizinkan Manager melakukan V2 saat menunggu V1 atau V2, dan V3 saat menunggu V1/V2/V3; tahap yang sudah disimpan dan data resmi tetap menolak pengulangan. Aksi V3 tetap membuat hasil resmi. Endpoint form `/verif2` dan `/verif3` juga menerima tindakan tanpa ring bawah. UI cepat memetakan Direksi, Senior Manager, dan Super Admin ke V3. Menu Edit menyambung ke koreksi petugas yang memerlukan alasan, audit before/after, dan menolak data tertagih/periode terkunci. Aksi klik-kanan membuka menu; status tahap menentukan aksi yang aktif.
+ 
+ Tes unit dan route/mock bukan pengganti tes browser dengan akun role nyata. Tes akun browser memerlukan database test terisolasi yang sudah dimigrasikan; tidak boleh memakai database produksi.
+ 
+-**Belum ditentukan:** apakah pada tindakan berbeda aktor yang sama boleh tercatat di ring yang berbeda; apakah closing termasuk tugas Operator Admin; dan apakah ada approval kedua di luar V3. Koreksi Staff wajib memiliki alasan dan audit; aturan ini sudah ditetapkan, bukan pertanyaan terbuka.
++**Belum ditentukan:** apakah pada tindakan berbeda aktor yang sama boleh tercatat di ring yang berbeda; apakah closing termasuk tugas Operator Admin; dan apakah ada approval kedua di luar V3. Tercatat sebagai OPEN-15 (aktor/ring), OPEN-01 (closing), dan OPEN-19 (approval kedua/role). Koreksi Staff wajib memiliki alasan dan audit; aturan ini sudah ditetapkan, bukan pertanyaan terbuka.
++
++## Koreksi setelah V3: alur yang berlaku dan celah
++
++Keputusan pemilik produk (DEC-06, lihat [Indeks](./INDEKS-dokumentasi-baca-meter.md#log-keputusan)): koreksi setelah V3 tidak boleh menjadi jalan mengubah hasil resmi atau tagihan tanpa jejak. Hasil resmi aktif hanya berubah lewat reopen, koreksi, lalu verifikasi ulang V3. Kolom "Tersedia" di bawah adalah klaim implementasi (belum diverifikasi terhadap kode); kolom "Celah" adalah pekerjaan yang belum selesai, bukan fitur yang sudah berlaku.
++
++| Aspek | Tersedia menurut dokumen | Celah / belum selesai |
++|---|---|---|
++| Reopen V3 | `/unverify` pada hasil resmi: `SENIOR_UP`; menolak bila pembacaan sudah dipakai Tagihan; mempertahankan V1/V2; membuka kesempatan V3 ulang. | Alasan dan before/after belum tercatat eksplisit; hasil resmi lama dihapus, bukan ditandai superseded (OPEN-08); dampak reset field koreksi belum diuji. |
++| Koreksi nilai | `PATCH /:id/koreksi`: alasan wajib, audit before/after, menolak periode terkunci dan hasil bertagihan. | Dokumen tidak menyebut endpoint ini menolak atau mengarahkan koreksi atas hasil V3 resmi aktif ke reopen. Bila endpoint menerimanya, itu jalur mengubah hasil resmi tanpa verifikasi ulang dan bertentangan dengan DEC-06; perlu diverifikasi terhadap kode. |
++| Setelah masuk Tagihan | Ditolak oleh reopen dan koreksi biasa. | Penyesuaian memerlukan workflow koreksi finansial terpisah yang belum ada (PRD FR-10). |
++| Audit | Jalur massal merekam audit per laporan dalam transaksinya. | Form satuan, koreksi, reopen, dan penerbitan ulang belum terbukti append-only. |
++
++Konsekuensi dokumentasi: STAFF mengoreksi nilai hanya pada hasil yang belum resmi atau sedang di-reopen; perubahan hasil V3 resmi aktif lewat V3 ulang. Syarat tambahan (bukti foto, persetujuan supervisor) untuk koreksi STAFF belum diputuskan (OPEN-09). Siapa yang berhak reopen di atas V3 belum didefinisikan (OPEN-15).
+ 
+ ## Hasil audit kode saat ini
+ 
+-Audit dilakukan pada `rbac.ts`, endpoint verifikasi dan unverify di `laporan-harian.router.ts`, `verif-massal.ts`, `closing.router.ts`, dan menu aksi UI verifikasi lapangan.
++Audit dilakukan pada `rbac.ts`, endpoint verifikasi dan unverify di `laporan-harian.router.ts`, `verif-massal.ts`, `closing.router.ts`, dan menu aksi UI verifikasi lapangan. Penilaian "Sesuai" berarti sesuai kebijakan menurut audit statis yang dicatat di sini, bukan bukti tes atau E2E.
+ 
+ | Aturan | Temuan kode | Penilaian |
+ |---|---|---|
+@@ -120,3 +135,11 @@
+ - Perubahan/rollback koreksi memiliki histori before/after yang tidak hilang setelah diterbitkan ulang.
+ - Dua permintaan serentak pada ring yang sama tidak membuat state/hasil resmi ganda atau melewati urutan ring.
+ - Verifikasi massal menghasilkan perilaku role dan transisi yang sama dengan aksi satuan, dengan hasil per item dan kegagalan parsial yang jelas.
++- Koreksi atas hasil V3 resmi aktif hanya dapat dilakukan setelah reopen; panggilan koreksi langsung pada hasil resmi aktif ditolak atau diarahkan ke reopen (DEC-06).
++
++## Riwayat perubahan
++
++| Versi | Tanggal | Perubahan |
++|---|---|---|
++| 0.4 | 1 November 2026 | Kontrak diselaraskan dengan matriks RBAC. Versi sebelumnya tidak tercatat pada dokumen ini. |
++| 0.5 | 1 November 2026 | Rekonsiliasi dokumentasi: bagian "Koreksi setelah V3", label klaim implementasi, rujukan DEC/OPEN, klarifikasi kolom Lalu, Pakai, dan Dev %. |
+--- a/src/docs/codebook-kondisi-catatan-meter.md
++++ b/src/docs/codebook-kondisi-catatan-meter.md
+@@ -1,10 +1,12 @@
+ # Codebook Kondisi Catat Meter
+ 
+-**Versi:** 0.2 (draf untuk validasi pemilik data; 31 Oktober 2026)  
++**Versi:** 0.3 (draf untuk validasi pemilik data; rekonsiliasi dokumentasi 1 November 2026)  
+ **Status:** belum disahkan untuk billing atau produksi. Tidak ada definisi dalam dokumen ini yang dianggap resmi sampai pemilik data menyetujui catatan sign-off.  
+ **Cakupan:** seluruh nilai enum `KondisiCatat` pada `prisma/schema/tagihan.prisma`, normalisasi label legacy, dan makna bisnis kondisi catat.  
+ **Sumber bukti awal:** enum aplikasi dan sampel `ProgresCater-PW5.csv` periode `202601` yang direkonsiliasi di [rekonsiliasi data ProgresCater](./rekonsiliasi-data-progrescater.md).
+ 
++**Peran dokumen:** sumber kebenaran untuk makna dan alias kode legacy `KondisiCatat`. Perlakuan hitung per kondisi ada di [aturan kondisi](./aturan-kondisi-catatan-meter.md); keputusan (DEC) dan isu terbuka (OPEN): [Indeks](./INDEKS-dokumentasi-baca-meter.md#register-open).
++
+ ## Tujuan dan batas penggunaan
+ 
+ Codebook ini menjawab **“apa arti kode ini menurut pemilik proses?”** Codebook bukan rumus pemakaian, keputusan tarif, atau izin untuk membuat hasil/tagihan otomatis. Perilaku aplikasi selama pilot diatur terpisah pada [Matriks Aturan Domain Kondisi Catat](./aturan-kondisi-catatan-meter.md).
+@@ -13,7 +15,7 @@
+ 
+ - Pertahankan nilai kondisi dan label sumber mentah; simpan hasil normalisasi secara terpisah.
+ - Jangan menebak arti singkatan dari nama kode atau menggabungkan kode yang tampak serupa.
+-- Kode dengan definisi atau dampak yang belum jelas harus masuk review; jangan mengubahnya menjadi pemakaian/tagihan nol atau taksiran otomatis.
++- Kode dengan definisi atau dampak yang belum jelas harus masuk review; jangan mengubahnya menjadi pemakaian/tagihan nol. Taksasi otomatis pada kode yang definisinya belum disahkan (mis. `TTB`, `MTA`, `DK`, `LOS_METER`, `BMK_BMB`, `METER_DALAM_AIR`) ditetapkan pemilik produk sebagai target di [aturan kondisi](./aturan-kondisi-catatan-meter.md), tetapi aktivasinya di runtime menunggu sign-off definisi dan exit criteria di sana (OPEN-03, OPEN-10); sampai itu kode tersebut masuk review.
+ - Label pada sampel historis adalah bukti penggunaan, bukan bukti definisi resmi maupun kebijakan billing.
+ 
+ ## Arti status
+@@ -88,9 +90,12 @@
+ | Versi | Tanggal | Perubahan |
+ |---|---|---|
+ | 0.1 | 31 Oktober 2026 | Draf awal untuk 22 nilai enum; mencatat label dari sampel `202601` dan pertanyaan klarifikasi tanpa menganggap makna belum terkonfirmasi sebagai fakta. |
++| 0.2 | 31 Oktober 2026 | Entri tidak dicatat saat itu. Direkonstruksi dari isi dokumen (bukan dari git): klarifikasi pemilik produk 31 Oktober (daftar taksasi, `REV_PENCATAT`, `TAA`/`RK`) dan definisi `MB`/`MUDA_KEMBALI`. |
++| 0.3 | 1 November 2026 | Rekonsiliasi: batas taksasi otomatis diselaraskan dengan allowlist pemilik produk (aktivasi runtime menunggu sign-off); peran dokumen dan tautan Indeks/OPEN. |
+ 
+ ## Referensi
+ 
+ - [Enum `KondisiCatat`](../../prisma/schema/tagihan.prisma)
+ - [Rekonsiliasi label legacy](./rekonsiliasi-data-progrescater.md)
+ - [Aturan domain per kondisi](./aturan-kondisi-catatan-meter.md)
++- [Indeks dokumentasi dan register OPEN](./INDEKS-dokumentasi-baca-meter.md)
+--- a/src/docs/hasil-audit-baca-meter.md
++++ b/src/docs/hasil-audit-baca-meter.md
+@@ -3,6 +3,9 @@
+ **Tanggal audit:** 31 Oktober 2026
+ **Cakupan:** pemeriksaan statis repository untuk alur pembacaan, verifikasi, billing, skema Prisma, autentikasi/otorisasi, dan sinkronisasi batch.
+ **Status:** temuan ini bukan penetration test, audit database produksi, atau sertifikasi metrologi.
++**Versi:** 0.2 (tabel status temuan ditambahkan 1 November 2026; isi temuan tetap snapshot 31 Oktober 2026)
++
++**Peran dokumen:** sumber kebenaran untuk temuan audit statis kode dan status temuannya. Status implementasi lain ada di [STATUS](./STATUS-baca-meter-air.md); keputusan (DEC) dan isu terbuka (OPEN) di [Indeks](./INDEKS-dokumentasi-baca-meter.md#register-open).
+ 
+ ## Ringkasan eksekutif
+ 
+@@ -10,6 +13,25 @@
+ 
+ Namun, implementasi belum siap dinyatakan production-ready. Prioritas pertama adalah memastikan setiap pengguna hanya dapat memproses objek yang berhak diakses, menutup jalur pembentukan pembacaan resmi yang melewati approval, dan menghilangkan override tarif tanpa kontrol/audit yang memadai. Race condition, histori koreksi, rollover, serta hardening operasional juga perlu dituntaskan sebelum deployment untuk penagihan resmi.
+ 
++## Status temuan (diperbarui 1 November 2026)
++
++Isi temuan di bawah adalah snapshot pemeriksaan statis 31 Oktober 2026. Kolom status ini disusun hanya dari dokumen proyek lain (STATUS, aturan verifikasi, arsitektur); kode tidak diperiksa ulang. **Terbuka**: tidak ada bukti perbaikan di dokumen. **Sebagian (klaim)** dan **Tertangani (klaim)**: dokumen menyatakan ditangani, belum diverifikasi. **OPEN**: perlu keputusan, lihat [register OPEN](./INDEKS-dokumentasi-baca-meter.md#register-open).
++
++| # | Temuan | Status | Dasar dan langkah berikutnya |
++|---|---|---|---|
++| 1 | Laporan mandiri tidak memeriksa kepemilikan pelanggan | Tertangani (klaim) | STATUS menyebut pemeriksaan sambungan tertaut pada alur akun. Perlu tes negatif lintas akun (G1). Tautan tetap bukan bukti kepemilikan. |
++| 2 | Verifikasi tidak membandingkan `meter.pelangganId` dengan laporan | Terbuka | G1 di STATUS masih mencantumkan kecocokan meter-pelanggan sebagai belum ditutup. |
++| 3 | `POST /pembacaan` melewati approval | OPEN | Keputusan kewenangan belum ada (OPEN-20). |
++| 4 | Komponen nominal tagihan dari client | Terbuka | Tidak ada bukti perbaikan di dokumen. |
++| 5 | Role pada token dapat usang | Terbuka | Tidak ada bukti perbaikan di dokumen. |
++| 6 | Koreksi tanpa histori append-only | Sebagian (klaim) | Aturan verifikasi: `/koreksi` dan jalur massal merekam audit before/after; form satuan, reopen, dan penerbitan ulang belum terbukti (OPEN-08). |
++| 7 | Pemeriksaan state sebelum transaksi (race) | Sebagian (klaim) | Aksi cepat dan massal memakai update bersyarat; verify/reject/unverify laporan mandiri tidak disebut. |
++| 8 | Meter aktif hanya ditegakkan aplikasi | Terbuka | Partial unique index direncanakan setelah preflight; tidak ada bukti diterapkan. |
++| 9 | Rollover dihitung nol | Terbuka | STATUS dan aturan kondisi mencatat sebagian jalur masih memakai `Math.max(0, ...)`; kapasitas digit `MUDA_KEMBALI` belum disahkan (OPEN-10). |
++| 10 | Validasi periode menerima bulan tidak valid | Terbuka | Tidak ada bukti perbaikan di dokumen. |
++| 11 | `pencatatId` berasal dari client | Terbuka | Tidak ada bukti perbaikan di dokumen. |
++| 12 | Kunci hasil resmi per meter/periode, bukan pelanggan/periode | OPEN | OPEN-06. |
++
+ ## Temuan berbasis repository
+ 
+ ### A. Prioritas tinggi
+--- a/src/docs/matriks-rbac-aplikasi.md
++++ b/src/docs/matriks-rbac-aplikasi.md
+@@ -1,9 +1,12 @@
+ # Matriks RBAC Aplikasi
+ 
+-**Status:** Kebijakan akses yang disepakati; cakupan multi-role dan closing masih perlu dirinci  
++**Status:** Aksi per role disepakati menurut dokumen ini; kolom cakupan data berstatus usulan; multi-role dan izin closing belum diputuskan  
++**Versi:** 0.2 (rekonsiliasi dokumentasi; sebelumnya tanpa nomor versi)  
+ **Tanggal:** 1 November 2026  
+ **Cakupan:** role, hak aksi, cakupan data, dan temuan awal pada Verifikasi
+ 
++**Peran dokumen:** sumber kebenaran untuk role teknis, izin aksi, dan cakupan data per role. Ring V1/V2/V3: [aturan verifikasi](./aturan-verifikasi-berjenjang.md). Istilah peran yang belum dipetakan ke enum: [Indeks](./INDEKS-dokumentasi-baca-meter.md#pemetaan-peran) (OPEN-19).
++
+ Dokumen ini menjadi acuan kebijakan akses lintas modul dan harus dibaca bersama [`aturan-verifikasi-berjenjang.md`](./aturan-verifikasi-berjenjang.md) untuk aturan domain Verifikasi. Role menentukan izin aktor, sedangkan alur tahap, konsistensi data, status tagihan, serta periode terkunci tetap menjadi invariant bisnis.
+ 
+ ## Prinsip rancangan
+@@ -45,12 +48,12 @@
+ 
+ ## Matriks keputusan awal
+ 
+-Matriks berikut mencatat kebijakan yang telah disepakati. “Cakupan” harus ditegakkan oleh server, bukan hanya filter UI.
++Kolom aksi (Verifikasi, Operasional, Pengaturan) mencatat kebijakan yang disepakati menurut dokumen ini; kolom "Cakupan yang diusulkan" masih usulan dan belum terbukti ditegakkan. “Cakupan” harus ditegakkan oleh server, bukan hanya filter UI.
+ 
+ | Role | Verifikasi | Operasional pendataan | Pengaturan & akses administratif | Cakupan yang diusulkan |
+ |---|---|---|---|---|
+ | **Super Admin** | Akses penuh ke semua modul dan aksi yang diizinkan modul, termasuk kewenangan V3; bypass guard role. | Akses penuh ke semua modul operasional. | Pengelolaan sistem, role, akun, konfigurasi, dan seluruh modul. Semua aksi tetap mematuhi invariant domain dan tercatat sesuai audit. | Seluruh sistem, tanpa pembatasan cakupan modul/data berbasis role. |
+-| **Direksi** | Dapat bertindak pada kewenangan V3. V3 adalah hasil akhir; **tidak ada ring atau persetujuan tambahan Direksi setelah V3**. | Dapat melakukan taksasi untuk pemakaian besar atau potensial melalui workflow aplikasi yang tersedia. | Tidak otomatis mengelola RBAC atau konfigurasi sistem. | Seluruh organisasi untuk kewenangan Direksi; pembatasan teknis rinci perlu diselaraskan. |
++| **Direksi** | Dapat bertindak pada kewenangan V3. V3 adalah hasil akhir; **tidak ada ring atau persetujuan tambahan Direksi setelah V3**. | Dapat melakukan taksasi untuk pemakaian besar atau potensial melalui workflow aplikasi yang tersedia (definisi dan alur belum ada: OPEN-13). | Tidak otomatis mengelola RBAC atau konfigurasi sistem. | Seluruh organisasi untuk kewenangan Direksi; pembatasan teknis rinci perlu diselaraskan. |
+ | **Senior Manager (V3)** | Kewenangan V3/final; reopen atau koreksi harus punya alasan dan audit. | Baca dan tinjau data wilayah/bagian yang menjadi tanggung jawabnya. | Tidak otomatis memiliki hak konfigurasi sistem atau administrasi akun. | Bagian/wilayah sesuai penempatan. |
+ | **Manager (V2)** | Tinjau dan tandai V2; hasilnya menunggu tahap final V3. V2 boleh memproses tanpa ring yang lebih rendah. | Tinjau pekerjaan dan lakukan koreksi sesuai workflow yang disetujui. | Tidak mengelola RBAC atau pengaturan sistem. | Bagian/wilayah tanggung jawab. |
+ | **Supervisor (V1)** | Pemeriksaan awal V1, evaluasi hasil lapangan, dan tindak lanjut sesuai proses. | Mengelola pekerjaan/rute petugas sesuai kewenangan. | Pengaturan operasional terbatas bila memang dibutuhkan; bukan administrasi role. | Wilayah/rute pengawasan. |
+@@ -62,17 +65,19 @@
+ 
+ - Supervisor menjalankan V1, Manager V2, Senior Manager dan Direksi menjalankan V3. V3 adalah hasil akhir; tidak ada persetujuan Direksi tambahan setelah V3.
+ - V2/V3 boleh memproses tanpa ring bawah. Jika tahap V2/V3 sudah terisi, aksi tidak boleh diulang; hasil resmi hanya dibuat oleh V3.
+-- Direksi dapat melakukan taksasi pemakaian besar atau potensial lewat workflow aplikasi yang tersedia.
+-- Staff/Operator Admin dapat melakukan input/impor data, Manual ADD satuan/ALL, dan mengedit nilai hasil koreksi pada tahap V1/V2/V3. Edit wajib menyertakan alasan serta audit before/after dan ditolak setelah hasil masuk tagihan. Staff tidak boleh mengesahkan tahap.
++- Direksi dapat melakukan taksasi pemakaian besar atau potensial lewat workflow aplikasi yang tersedia (definisi dan alur belum ada: OPEN-13).
++- Staff/Operator Admin dapat melakukan input/impor data, Manual ADD satuan/ALL, dan mengedit nilai hasil koreksi pada tahap V1/V2/V3. Edit wajib menyertakan alasan serta audit before/after dan ditolak setelah hasil masuk tagihan. Staff tidak boleh mengesahkan tahap. Edit atas hasil V3 resmi aktif hanya lewat reopen oleh role berwenang (DEC-06); syarat bukti dan persetujuan tambahan: OPEN-09.
+ - Staff tidak memiliki akses penuh ke pengaturan pendataan, RBAC, akun, atau konfigurasi sensitif. Izin closing belum disepakati dan tidak boleh diasumsikan dari akses operasional.
+ - Supervisor, Manager, dan Senior Manager dibatasi pada bagian/wilayah penugasan. Pelaksana dibatasi pada rute yang ditugaskan dan kiriman sendiri. `USER` adalah pelanggan dengan akses pada data miliknya sendiri.
+ - Role aktif untuk akun dengan beberapa role adalah arah kebijakan, tetapi belum didukung model `User.role` yang hanya menyimpan satu role. Implementasi multi-role membutuhkan rancangan tersendiri; jangan menggabungkan role secara implisit.
+ 
++- **Super Admin dan invariant bisnis (DEC-04):** akses penuh ke semua modul tidak membatalkan invariant: periode terkunci, validasi meter/stand, status resmi, dan perlindungan hasil yang sudah masuk tagihan tetap berlaku; aksinya tercatat atas akun Super Admin.
++
+ ## Pertanyaan yang masih terbuka
+ 
+-1. Apakah closing termasuk tugas Operator Admin?
+-2. Apakah ada role internal tambahan selain `USER` pelanggan?
+-3. Apakah ada tindakan lain yang membutuhkan approval kedua di luar V3 final?
++1. Apakah closing termasuk tugas Operator Admin? (OPEN-01)
++2. Apakah ada role internal tambahan selain `USER` pelanggan? (OPEN-19)
++3. Apakah ada tindakan lain yang membutuhkan approval kedua di luar V3 final? (OPEN-19)
+ 
+ ## Implementasi dan tindak lanjut
+ 
+@@ -88,4 +93,5 @@
+ - [NIST Role Based Access Control Project](https://csrc.nist.gov/projects/role-based-access-control) — konsep role dan privilege, role hierarchy, serta administrasi akses. Halaman proyek menandai dirinya sebagai arsip, jadi gunakan untuk konsep dasar, bukan panduan implementasi terkini.
+ - Dokumen organisasi aplikasi: [`organisasi.md`](../../prisma/docs/organisasi.md).
+ - Kontrak alur Verifikasi aplikasi: [`aturan-verifikasi-berjenjang.md`](./aturan-verifikasi-berjenjang.md).
++- Indeks dokumentasi, glosarium, dan register OPEN: [`INDEKS-dokumentasi-baca-meter.md`](./INDEKS-dokumentasi-baca-meter.md).
+ - Implementasi role dan akses modul: [`rbac.ts`](../lib/server/middleware/rbac.ts).
+--- a/src/docs/rekonsiliasi-data-progrescater.md
++++ b/src/docs/rekonsiliasi-data-progrescater.md
+@@ -3,7 +3,10 @@
+ **Status:** analisis satu sampel; bukan pengesahan aturan tarif/pemakaian
+ **Sumber:** [`ProgresCater-PW5.csv`](../../prisma/data/jan/ProgresCater-PW5.csv)
+ **Periode sampel:** `202601`
+-**Tanggal analisis:** 31 Oktober 2026
++**Tanggal analisis:** 31 Oktober 2026 (angka tidak dihitung ulang pada rekonsiliasi dokumentasi 1 November 2026)
++**Versi:** 0.2 (catatan `REV.PENCATAT` dan tautan Indeks ditambahkan 1 November 2026; sebelumnya tanpa nomor versi)
++
++**Peran dokumen:** sumber kebenaran untuk analisis data sampel `202601`. Makna kode: [codebook](./codebook-kondisi-catatan-meter.md); keputusan (DEC) dan isu terbuka (OPEN): [Indeks](./INDEKS-dokumentasi-baca-meter.md#register-open).
+ 
+ ## Ringkasan terukur
+ 
+@@ -32,7 +35,7 @@
+ | `RUMAH KOSONG` | 1.284 | `RUMAH_KOSONG` | Tidak selalu berarti pemakaian nol. |
+ | `STAND TEMPEL` | 1.249 | `STAND_TEMPEL` | Perlu codebook untuk membedakan sumber angka dan bukti. |
+ | `STAND-KONSUMEN` | 554 | `STAND_KONSUMEN` | Perlu dipertahankan sebagai input offsite, bukan disamakan dengan kunjungan petugas. |
+-| `REV.PENCATAT` | 490 | `REV_PENCATAT` | Tujuan/aturan revisi perlu dijelaskan pemilik proses. |
++| `REV.PENCATAT` | 490 | `REV_PENCATAT` | Pada sampel, `ketcatat` berisi label ini sementara `kondisimeternama`/`kondisimeterkode` kosong, sehingga kondisi asli baris tersebut tidak tersedia. Pemilik produk (31 Oktober) mengklarifikasi bahwa pada alur baru ini adalah penanda workflow revisi ST Awal, bukan kondisi meter (lihat codebook). Cara mengimpor 490 baris legacy tanpa kehilangan kondisi asli: OPEN-18. |
+ | `DK` | 408 | `DK` | Akronim belum didefinisikan; simpan label mentah. |
+ | `TIDAK ADA AIR` | 339 | `TIDAK_ADA_AIR` | Tidak otomatis berarti stand/pemakaian 0. |
+ | `MATI ADA AIR` | 314 | `METER_MATI_ADA_AIR` | Perlu aturan taksiran dan bukti yang disahkan. |

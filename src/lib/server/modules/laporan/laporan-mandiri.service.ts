@@ -5,6 +5,7 @@ import {
   jendelaLaporMandiri,
 } from "@/lib/domain/lapor-mandiri"
 import {
+  BadRequestError,
   ConflictError,
   NotFoundError,
   isPrismaKnownError,
@@ -49,6 +50,45 @@ export async function dapatkanJendelaLaporMandiri(sekarang = new Date()) {
   )
 
   return jendelaLaporMandiri(sekarang, { tanggalBuka, tanggalTutup })
+}
+
+export async function daftarPeriodeUjiLaporMandiri() {
+  if (process.env.NODE_ENV === "production") return []
+
+  const [daftarCatat, periodeTerkunci] = await Promise.all([
+    prisma.daftarCatat.groupBy({
+      by: ["periode"],
+      orderBy: { periode: "desc" },
+    }),
+    prisma.periodePenagihan.findMany({
+      where: { status: "TERKUNCI" },
+      select: { periode: true },
+    }),
+  ])
+  const terkunci = new Set(periodeTerkunci.map((row) => row.periode))
+  return daftarCatat
+    .map((row) => row.periode)
+    .filter((periode) => !terkunci.has(periode))
+}
+
+export async function pastikanPeriodeUjiLaporMandiri(
+  nilai: string | null | undefined,
+) {
+  if (process.env.NODE_ENV === "production") {
+    throw new BadRequestError("Pemilihan periode uji tidak tersedia.")
+  }
+  if (!nilai || !/^\d{6}$/.test(nilai)) {
+    throw new BadRequestError("Periode uji harus dipilih dari daftar yang tersedia.")
+  }
+
+  const periode = Number(nilai)
+  const tersedia = await daftarPeriodeUjiLaporMandiri()
+  if (!tersedia.includes(periode)) {
+    throw new BadRequestError(
+      "Periode uji tidak tersedia atau sudah terkunci. Pilih periode kerja yang masih terbuka.",
+    )
+  }
+  return periode
 }
 
 export async function pastikanSambunganTertautKeAkun(

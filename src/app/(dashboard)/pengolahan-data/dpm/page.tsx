@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { PageContainer } from "@/components/layout"
 import { PembacaanGrid } from "@/features/dashboard/components/grids/pembacaan-grid"
 
-export const metadata: Metadata = { title: "Data Pembacaan Meter · Tirtawening" }
+export const metadata: Metadata = { title: "Data Pembacaan Meter" }
 
 export default function InfoPembacaanPage() {
   return (

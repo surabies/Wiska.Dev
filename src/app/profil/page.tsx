@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Profil Perusahaan" }
 // TODO: isi dengan visi, misi, dan sejarah resmi perusahaan.
 const MISI = ["Contoh: menyediakan air bersih yang layak bagi seluruh pelanggan", "Contoh: meningkatkan kualitas pelayanan"]
 
-export default function Page() {
+export default function ProfilPerusahaanPage() {
   return (
     <HalamanInfo
       judul="Profil Perusahaan"

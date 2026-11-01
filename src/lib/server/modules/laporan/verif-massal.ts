@@ -26,7 +26,8 @@
 
 import { prisma } from "@db"
 import { tentukanBlok } from "@/lib/domain/tagihan"
-import { periodeToDate } from "../../lib/periode"
+import { recordAudit } from "../../lib/audit"
+import { simpanPembacaanResmi } from "./pembacaan-resmi"
 
 export type Ring = 1 | 2 | 3
 
@@ -49,6 +50,7 @@ interface Opsi {
   ids: string[]
   ring: Ring
   userId: string
+  auditMeta: { ipAddress: string | null; userAgent: string | null }
   /// Ambang anomali (%) — dibaca pemanggil dari Konfigurasi.
   ambangAnomali: number
   sertakanAnomali: boolean
@@ -60,7 +62,7 @@ function anomali(persentase: number | null, ambang: number): boolean {
 }
 
 export async function verifikasiMassal(opsi: Opsi): Promise<HasilVerifMassal> {
-  const { ids, ring, userId, ambangAnomali, sertakanAnomali } = opsi
+  const { ids, ring, userId, auditMeta, ambangAnomali, sertakanAnomali } = opsi
   const hasil: HasilVerifMassal = {
     diproses: ids.length,
     berhasil: 0,
@@ -103,10 +105,40 @@ export async function verifikasiMassal(opsi: Opsi): Promise<HasilVerifMassal> {
     .map((l) => l.pelangganId)
     .filter((v): v is string => v !== null)
   const meter = await prisma.meter.findMany({
-    where: { pelangganId: { in: pelangganIds }, isAktif: true },
-    select: { id: true, pelangganId: true },
+    where: { pelangganId: { in: pelangganIds } },
+    select: { id: true, pelangganId: true, isAktif: true },
   })
-  const meterAktif = new Map(meter.map((m) => [m.pelangganId, m.id]))
+  const meterPelanggan = new Map<string, Set<string>>()
+  const meterAktif = new Map<string, string[]>()
+  for (const item of meter) {
+    const semuaMeter = meterPelanggan.get(item.pelangganId) ?? new Set<string>()
+    semuaMeter.add(item.id)
+    meterPelanggan.set(item.pelangganId, semuaMeter)
+    if (item.isAktif) {
+      const idsPelanggan = meterAktif.get(item.pelangganId) ?? []
+      idsPelanggan.push(item.id)
+      meterAktif.set(item.pelangganId, idsPelanggan)
+    }
+  }
+  const meterAktifUnik = new Map(
+    [...meterAktif]
+      .filter(([, idsMeter]) => idsMeter.length === 1)
+      .map(([pelangganId, [meterId]]) => [pelangganId, meterId]),
+  )
+  const tentukanMeter = (laporan: {
+    pelangganId: string | null
+    meterVerifId: string | null
+  }) => {
+    if (!laporan.pelangganId) return undefined
+    if (laporan.meterVerifId) {
+      return meterPelanggan
+        .get(laporan.pelangganId)
+        ?.has(laporan.meterVerifId)
+        ? laporan.meterVerifId
+        : undefined
+    }
+    return meterAktifUnik.get(laporan.pelangganId)
+  }
 
   const lewati = (l: { id: string; nomorLangganan: string }, pesan: string) => {
     hasil.dilewati++
@@ -146,9 +178,7 @@ export async function verifikasiMassal(opsi: Opsi): Promise<HasilVerifMassal> {
           lewati(l, "V1 sudah terisi")
           continue
         }
-        const meterId =
-          l.meterVerifId ??
-          (l.pelangganId ? meterAktif.get(l.pelangganId) : undefined)
+        const meterId = tentukanMeter(l)
         if (!meterId) {
           lewati(
             l,
@@ -156,55 +186,99 @@ export async function verifikasiMassal(opsi: Opsi): Promise<HasilVerifMassal> {
           )
           continue
         }
-        await prisma.laporanHarianPetugas.update({
-          where: { id: l.id },
-          data: {
-            verif1At: new Date(),
-            verif1ById: userId,
-            meterVerifId: meterId,
-            // Tidak ada koreksi: stand & pemakaian dibiarkan apa adanya,
-            // aturan tagih diterapkan nanti di V3.
-            verifiedAt: null,
-            verifiedById: null,
-          },
+        const kini = new Date()
+        await prisma.$transaction(async (tx) => {
+          const berubah = await tx.laporanHarianPetugas.updateMany({
+            where: {
+              id: l.id,
+              verif1At: null,
+              verif2At: null,
+              verif3At: null,
+              pembacaanId: null,
+              isVerified: false,
+            },
+            data: {
+              verif1At: kini,
+              verif1ById: userId,
+              meterVerifId: meterId,
+              verifiedAt: null,
+              verifiedById: null,
+            },
+          })
+          if (berubah.count !== 1)
+            throw new Error("Status laporan berubah sebelum V1 dapat disimpan")
+          await recordAudit(tx, {
+            userId,
+            aksi: "VERIFIKASI_V1_MASSAL",
+            entitas: "LaporanHarianPetugas",
+            entitasId: l.id,
+            perubahan: {
+              sebelum: { verif1At: l.verif1At },
+              sesudah: { verif1At: kini, verif1ById: userId, meterVerifId: meterId },
+            },
+            ...auditMeta,
+          })
         })
         hasil.berhasil++
         continue
       }
 
       if (ring === 2) {
-        if (!l.verif1At) {
-          lewati(l, "Menunggu V1")
-          continue
-        }
         if (l.verif2At) {
           lewati(l, "V2 sudah terisi")
           continue
         }
-        await prisma.laporanHarianPetugas.update({
-          where: { id: l.id },
-          data: { verif2At: new Date(), verif2ById: userId },
+        if (l.verif3At) {
+          lewati(l, "V3 sudah terisi")
+          continue
+        }
+        const kini = new Date()
+        await prisma.$transaction(async (tx) => {
+          const berubah = await tx.laporanHarianPetugas.updateMany({
+            where: {
+              id: l.id,
+              verif2At: null,
+              verif3At: null,
+              pembacaanId: null,
+              isVerified: false,
+            },
+            data: { verif2At: kini, verif2ById: userId },
+          })
+          if (berubah.count !== 1)
+            throw new Error("Status laporan berubah sebelum V2 dapat disimpan")
+          await recordAudit(tx, {
+            userId,
+            aksi: "VERIFIKASI_V2_MASSAL",
+            entitas: "LaporanHarianPetugas",
+            entitasId: l.id,
+            perubahan: {
+              sebelum: { verif2At: l.verif2At },
+              sesudah: { verif2At: kini, verif2ById: userId },
+            },
+            ...auditMeta,
+          })
         })
         hasil.berhasil++
         continue
       }
 
       // ring === 3 — satu-satunya tempat PembacaanMeter resmi lahir.
-      if (!l.verif1At || !l.verif2At) {
-        lewati(l, "Menunggu V1 dan V2")
-        continue
-      }
       if (l.verif3At) {
         lewati(l, "V3 sudah terisi")
         continue
       }
-      if (!l.meterVerifId) {
-        lewati(l, "Meter tujuan belum dipilih di V1")
+      const meterId = tentukanMeter(l)
+      if (!meterId) {
+        lewati(l, "Meter aktif tidak dapat ditentukan dengan pasti")
         continue
       }
 
       const standAkhir = l.standAkhirRevisi ?? l.standAkhir
-      const pemakaianRiil = Math.max(0, standAkhir - l.standAwal)
+      const pemakaianRiil = standAkhir - l.standAwal
+      if (pemakaianRiil < 0) {
+        lewati(l, "Stand akhir lebih kecil dari stand awal")
+        continue
+      }
       // TIDAK ADA TAKSASI OTOMATIS.
       //
       // Aturan taksiran (minimum 5 m3, taksiran dari bulan lalu) DIHAPUS dari
@@ -232,10 +306,34 @@ export async function verifikasiMassal(opsi: Opsi): Promise<HasilVerifMassal> {
 
       const kini = new Date()
       await prisma.$transaction(async (tx) => {
-        const pembacaan = await tx.pembacaanMeter.create({
+        const berubah = await tx.laporanHarianPetugas.updateMany({
+          where: {
+            id: l.id,
+            verif3At: null,
+            pembacaanId: null,
+            isVerified: false,
+          },
           data: {
-            meterId: l.meterVerifId!,
-            periode: periodeToDate(l.periode),
+            verif3At: kini,
+            verif3ById: userId,
+            meterVerifId: meterId,
+            isVerified: true,
+            verifiedAt: kini,
+            verifiedById: userId,
+          },
+        })
+        if (berubah.count !== 1)
+          throw new Error("Status laporan berubah sebelum V3 dapat disimpan")
+
+        const pembacaan = await simpanPembacaanResmi(tx, {
+          pelangganId: l.pelangganId,
+          nomorLangganan: l.nomorLangganan,
+          meterId,
+          periode: l.periode,
+          sumber: "PETUGAS",
+          laporanId: l.id,
+          aktor: { userId, ...auditMeta },
+          data: {
             standLalu: l.standAwal,
             standAkhir,
             pemakaianM3: pemakaianTagih,
@@ -260,13 +358,27 @@ export async function verifikasiMassal(opsi: Opsi): Promise<HasilVerifMassal> {
         await tx.laporanHarianPetugas.update({
           where: { id: l.id },
           data: {
-            verif3At: kini,
-            verif3ById: userId,
-            isVerified: true,
-            verifiedAt: kini,
-            verifiedById: userId,
             pembacaanId: pembacaan.id,
           },
+        })
+        await recordAudit(tx, {
+          userId,
+          aksi: "VERIFIKASI_V3_MASSAL",
+          entitas: "LaporanHarianPetugas",
+          entitasId: l.id,
+          perubahan: {
+            sebelum: {
+              verif3At: l.verif3At,
+              pembacaanId: l.pembacaanId,
+            },
+            sesudah: {
+              verif3At: kini,
+              verif3ById: userId,
+              pembacaanId: pembacaan.id,
+              meterVerifId: meterId,
+            },
+          },
+          ...auditMeta,
         })
       })
       hasil.berhasil++

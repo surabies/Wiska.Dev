@@ -2,9 +2,9 @@ import type { Metadata } from "next"
 import { PageContainer } from "@/components/layout"
 import { PelangganGrid } from "@/features/dashboard/components/grids/pelanggan-grid"
 
-export const metadata: Metadata = { title: "Data Pelanggan · Tirtawening" }
+export const metadata: Metadata = { title: "Data Pelanggan" }
 
-export default function Page() {
+export default function DataPelangganPage() {
   return (
     <PageContainer
       penuh

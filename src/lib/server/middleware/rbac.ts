@@ -44,6 +44,7 @@ export const ACCESS_LEVEL: Record<string, number> = {
   read: 1,
   approve: 2,
   execute: 3,
+  read_write: 3,
   full: 4,
 } as const
 
@@ -127,12 +128,12 @@ export const MODULE_ACCESS: Record<string, Record<Role, AccessLevel>> = {
 }
 
 export function canAccess(module: string, role: Role): boolean {
-  return MODULE_ACCESS[module]?.[role] !== undefined &&
-    ACCESS_LEVEL[MODULE_ACCESS[module]![role] as string] > 0
+  return getAccessLevel(module, role) !== "none"
 }
 
 // Tingkatan akses terbesar yang dimiliki peran terhadap modul.
 export function getAccessLevel(module: string, role: Role): AccessLevel | null {
+  if (role === "SUPER_ADMIN") return "full"
   return MODULE_ACCESS[module]?.[role] ?? "none"
 }
 
@@ -146,6 +147,10 @@ export function requireModuleAccess(
 ): MiddlewareHandler {
   return async (c, next) => {
     const user = getSessionUser(c)
+    if (user.role === "SUPER_ADMIN") {
+      await next()
+      return
+    }
     const level = MODULE_ACCESS[module]?.[user.role]
     if (!level) {
       throw new ForbiddenError(`Akses ke modul "${module}" ditolak`)
@@ -205,7 +210,7 @@ export const ROLE_GROUPS = {
 export function requireRole(...roles: readonly Role[]): MiddlewareHandler {
   return async (c, next) => {
     const user = getSessionUser(c)
-    if (!roles.includes(user.role)) {
+    if (user.role !== "SUPER_ADMIN" && !roles.includes(user.role)) {
       throw new ForbiddenError(
         `Aksi ini memerlukan salah satu role: ${roles.join(", ")}`,
       )

@@ -1,7 +1,7 @@
 import { MenuPage } from "@/components/layout"
 
-export const metadata = { title: "Running Text · Tirtawening" }
+export const metadata = { title: "Running Text" }
 
-export default function Page() {
+export default function TeksBerjalanPage() {
   return <MenuPage href="/tools/running-text" />
 }

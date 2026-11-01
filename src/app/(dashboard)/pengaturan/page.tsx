@@ -5,10 +5,10 @@ import { JendelaLaporMandiri } from "@/features/dashboard/components/pengaturan/
 import { auth } from "@/lib/auth"
 
 export const metadata: Metadata = {
-  title: "Pengaturan Laporan Mandiri · Tirtawening",
+  title: "Pengaturan Laporan Mandiri",
 }
 
-export default async function Page() {
+export default async function PengaturanLaporanMandiriPage() {
   const session = await auth()
   if (!session?.user) redirect("/login")
   if (session.user.role !== "SUPER_ADMIN") redirect("/dashboard")

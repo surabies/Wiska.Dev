@@ -20,7 +20,7 @@ const ALUR = [
   { judul: "Pemasangan", isi: "Petugas memasang sambungan dan meter air." },
 ]
 
-export default function Page() {
+export default function PasangBaruPage() {
   return (
     <HalamanInfo
       judul="Pasang Baru"

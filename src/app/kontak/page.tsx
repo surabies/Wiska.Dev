@@ -14,7 +14,7 @@ const KONTAK = [
   { label: "Jam layanan", isi: "Isi hari dan jam layanan" },
 ]
 
-export default function Page() {
+export default function KontakPage() {
   return (
     <HalamanInfo
       judul="Kontak & Kantor Layanan"

@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
-import { InfoPelangganView } from "@/features/dashboard/components/info-pelanggan"
+import { InfoPelangganView } from "@/features/dashboard/info-pelanggan"
 
-export const metadata: Metadata = { title: "Info Pelanggan · Tirtawening" }
+export const metadata: Metadata = { title: "Info Pelanggan" }
 
 // Tanpa breadcrumb: judul halaman berada di tengah, di dalam view.
 export default function InfoPelangganPage() {

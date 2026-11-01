@@ -1,7 +1,7 @@
 import { MenuPage } from "@/components/layout"
 
-export const metadata = { title: "Import Stand · Tirtawening" }
+export const metadata = { title: "Import Stand Angkat" }
 
-export default function Page() {
+export default function ImporStandAngkatPage() {
   return <MenuPage href="/tools/import-stand" />
 }

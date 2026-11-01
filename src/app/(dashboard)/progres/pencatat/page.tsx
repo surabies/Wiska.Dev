@@ -5,9 +5,9 @@ import { PageContainer } from "@/components/layout"
 import { LaporanHarianClient } from "@/features/dashboard/components/laporan-harian/laporan-harian-client"
 
 
-export const metadata: Metadata = { title: "Petugas Pencatat Meter · Tirtawening" }
+export const metadata: Metadata = { title: "Laporan Pencatatan Meter" }
 
-export default async function PetugasPage() {
+export default async function LaporanPencatatanMeterPage() {
   const session = await auth()
   if (!session?.user) redirect("/login")
 

@@ -5,7 +5,7 @@ import { PageContainer } from "@/components/layout"
 import { HalamanUrutanPelanggan } from "@/features/dashboard/components/pemetaan-rute/halaman-urutan-pelanggan"
 import { adalahSupervisorUp } from "@/features/dashboard/lib/wewenang"
 
-export const metadata: Metadata = { title: "Urutan Pelanggan · Tirtawening" }
+export const metadata: Metadata = { title: "Urutan Pelanggan" }
 
 export default async function UrutanPelangganPage({
   params,

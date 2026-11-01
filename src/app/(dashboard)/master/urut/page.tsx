@@ -5,7 +5,7 @@ import { PageContainer } from "@/components/layout"
 import { PemetaanRuteClient } from "@/features/dashboard/components/pemetaan-rute/pemetaan-rute-client"
 import { adalahSupervisorUp } from "@/features/dashboard/lib/wewenang"
 
-export const metadata: Metadata = { title: "Pemetaan Rute · Tirtawening" }
+export const metadata: Metadata = { title: "Pemetaan Rute" }
 
 export default async function PemetaanPage() {
   const session = await auth()

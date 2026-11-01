@@ -1,7 +1,7 @@
 import { MenuPage } from "@/components/layout"
 
-export const metadata = { title: "Monitoring Tutup Bulan · Tirtawening" }
+export const metadata = { title: "Monitoring Tutup Bulan" }
 
-export default function Page() {
+export default function PemantauanTutupBulanPage() {
   return <MenuPage href="/tools-tutup/monitoring-tutup-bulan" />
 }

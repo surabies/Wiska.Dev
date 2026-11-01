@@ -37,7 +37,7 @@ export function ProgresPetugas({ data }: { data: BarisPetugas[] }) {
     <Panel
       label="Progres Baca per Petugas"
       chip={data.length > 0 ? `${data.length} Petugas` : undefined}
-      deskripsi="Tercatat dari beban kerja periode ini. Yang paling tertinggal di atas."
+      deskripsi="Tercatat dari beban kerja periode ini. Yang paling tertinggal di Bawah."
     >
       {data.length === 0 ? (
         <p className="text-sm text-muted-foreground">Daftar catat periode ini belum tersedia.</p>

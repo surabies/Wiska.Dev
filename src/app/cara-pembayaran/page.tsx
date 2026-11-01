@@ -19,7 +19,7 @@ const KANAL = [
   { nama: "Contoh: Loket pembayaran", deskripsi: "Isi alamat dan jam layanan" },
 ]
 
-export default function Page() {
+export default function CaraPembayaranPage() {
   return (
     <HalamanInfo
       judul="Cara Pembayaran"

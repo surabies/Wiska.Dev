@@ -2,24 +2,24 @@
 //
 // Page tipis: metadata + rakit fitur lewat kerangka HalamanPublik (satu
 // bahasa visual dengan beranda). Lihat FRONTEND.md.
-import type { Metadata } from "next";
-import { MessageSquare, Ticket } from "@/components/ui/hugeicons-compat";
-import { auth } from "@/lib/auth";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PengaduanForm } from "@/features/public/components/pengaduan-form";
-import { LacakTiketForm } from "@/features/public/components/lacak-tiket-form";
-import { getPetaCakupan } from "@/features/beranda/lib/peta";
+import type { Metadata } from "next"
+import { MessageSquare, Ticket } from "@/components/ui/hugeicons-compat"
+import { auth } from "@/lib/auth"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { PengaduanForm } from "@/features/public/components/pengaduan-form"
+import { LacakTiketForm } from "@/features/public/components/lacak-tiket-form"
+import { getPetaCakupan } from "@/features/beranda/lib/peta"
 import {
   HalamanPublik,
   AsideBlok,
   KartuBerbingkai,
-} from "@/features/public/components/halaman-publik";
+} from "@/features/public/components/halaman-publik"
 
 export const metadata: Metadata = {
   title: "Pengaduan",
   description:
     "Laporkan kebocoran, air mati, atau keluhan layanan PERUMDA Tirtawening Kota Bandung",
-};
+}
 
 export default async function PengaduanPage({
   searchParams,
@@ -28,11 +28,11 @@ export default async function PengaduanPage({
   // tiket, membuka tab "Lacak tiket" dan mengisi + mencari otomatis — bukan
   // menduplikasi tampilan detail tiket di tempat lain. ?tab=lacak membuka tab
   // pelacakan langsung (deep-link umum, mis. dari email/WA).
-  searchParams: Promise<{ nomor?: string; tab?: string }>;
+  searchParams: Promise<{ nomor?: string; tab?: string }>
 }) {
-  const { nomor, tab } = await searchParams;
-  const [session, peta] = await Promise.all([auth(), getPetaCakupan()]);
-  const tabAwal = nomor || tab === "lacak" ? "lacak" : "lapor";
+  const { nomor, tab } = await searchParams
+  const [session, peta] = await Promise.all([auth(), getPetaCakupan()])
+  const tabAwal = nomor || tab === "lacak" ? "lacak" : "lapor"
 
   return (
     <HalamanPublik
@@ -58,9 +58,9 @@ export default async function PengaduanPage({
 
           <AsideBlok label="Ada target waktunya">
             <p>
-              Setiap tiket punya target penanganan sesuai tingkat
-              kegawatannya — dan target itu ikut ditampilkan di halaman
-              pelacakan, termasuk saat kami melewatinya.
+              Setiap tiket punya target penanganan sesuai tingkat kegawatannya —
+              dan target itu ikut ditampilkan di halaman pelacakan, termasuk
+              saat kami melewatinya.
             </p>
           </AsideBlok>
 
@@ -130,5 +130,5 @@ export default async function PengaduanPage({
         </Tabs>
       </KartuBerbingkai>
     </HalamanPublik>
-  );
+  )
 }

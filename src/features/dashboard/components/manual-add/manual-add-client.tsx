@@ -7,6 +7,7 @@ import {
   type ItemTab,
 } from "@/components/layout/page/TabLembaran";
 import { Button } from "@/components/ui/button";
+import { ALASAN_MANUAL } from "./alasan-manual";
 import { ambilSatu, kirimJson } from "../../lib/api-client";
 
 type KunciTab = "satuan" | "massal";
@@ -42,18 +43,20 @@ type ItemManualAdd = {
   nomorLangganan: string;
   nama: string;
   alamat: string;
-  taksasi: number;
+  taksasi: number | null;
   metode?:
     | "RATA_RATA_12_BULAN"
     | "TIGA_TERTINGGI"
     | "RIWAYAT_TERSEDIA"
     | "TANPA_HISTORI";
-  standTerakhir: number;
+  standTerakhir: number | null;
   pemakaianLalu: number | null;
   nomorMeter: string | null;
+  bolehDitambahkan: boolean;
+  alasanPeninjauan: string | null;
   manualProvenance?: {
     standSumber: { id: string; periode: string; standAwal: number } | null;
-    sumberPembacaan: { id: string; periode: string; pemakaianRiil: number }[];
+    sumberTagihan: { id: string; periode: string; pemakaianM3: number }[];
   };
 };
 
@@ -143,10 +146,11 @@ export function ManualAddClient() {
   const [pilihan, setPilihan] = React.useState<Pelanggan | null>(null);
   const [standAwal, setStandAwal] = React.useState("");
   const [standAkhir, setStandAkhir] = React.useState("");
-  const [alasanSatuan, setAlasanSatuan] = React.useState("");
-  const [konfirmasiTimpa, setKonfirmasiTimpa] = React.useState(false);
+  const [pemakaianInput, setPemakaianInput] = React.useState<string | null>(null);
+  const [alasanSatuan, setAlasanSatuan] = React.useState<string>(ALASAN_MANUAL.pencatatan);
   const [mencari, setMencari] = React.useState(false);
   const [menyimpanSatuan, setMenyimpanSatuan] = React.useState(false);
+  const pencarianId = React.useRef(0);
 
   const [opsi, setOpsi] = React.useState<Opsi>({
     periode: null,
@@ -171,10 +175,13 @@ export function ManualAddClient() {
   } | null>(null);
 
   const nomorPeriode = periodeDariInput(periode);
-  const pemakaianSatuan =
+  const pemakaianHitung =
     standAwal !== "" && standAkhir !== ""
-      ? Number(standAkhir) - Number(standAwal)
-      : null;
+      ? String(Number(standAkhir) - Number(standAwal))
+      : "";
+  const pemakaianSatuan = pemakaianInput ?? pemakaianHitung;
+  const daftarYangBisaDipilih =
+    daftarManualAdd?.filter((item) => item.bolehDitambahkan) ?? [];
 
   React.useEffect(() => {
     let active = true;
@@ -245,6 +252,7 @@ export function ManualAddClient() {
   async function cariPelanggan(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (nomorPeriode === null) return;
+    const requestId = ++pencarianId.current;
     setError(null);
     setPesan(null);
     setMencari(true);
@@ -255,20 +263,23 @@ export function ManualAddClient() {
         nomor: nomor.trim(),
         periode: nomorPeriode,
       });
-      setPelanggan(hasil);
-      if (hasil.length === 0) setPesan("Pelanggan aktif tidak ditemukan.");
+      if (requestId === pencarianId.current) {
+        setPelanggan(hasil);
+        if (hasil.length === 0) setPesan("Pelanggan aktif tidak ditemukan.");
+      }
     } catch (cause) {
-      setError(pesanError(cause));
+      if (requestId === pencarianId.current) setError(pesanError(cause));
     } finally {
-      setMencari(false);
+      if (requestId === pencarianId.current) setMencari(false);
     }
   }
 
   function pilihPelanggan(item: Pelanggan) {
     setPilihan(item);
-    setKonfirmasiTimpa(false);
+    setAlasanSatuan(item.sudahAdaLaporan ? ALASAN_MANUAL.koreksi : ALASAN_MANUAL.pencatatan);
     setStandAwal(item.standTerakhir == null ? "" : String(item.standTerakhir));
     setStandAkhir(item.standTerakhir == null ? "" : String(item.standTerakhir));
+    setPemakaianInput(null);
     setPesan(null);
     setError(null);
   }
@@ -285,6 +296,7 @@ export function ManualAddClient() {
         periode: nomorPeriode,
         standAwal: Number(standAwal),
         standAkhir: Number(standAkhir),
+        pemakaian: Number(pemakaianSatuan),
         alasanManual: alasanSatuan,
       });
       setPesan(
@@ -415,7 +427,15 @@ export function ManualAddClient() {
                 <input
                   className={INPUT_CLASS}
                   value={nomor}
-                  onChange={(event) => setNomor(event.target.value)}
+                  onChange={(event) => {
+                    pencarianId.current += 1;
+                    setNomor(event.target.value);
+                    setMencari(false);
+                    setError(null);
+                    setPelanggan([]);
+                    setPilihan(null);
+                    setPesan(null);
+                  }}
                   inputMode="numeric"
                   maxLength={11}
                   autoComplete="off"
@@ -428,27 +448,37 @@ export function ManualAddClient() {
                   type="month"
                   value={periode}
                   onChange={(event) => {
+                    pencarianId.current += 1;
                     setPeriode(event.target.value);
+                    setMencari(false);
+                    setError(null);
                     setPilihan(null);
                     setPelanggan([]);
+                    setPesan(null);
                   }}
                   required
                 />
               </Field>
               <Button
                 type="submit"
-                disabled={mencari || nomor.trim().length < 2}
+                disabled={
+                  mencari || !/^\d{11}$/.test(nomor.trim())
+                }
               >
                 {mencari ? "Mencari..." : "Cari pelanggan"}
               </Button>
             </form>
+
+            <p className="-mt-3 text-xs text-muted-foreground">
+              Masukkan tepat 11 digit. Hasil pencarian hanya menampilkan nomor
+              yang cocok seluruhnya.
+            </p>
 
             {pelanggan.length > 0 && (
               <div className="overflow-x-auto rounded-lg border border-border">
                 <table className="w-full min-w-2xl text-left text-sm">
                   <thead className="bg-muted/50 text-xs text-muted-foreground">
                     <tr>
-                      <th className="px-3 py-2">Pilih</th>
                       <th className="px-3 py-2">No. Pel</th>
                       <th className="px-3 py-2">Nama / Alamat</th>
                       <th className="px-3 py-2">Meter aktif</th>
@@ -514,28 +544,11 @@ export function ManualAddClient() {
                     {pilihan.alamat}
                   </p>
                 </div>
-                {pilihan.bolehTimpaLaporan && (
-                  <div className="grid gap-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
-                    <p>
-                      Laporan ini sudah diverifikasi. Menimpa akan menghapus
-                      penanda V1–V3 dan mengembalikan hasil ke antrean
-                      verifikasi. Pembacaan yang sudah ditagihkan tidak dapat
-                      ditimpa.
-                    </p>
-                    <label className="flex items-start gap-2">
-                      <input
-                        type="checkbox"
-                        checked={konfirmasiTimpa}
-                        onChange={(event) =>
-                          setKonfirmasiTimpa(event.target.checked)
-                        }
-                      />
-                      <span>
-                        Saya memahami hasil lama diganti dan perlu diverifikasi
-                        ulang.
-                      </span>
-                    </label>
-                  </div>
+                {pilihan.sudahAdaLaporan && pilihan.bolehTimpaLaporan && (
+                  <p className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
+                    Hasil lama akan diganti dan laporan kembali ke antrean
+                    verifikasi.
+                  </p>
                 )}
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Field label="ST Awal">
@@ -561,35 +574,34 @@ export function ManualAddClient() {
                     />
                   </Field>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Perkiraan Pakai dari selisih stand: {pemakaianSatuan ?? "—"} m³.
-                  Jika stand mundur, laporan tetap masuk untuk ditinjau dan
-                  tidak diubah menjadi nol.
-                </p>
-                <Field
-                  label={
-                    pilihan.bolehTimpaLaporan
-                      ? "Alasan penggantian hasil"
-                      : "Alasan Manual Add"
-                  }
-                >
-                  <textarea
-                    className={`${INPUT_CLASS} min-h-20 py-2`}
-                    value={alasanSatuan}
-                    onChange={(event) => setAlasanSatuan(event.target.value)}
-                    maxLength={500}
-                    minLength={5}
+                <Field label="Pemakaian (m³)">
+                  <input
+                    className={INPUT_CLASS}
+                    type="number"
+                    min="-2147483648"
+                    max="2147483647"
+                    step="1"
+                    value={pemakaianSatuan}
+                    onChange={(event) => setPemakaianInput(event.target.value)}
                     required
                   />
+                  <span className="text-xs font-normal text-muted-foreground">
+                    Nilai awal mengikuti selisih ST dan dapat diubah.
+                  </span>
                 </Field>
+                <div className="grid gap-1.5 text-sm">
+                  <span className="font-medium">Catatan audit</span>
+                  <span className="rounded-md border border-border bg-background px-3 py-2 text-muted-foreground">
+                    {alasanSatuan}
+                  </span>
+                </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <Button
                     type="submit"
                     disabled={
                       menyimpanSatuan ||
                       !pilihan.meterAktif ||
-                      (pilihan.sudahAdaLaporan && !pilihan.bolehTimpaLaporan) ||
-                      (pilihan.bolehTimpaLaporan && !konfirmasiTimpa)
+                      (pilihan.sudahAdaLaporan && !pilihan.bolehTimpaLaporan)
                     }
                   >
                     {menyimpanSatuan
@@ -614,11 +626,12 @@ export function ManualAddClient() {
                 Tambah laporan massal berdasarkan rute dan petugas
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Sistem menghitung rata-rata pemakaian dari histori resmi yang
-                tersedia. ST Awal dan ST Akhir mengambil angka ST Awal dari
-                pencatatan resmi terakhir, dan nilainya sama. Jika tidak ada
-                pencatatan sebelumnya, keduanya 0. Jika terdapat beberapa
-                meter aktif, sistem memakai meter terbaru.
+                Taksasi memakai pemakaian tagihan bulanan (`pemakaianM3`),
+                termasuk angka hasil override dan minimum. ST Awal dan ST Akhir
+                memakai stand akhir resmi periode sebelumnya. Tanpa histori
+                tagihan, sistem mengusulkan minimum Perdir 5 m³ untuk diverifikasi.
+                Tanpa meter aktif atau stand resmi sebelumnya, alamat ditandai
+                Perlu Ditinjau dan tidak dapat ditambahkan.
               </p>
             </header>
             <Notifikasi error={error} pesan={pesan} />
@@ -739,7 +752,10 @@ export function ManualAddClient() {
               <div className="grid min-h-0 gap-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="text-sm">
-                    {daftarManualAdd.length} alamat · {pilihanIds.size} dipilih
+                    {daftarManualAdd.length} alamat ·{" "}
+                    {daftarYangBisaDipilih.length} dapat dipilih ·{" "}
+                    {daftarManualAdd.length - daftarYangBisaDipilih.length}{" "}
+                    perlu ditinjau · {pilihanIds.size} dipilih
                   </p>
                   <Button
                     type="button"
@@ -755,19 +771,21 @@ export function ManualAddClient() {
                   <input
                     type="checkbox"
                     checked={
-                      daftarManualAdd.length > 0 &&
-                      daftarManualAdd.every((item) =>
+                      daftarYangBisaDipilih.length > 0 &&
+                      daftarYangBisaDipilih.every((item) =>
                         pilihanIds.has(item.daftarCatatId),
                       )
                     }
                     disabled={
-                      menyimpanMassal || daftarManualAdd.length === 0
+                      menyimpanMassal || daftarYangBisaDipilih.length === 0
                     }
                     onChange={(event) => {
                       setPilihanIds(
                         event.target.checked
                           ? new Set(
-                              daftarManualAdd.map((item) => item.daftarCatatId),
+                              daftarYangBisaDipilih.map(
+                                (item) => item.daftarCatatId,
+                              ),
                             )
                           : new Set(),
                       );
@@ -785,6 +803,7 @@ export function ManualAddClient() {
                         <th className="px-3 py-2">ST Awal</th>
                         <th className="px-3 py-2">ST Akhir</th>
                         <th className="px-3 py-2">Pakai</th>
+                        <th className="px-3 py-2">Status</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -792,7 +811,7 @@ export function ManualAddClient() {
                         <tr>
                           <td
                             className="px-3 py-6 text-center text-muted-foreground"
-                            colSpan={6}
+                            colSpan={7}
                           >
                             Tidak ada alamat yang belum disetorkan untuk filter
                             ini.
@@ -809,7 +828,9 @@ export function ManualAddClient() {
                                 type="checkbox"
                                 aria-label={`Pilih ${item.nomorLangganan}`}
                                 checked={pilihanIds.has(item.daftarCatatId)}
-                                disabled={menyimpanMassal}
+                                disabled={
+                                  menyimpanMassal || !item.bolehDitambahkan
+                                }
                                 onChange={(event) => {
                                   setPilihanIds((sebelumnya) => {
                                     const berikutnya = new Set(sebelumnya);
@@ -827,10 +848,16 @@ export function ManualAddClient() {
                               {item.nomorLangganan}
                             </td>
                             <td className="px-3 py-2">{item.nama}</td>
-                            <td className="px-3 py-2">{item.standTerakhir}</td>
-                            <td className="px-3 py-2">{item.standTerakhir}</td>
                             <td className="px-3 py-2">
-                              {item.taksasi} m³
+                              {item.standTerakhir ?? "—"}
+                            </td>
+                            <td className="px-3 py-2">
+                              {item.standTerakhir ?? "—"}
+                            </td>
+                            <td className="px-3 py-2">
+                              {item.taksasi === null
+                                ? "—"
+                                : `${item.taksasi} m³`}
                               {item.metode && (
                                 <div className="text-xs text-muted-foreground">
                                   {item.metode === "RATA_RATA_12_BULAN"
@@ -839,9 +866,21 @@ export function ManualAddClient() {
                                       ? "Rata-rata 3 tertinggi"
                                       : item.metode === "RIWAYAT_TERSEDIA"
                                         ? "Rata-rata histori tersedia"
-                                        : "Tanpa histori: 0 m³"}
+                                        : "Tanpa histori: minimum Perdir"}
                                   {item.manualProvenance &&
-                                    ` · ${item.manualProvenance.sumberPembacaan.length} pembacaan`}
+                                    ` · ${item.manualProvenance.sumberTagihan.length} tagihan`}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-3 py-2">
+                              <div>
+                                {item.bolehDitambahkan
+                                  ? "Usulan untuk verifikasi"
+                                  : "Perlu Ditinjau"}
+                              </div>
+                              {item.alasanPeninjauan && (
+                                <div className="text-xs text-muted-foreground">
+                                  {item.alasanPeninjauan}
                                 </div>
                               )}
                             </td>

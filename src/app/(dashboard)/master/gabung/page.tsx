@@ -1,7 +1,7 @@
 import { MenuPage } from "@/components/layout"
 
-export const metadata = { title: "Log Aktivitas · Tirtawening" }
+export const metadata = { title: "Penggabungan Rute" }
 
-export default function Page() {
+export default function PenggabunganRutePage() {
   return <MenuPage href="/master/gabung" />
 }

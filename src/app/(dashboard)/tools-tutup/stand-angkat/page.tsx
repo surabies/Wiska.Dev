@@ -1,7 +1,7 @@
 import { MenuPage } from "@/components/layout"
 
-export const metadata = { title: "Stand Angkat · Tirtawening" }
+export const metadata = { title: "Stand Angkat" }
 
-export default function Page() {
+export default function StandAngkatPage() {
   return <MenuPage href="/tools-tutup/stand-angkat" />
 }

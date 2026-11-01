@@ -22,7 +22,7 @@ import { validate } from "../../lib/validate";
 import { requireRole, ROLE_GROUPS } from "../../middleware/rbac";
 import {
   hitungTaksasiManual,
-  type RiwayatValidManual,
+  type RiwayatTagihanManual,
 } from "@/lib/domain/taksasi-manual";
 
 export const manualAddRouter = new Hono();
@@ -37,7 +37,9 @@ const PERIODE_SCHEMA = z.coerce
   });
 
 const queryPelangganSchema = z.object({
-  nomor: z.string().trim().min(2).max(11),
+  nomor: z.string().trim().regex(/^\d{11}$/, {
+    message: "Nomor pelanggan harus terdiri dari 11 digit.",
+  }),
   periode: PERIODE_SCHEMA,
 });
 
@@ -60,6 +62,12 @@ const inputSatuanSchema = z.object({
   periode: PERIODE_SCHEMA,
   standAwal: z.coerce.number().int().min(0).max(2_147_483_647),
   standAkhir: z.coerce.number().int().min(0).max(2_147_483_647),
+  pemakaian: z.coerce
+    .number()
+    .int()
+    .min(-2_147_483_648)
+    .max(2_147_483_647)
+    .optional(),
   alasanManual: alasanSchema,
 });
 
@@ -78,6 +86,42 @@ const BATAS_BARIS_MASSAL = 500;
 const META_AUDIT = (request: Request) => auditMetaFromRequest(request);
 
 type Transaksi = Prisma.TransactionClient;
+
+type ItemManualAdd = {
+  daftarCatatId: string;
+  pelangganId: string;
+  nomorLangganan: string;
+  nama: string;
+  alamat: string;
+  taksasi: number | null;
+  metode:
+    | "RATA_RATA_12_BULAN"
+    | "TIGA_TERTINGGI"
+    | "RIWAYAT_TERSEDIA"
+    | "TANPA_HISTORI";
+  standTerakhir: number | null;
+  pemakaianLalu: number | null;
+  meterId: string | null;
+  nomorMeter: string | null;
+  bolehDitambahkan: boolean;
+  alasanPeninjauan: string | null;
+  manualProvenance: Prisma.InputJsonObject;
+};
+
+function isItemManualAddSiap(
+  item: ItemManualAdd,
+): item is ItemManualAdd & {
+  taksasi: number;
+  standTerakhir: number;
+  meterId: string;
+} {
+  return (
+    item.bolehDitambahkan &&
+    item.taksasi !== null &&
+    item.standTerakhir !== null &&
+    item.meterId !== null
+  );
+}
 
 function cekPeriodeTerbuka(status: string | undefined) {
   if (status === "TERKUNCI") {
@@ -112,7 +156,7 @@ manualAddRouter.get(
     const periodeDate = periodeToDate(periode);
     const pelanggan = await prisma.pelanggan.findMany({
       where: {
-        nomorLangganan: { startsWith: nomor },
+        nomorLangganan: nomor,
         status: "AKTIF",
       },
       orderBy: { nomorLangganan: "asc" },
@@ -132,20 +176,38 @@ manualAddRouter.get(
             pembacaan: {
               where: {
                 periode: { lt: periodeDate },
-                alasanTaksir: null,
-                pemakaianRiil: { gte: 0 },
               },
               orderBy: { periode: "desc" },
               take: 1,
               select: {
                 standAkhir: true,
-                pemakaianRiil: true,
               },
             },
           },
         },
       },
     });
+    const tagihanTerakhir = await prisma.tagihan.findMany({
+      where: {
+        pelangganId: { in: pelanggan.map((item) => item.id) },
+        periode: { lt: periodeDate },
+        pemakaianM3: { gte: 0 },
+      },
+      orderBy: { periode: "desc" },
+      select: {
+        pelangganId: true,
+        pemakaianM3: true,
+      },
+    });
+    const pemakaianTagihanTerakhir = new Map<string, number>();
+    for (const tagihan of tagihanTerakhir) {
+      if (!pemakaianTagihanTerakhir.has(tagihan.pelangganId)) {
+        pemakaianTagihanTerakhir.set(
+          tagihan.pelangganId,
+          tagihan.pemakaianM3,
+        );
+      }
+    }
     const pembacaanPeriode = await prisma.pembacaanMeter.findMany({
       where: {
         periode: periodeDate,
@@ -204,9 +266,6 @@ manualAddRouter.get(
           null;
         const bolehTimpaLaporan =
           laporanPeriodeData !== null &&
-          (laporanPeriodeData.verif1At !== null ||
-            laporanPeriodeData.verif2At !== null ||
-            laporanPeriodeData.verif3At !== null) &&
           !laporanPeriodeData.pembacaan?.tagihan &&
           !pembacaanPeriode.some(
             (row) =>
@@ -224,7 +283,7 @@ manualAddRouter.get(
           meterAktif: item.meter.length === 1,
           meterAmbigu: item.meter.length > 1,
           standTerakhir: bacaan?.standAkhir ?? null,
-          pemakaianTerakhir: bacaan?.pemakaianRiil ?? null,
+          pemakaianTerakhir: pemakaianTagihanTerakhir.get(item.id) ?? null,
           sudahAdaLaporan,
           bolehTimpaLaporan,
         };
@@ -301,7 +360,7 @@ manualAddRouter.get(
 async function ambilDaftarManualAdd(
   tx: Transaksi,
   filter: z.infer<typeof filterSchema>,
-) {
+): Promise<ItemManualAdd[]> {
   await pastikanPeriodeTerbuka(tx, filter.periode);
   const baris = await tx.daftarCatat.findMany({
     where: {
@@ -340,7 +399,7 @@ async function ambilDaftarManualAdd(
 
   const pelangganIds = baris.map((row) => row.pelangganId);
   const nomorLangganan = baris.map((row) => row.pelanggan.nomorLangganan);
-  const [laporanAda, bacaan, standTerakhirMeter, bacaanPeriodeIni] =
+  const [laporanAda, tagihan, standTerakhirMeter, bacaanPeriodeIni] =
     await Promise.all([
     tx.laporanHarianPetugas.findMany({
       where: {
@@ -352,22 +411,18 @@ async function ambilDaftarManualAdd(
       },
       select: { pelangganId: true, nomorLangganan: true },
     }),
-    tx.pembacaanMeter.findMany({
+    tx.tagihan.findMany({
       where: {
-        meterId: {
-          in: baris.flatMap((row) => row.pelanggan.meter.map((meter) => meter.id)),
-        },
+        pelangganId: { in: pelangganIds },
         periode: { lt: periodeToDate(filter.periode) },
-        alasanTaksir: null,
-        pemakaianRiil: { gte: 0 },
+        pemakaianM3: { gte: 0 },
       },
       orderBy: { periode: "desc" },
       select: {
         id: true,
-        meterId: true,
+        pelangganId: true,
         periode: true,
-        standLalu: true,
-        pemakaianRiil: true,
+        pemakaianM3: true,
       },
     }),
     tx.meter.findMany({
@@ -387,7 +442,7 @@ async function ambilDaftarManualAdd(
           select: {
             id: true,
             periode: true,
-            standLalu: true,
+            standAkhir: true,
           },
         },
       },
@@ -408,17 +463,15 @@ async function ambilDaftarManualAdd(
     ...bacaanPeriodeIni.map((row) => row.meter.pelangganId),
   ]);
   const duplicateNumbers = new Set(laporanAda.map((row) => row.nomorLangganan));
-  const histories = new Map<string, RiwayatValidManual[]>();
-  for (const row of bacaan) {
-    if (row.pemakaianRiil === null) continue;
-    const riwayat = histories.get(row.meterId) ?? [];
+  const histories = new Map<string, RiwayatTagihanManual[]>();
+  for (const row of tagihan) {
+    const riwayat = histories.get(row.pelangganId) ?? [];
     riwayat.push({
       id: row.id,
       periode: row.periode,
-      standAwal: row.standLalu,
-      pemakaianRiil: row.pemakaianRiil,
+      pemakaianM3: row.pemakaianM3,
     });
-    histories.set(row.meterId, riwayat);
+    histories.set(row.pelangganId, riwayat);
   }
 
   const standTerakhirByMeter = new Map(
@@ -430,7 +483,7 @@ async function ambilDaftarManualAdd(
           ? {
               id: pembacaan.id,
               periode: pembacaan.periode,
-              standAwal: pembacaan.standLalu,
+              standAkhir: pembacaan.standAkhir,
             }
           : null,
       ] as const;
@@ -447,7 +500,7 @@ async function ambilDaftarManualAdd(
     }
 
     const hasil = hitungTaksasiManual(
-      meter ? (histories.get(meter.id) ?? []) : [],
+      histories.get(row.pelangganId) ?? [],
       periodeToDate(filter.periode),
       meter ? (standTerakhirByMeter.get(meter.id) ?? null) : null,
     );
@@ -462,12 +515,14 @@ async function ambilDaftarManualAdd(
       metode: hasil.metode,
       standTerakhir: hasil.standAwalTerakhir,
       pemakaianLalu: hasil.pemakaianTerakhir,
+      bolehDitambahkan: hasil.bolehDitambahkan,
+      alasanPeninjauan: hasil.alasanPeninjauan,
       meterId: meter?.id ?? null,
       nomorMeter: meter?.nomorMeter ?? null,
       manualProvenance: {
         metode: hasil.metode,
         standSumber: hasil.standSumber,
-        sumberPembacaan: hasil.sumberPembacaan,
+        sumberTagihan: hasil.sumberTagihan,
       } satisfies Prisma.InputJsonObject,
     };
   });
@@ -508,20 +563,7 @@ manualAddRouter.post(
             where: { isAktif: true },
             orderBy: { createdAt: "desc" },
             take: 2,
-            select: {
-              id: true,
-              nomorMeter: true,
-              pembacaan: {
-                where: {
-                  periode: { lt: periodeToDate(input.periode) },
-                  alasanTaksir: null,
-                  pemakaianRiil: { gte: 0 },
-                },
-                orderBy: { periode: "desc" },
-                take: 1,
-                select: { pemakaianRiil: true },
-              },
-            },
+            select: { id: true, nomorMeter: true },
           },
           daftarCatat: {
             where: { periode: input.periode },
@@ -597,16 +639,6 @@ manualAddRouter.post(
           },
         },
       });
-      const bolehTimpa =
-        existing !== null &&
-        (existing.verif1At !== null ||
-          existing.verif2At !== null ||
-          existing.verif3At !== null);
-      if (existing && !bolehTimpa) {
-        throw new ConflictError(
-          "Laporan sudah ada tetapi belum pernah diverifikasi; koreksi melalui halaman verifikasi.",
-        );
-      }
       const pembacaanPeriodeIni = await tx.pembacaanMeter.findMany({
         where: {
           periode: periodeToDate(input.periode),
@@ -643,8 +675,17 @@ manualAddRouter.post(
         );
       }
 
-      const pemakaian = input.standAkhir - input.standAwal;
-      const pemakaianLalu = meter.pembacaan[0]?.pemakaianRiil ?? null;
+      const pemakaian = input.pemakaian ?? input.standAkhir - input.standAwal;
+      const tagihanTerakhir = await tx.tagihan.findFirst({
+        where: {
+          pelangganId: pelanggan.id,
+          periode: { lt: periodeToDate(input.periode) },
+          pemakaianM3: { gte: 0 },
+        },
+        orderBy: { periode: "desc" },
+        select: { pemakaianM3: true },
+      });
+      const pemakaianLalu = tagihanTerakhir?.pemakaianM3 ?? null;
       const dataLaporan = {
           pelangganId: pelanggan.id,
           nomorLangganan: pelanggan.nomorLangganan,
@@ -830,9 +871,15 @@ manualAddRouter.post(
             "Sebagian pilihan sudah berubah atau tidak lagi tersedia. Muat ulang daftar alamat.",
           );
         }
+        const pilihanSiap = pilihan.filter(isItemManualAddSiap);
+        if (pilihanSiap.length !== pilihan.length) {
+          throw new ConflictError(
+            "Sebagian alamat belum memiliki meter aktif dan stand resmi periode sebelumnya. Lengkapi datanya sebelum ditambahkan.",
+          );
+        }
         const waktu = new Date();
-        const ids = pilihan.map(() => randomUUID());
-        const laporanData = pilihan.map((item, index) => ({
+        const ids = pilihanSiap.map(() => randomUUID());
+        const laporanData = pilihanSiap.map((item, index) => ({
           id: ids[index]!,
           pelangganId: item.pelangganId,
           nomorLangganan: item.nomorLangganan,
@@ -878,7 +925,7 @@ manualAddRouter.post(
                 },
               })
             : [];
-        const idsDaftar = pilihan
+        const idsDaftar = pilihanSiap
           .filter((_, index) =>
             laporanTersimpan.some((laporan) => laporan.id === ids[index]),
           )

@@ -1,7 +1,7 @@
 import { MenuPage } from "@/components/layout"
 
-export const metadata = { title: "Panduan Pengguna · Tirtawening" }
+export const metadata = { title: "Panduan Pengguna" }
 
-export default function Page() {
+export default function BantuanPage() {
   return <MenuPage href="/bantuan" />
 }

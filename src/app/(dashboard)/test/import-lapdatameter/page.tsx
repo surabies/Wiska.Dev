@@ -2,10 +2,10 @@ import {  PageContainer } from "@/components/layout"
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { ImporDataClient } from "@/features/dashboard/components/test/import-lapdatameter/impor-data-client"
-import { Metadata } from "next/dist/lib/metadata/types/metadata-interface"
+import type { Metadata } from "next"
 
 
-export const metadata: Metadata = { title: "Import Lapdatameter · Tirtawening" }
+export const metadata: Metadata = { title: "Import Lapdatameter" }
 
 export default async function ImportLapdatameterPage() {
   const session = await auth()

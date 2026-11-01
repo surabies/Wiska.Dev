@@ -116,6 +116,39 @@ penugasanRuteRouter.get(
   },
 )
 
+penugasanRuteRouter.get(
+  "/opsi-filter",
+  requireRole(...ROLE_GROUPS.STAFF_UP),
+  validate(
+    "query",
+    z.object({
+      periode: z.coerce
+        .number()
+        .int()
+        .min(190001)
+        .max(999912)
+        .optional(),
+    }),
+  ),
+  async (c) => {
+    const { periode } = c.req.valid("query")
+    const rows =
+      periode === undefined
+        ? await prisma.penugasanRute.findMany({
+            select: { pencatatId: true, ruteId: true },
+          })
+        : await prisma.daftarCatat.groupBy({
+            by: ["pencatatId", "ruteId"],
+            where: {
+              periode,
+              pencatatId: { not: null },
+              ruteId: { not: null },
+            },
+          })
+    return ok(c, rows)
+  },
+)
+
 // ── Rute yang belum ditugaskan ke pencatat mana pun ────────────────────
 const ruteTanpaPetugasSchema = paginationQuerySchema.extend({
   q: z.string().trim().min(1).optional(),

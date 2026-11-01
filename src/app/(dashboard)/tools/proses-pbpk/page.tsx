@@ -1,7 +1,7 @@
 import { MenuPage } from "@/components/layout"
 
-export const metadata = { title: "Proses PBPK · Tirtawening" }
+export const metadata = { title: "Proses PBPK" }
 
-export default function Page() {
+export default function ProsesPBPKPage() {
   return <MenuPage href="/tools/proses-pbpk" />
 }

@@ -1,7 +1,7 @@
 import { MenuPage } from "@/components/layout"
 
-export const metadata = { title: "Import Photo · Tirtawening" }
+export const metadata = { title: "Import Backup Photo" }
 
-export default function Page() {
+export default function ImporFotoGWMPage() {
   return <MenuPage href="/tools/import-photo" />
 }

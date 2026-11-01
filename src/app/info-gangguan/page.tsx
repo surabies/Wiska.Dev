@@ -25,7 +25,7 @@ const DAFTAR_GANGGUAN: Gangguan[] = [
   },
 ]
 
-export default function Page() {
+export default function InfoGangguanPage() {
   return (
     <HalamanInfo
       judul="Info Gangguan Air"

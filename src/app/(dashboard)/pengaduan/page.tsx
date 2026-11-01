@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import { PageContainer } from "@/components/layout"
 import { PapanPengaduan } from "@/features/dashboard/components/pengaduan/papan-pengaduan"
 
-export const metadata: Metadata = { title: "Data Pelanggan · Tirtawening" }
+export const metadata: Metadata = { title: "Pengaduan" }
 
 export default async function PengaduanPage({
   searchParams,

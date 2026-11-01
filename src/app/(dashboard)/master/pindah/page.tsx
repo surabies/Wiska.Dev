@@ -1,7 +1,7 @@
 import { MenuPage } from "@/components/layout"
 
-export const metadata = { title: "Otorisasi · Tirtawening" }
+export const metadata = { title: "Pindah Rute" }
 
-export default function Otorisasi() {
+export default function PindahRutePage() {
   return <MenuPage href="/master/pindah" />
 }

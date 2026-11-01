@@ -1,0 +1,145 @@
+# Aturan Verifikasi Berjenjang dan Koreksi
+
+**Versi:** 0.5 (rekonsiliasi dokumentasi; 1 November 2026; sebelumnya 0.4: kontrak diselaraskan dengan matriks RBAC)
+
+**Status:** kebijakan bisnis diselaraskan dengan [Matriks RBAC Aplikasi](./RBAC.md). Status implementasi tetap dibedakan dari kebijakan; validasi dilakukan dengan tes.
+
+**Cakupan:** verifikasi laporan petugas dengan tahap V1/V2/V3, koreksi setelah verifikasi, verifikasi massal, hak administratif STAFF, dan closing.
+
+**Terkait:** [Status proyek](./STATUS.md), [PRD](./PRD.md), [MVP](./MVP.md), [Roadmap](./ROADMAP.md), [Matriks RBAC](./RBAC.md), [Aturan kondisi](./ATURAN-KONDISI.md), [Indeks dokumentasi](./INDEKS.md).
+
+**Peran dokumen:** sumber kebenaran untuk ring V1/V2/V3, reopen, koreksi setelah verifikasi, dan kontrak tabel halaman verifikasi. Role teknis dan cakupan data: [RBAC](./RBAC.md). Perlakuan per kondisi dan taksasi: [aturan kondisi](./ATURAN-KONDISI.md). Keputusan (DEC) dan isu terbuka (OPEN): [Indeks](./INDEKS.md#register-open).
+
+## Kontrak perilaku yang diminta
+
+| Peran bisnis | Boleh melakukan | Batas setelah menyimpan tahap/koreksi |
+|---|---|---|
+| V1 — Supervisor | Memeriksa dan mencatat tindakan pada ring V1. | V1 tidak membuat hasil resmi. Koreksi nilai oleh Staff hanya lewat workflow beralasan dan diaudit; Staff tidak menandatangani ring. |
+| V2 — Manager | Boleh memproses langsung tanpa V1 atau meninjau hasil V1; hanya ring V2 yang menandai tindakan Manager. | V2 bukan hasil resmi dan menunggu V3. Tidak boleh mengulang V2 yang sudah terisi tanpa workflow pembatalan yang sah. |
+| V3 — Senior Manager/Direksi | Boleh memproses langsung tanpa V1/V2 atau meninjau ring sebelumnya; hanya ring V3 yang menandai tindakan. Direksi dapat melakukan taksasi pemakaian besar/potensial melalui workflow aplikasi. | V3 adalah tahap akhir dan satu-satunya tahap yang membuat `PembacaanMeter` resmi. Tidak ada persetujuan Direksi setelah V3. |
+| SUPER_ADMIN | Akses penuh ke semua modul dan melewati guard role, termasuk akses administratif pada modul Verifikasi. Pada UI aksi cepat, role ini dipetakan ke V3. | Akses penuh tidak menghapus invariant bisnis: status resmi, validasi meter/stand, status tagihan, dan periode terkunci tetap dijaga. Aksi dicatat atas akun Super Admin. |
+| STAFF / Operator Admin | Input/impor data, Manual ADD satuan/ALL, serta edit nilai hasil koreksi V1/V2/V3 melalui workflow dengan alasan dan audit before/after. | Tidak mengesahkan ring. Edit ditolak setelah hasil masuk tagihan. Edit atas hasil V3 resmi aktif hanya lewat reopen oleh role berwenang (DEC-06); syarat bukti dan persetujuan tambahan: OPEN-09. Izin closing belum disepakati (OPEN-01) dan tidak diturunkan dari kewenangan ini. |
+
+### Semantik ring dan ikon progres
+
+- Ring adalah penanda role yang benar-benar melakukan tindakan, bukan kewajiban bahwa semua ring bawah harus selesai lebih dahulu. V2 dan V3 boleh memproses alamat tanpa ring sebelumnya sesuai kewenangan role.
+- Hasil V1 bukan hasil resmi; hasil V2 menunggu V3. Hanya V3 yang menghasilkan `PembacaanMeter` resmi.
+- V2/V3 tidak mengisi ring bawah secara otomatis. Bila suatu tindakan lebih tinggi dilakukan langsung, ring aktor tersebut yang diisi; data ring lama yang memang sudah ada tetap merupakan histori, bukan syarat untuk tindakan berikutnya.
+- Pada ikon progres, tampilkan hanya ring dari tindakan efektif/terakhir: tindakan V2 menampilkan bar V2 terisi dan bar V1 kosong; tindakan V3 menampilkan bar V3 terisi dan bar V1/V2 kosong. Berlaku untuk tindakan satuan dan massal.
+- Ikon progres adalah ringkasnya tindakan terakhir, bukan histori. Jangan menghapus event/ring terdahulu dari penyimpanan audit ketika indikator menampilkan ring lebih tinggi. Tandai nilai terdahulu sebagai superseded bila relevan.
+- Koreksi V3 dilakukan melalui reopen/review lalu pengesahan ulang; selama reopen, UI harus membedakan hasil yang sedang direview dari hasil resmi aktif. Koreksi atas hasil yang sudah dipakai Tagihan tidak dilakukan dengan menghapus/mengubah hasil resmi.
+
+Verifikasi massal mengikuti aturan role, transisi, histori, dan tampilan ring yang sama dengan verifikasi satuan; V3 massal membuat hasil resmi.
+
+### Kontrak tabel halaman verifikasi
+
+Kolom berikut adalah spesifikasi kerja berdasarkan klarifikasi pemilik produk. “Ring” berarti ring verifikasi V1/V2/V3, bukan ring wilayah. “Alamat” harus tetap ada karena merupakan identitas lokasi sambungan.
+
+| Urutan | Kolom | Fungsi dan sumber nilai | Perilaku/kondisi |
+|---:|---|---|---|
+| 1 | Checkbox | Memilih baris untuk aksi massal. | Pilihan UI saja; tidak mengubah status verifikasi. |
+| 2 | Ring | Menunjukkan ring verifikasi yang terakhir/tindakan efektif (V1, V2, atau V3). | Hanya ring pelaku yang tampil; jangan mengisi ring bawah secara implisit. Histori lama tetap dapat diaudit. |
+| 3 | Status | Status proses yang mudah dipahami, misalnya Pending, Disetujui, atau Perlu Review. | Terpisah dari Ring. “Disetujui” hanya jika V3 telah membuat hasil resmi; hasil V1/V2 belum final. |
+| 4 | No. Pel | Nomor sambungan pelanggan. | Identitas stabil untuk pencarian/pencocokan. |
+| 5 | Nama | Nama pelanggan. | Ambil dari data pelanggan/sambungan yang berlaku. |
+| 6 | Alamat | Alamat lokasi sambungan. | Wajib tersedia di tabel; jangan dihilangkan dari ekspor yang relevan. |
+| 7 | Rute | Kode/nama rute pembacaan. | Konteks operasional/rute. |
+| 8 | Ket Catat | Keterangan asli yang dicatat petugas. | Pertahankan nilai sumber; “Revisi Pencatat” adalah penanda workflow koreksi, bukan kondisi baru. |
+| 9 | ST Awal | Stand awal yang dipakai untuk pencatatan/perhitungan periode. | Setelah koreksi ST Awal, tampilkan nilai aktif hasil revisi. |
+| 10 | ST Akhir | Stand akhir yang dicatat petugas atau nilai operasional pada pencatatan taksasi. | Pada taksasi yang disetujui, ST Awal dan ST Akhir diset sama; pemakaian taksasi disimpan terpisah dari selisih stand. |
+| 11 | ST Revisi | Nilai ST Awal hasil revisi manusia untuk periode berjalan. | Terisi saat alamat ditandai “Revisi Pencatat” oleh petugas atau verifikator lalu ST Awal dikoreksi. Hanya alamat bertanda ini yang mengaktifkan input ST Awal. Nilai setelah revisi sama dengan ST Awal aktif; nilai sebelum/sesudah tetap disimpan di audit. |
+| 12 | ST Resmi | Stand akhir yang disahkan sebagai hasil resmi. | Kosong/belum resmi sebelum V3; jangan menyamakan dengan ST Revisi (koreksi ST Awal). |
+| 13 | Pakai | Pemakaian periode ini yang sedang ditinjau. | Dapat berupa delta terukur atau taksasi sesuai kondisi dan kebijakan yang disahkan; jangan mengubah nilai negatif menjadi nol diam-diam. Kolom penyimpanan taksasi: OPEN-14. |
+| 14 | Lalu | Pemakaian periode pembanding sebelumnya. | Sumber periode pembanding harus konsisten dan ditampilkan dalam satuan yang sama dengan Pakai. Bukan stand meter; stand sumber Manual Add All adalah `standAkhir` (DEC-01). |
+| 15 | Dev % | Perbandingan Pakai terhadap Lalu. | Rumus, perilaku jika Lalu nol/kosong, dan pembulatan perlu ditetapkan sebelum dipakai sebagai keputusan otomatis (OPEN-12). |
+| 16 | Tagihan | Pemakaian yang akan ditagihkan dalam m³, bukan nominal rupiah. | Tetap terpisah dari Pakai/hasil ukur; nominal rupiah bukan isi kolom ini. |
+| 17 | Petugas | Nama petugas pencatat lapangan. | Menampilkan pencatat, bukan verifikator; verifikator terlihat pada detail/audit ring. |
+| 18 | Tgl Catat | Tanggal dan waktu pencatatan. | Tampilkan waktu, bukan tanggal saja; format zona waktu harus konsisten (WIB untuk UI operasional). |
+
+#### Alur Revisi Pencatat dan taksasi yang terkait tabel
+
+- Taksasi dapat terbentuk otomatis saat petugas mencatat salah satu dari 14 kondisi yang ditetapkan pada [matriks kondisi](./ATURAN-KONDISI.md); Manual ADD/Manual ADD All tetap opsi jika petugas tidak mencatat rute, misalnya sakit.
+- Prioritas taksasi adalah rata-rata 12 bulan; jika data tak cukup, rata-rata tiga pemakaian terbesar; jika tiga nilai belum tersedia, rata-rata tiga bulan terakhir atau histori valid yang tersedia. Taksasi dibulatkan ke atas tanpa minimum otomatis. ST Awal dan ST Akhir memakai stand resmi terakhir, sementara Pakai menyimpan hasil taksasi terpisah.
+- “Revisi Pencatat” dapat ditandai saat petugas mencatat atau oleh verifikator yang mengubah kondisi di modal. Hanya alamat dengan penanda ini yang mengaktifkan input ST Awal; koreksi menghitung ulang Pakai dari stand terkoreksi dan menyimpan before/after, alasan, aktor, serta waktu di audit.
+- “Revisi Pencatat” bukan perubahan terhadap kondisi asal: kondisi petugas harus tetap tersimpan. Jika kode legacy `REV_PENCATAT` masih ada untuk kompatibilitas data, jangan gunakan sebagai pengganti kondisi asli pada data baru tanpa keputusan migrasi. Penanganan 490 baris legacy: OPEN-18.
+- Rumus belum siap dipakai runtime: kriteria histori valid, pengecualian nilai taksasi/koreksi lama, dan perilaku jika tidak ada histori sama sekali perlu ditetapkan pada matriks kondisi (OPEN-02, OPEN-04).
+
+**Status implementasi UI/backend (klaim dokumen per 1 November; belum diverifikasi terhadap kode oleh rekonsiliasi dokumentasi):** UI dan endpoint satu-klik mengizinkan Manager melakukan V2 saat menunggu V1 atau V2, dan V3 saat menunggu V1/V2/V3; tahap yang sudah disimpan dan data resmi tetap menolak pengulangan. Aksi V3 tetap membuat hasil resmi. Endpoint form `/verif2` dan `/verif3` juga menerima tindakan tanpa ring bawah. UI cepat memetakan Direksi, Senior Manager, dan Super Admin ke V3. Menu Edit menyambung ke koreksi petugas yang memerlukan alasan, audit before/after, dan menolak data tertagih/periode terkunci. Aksi klik-kanan membuka menu; status tahap menentukan aksi yang aktif.
+
+Tes unit dan route/mock bukan pengganti tes browser dengan akun role nyata. Tes akun browser memerlukan database test terisolasi yang sudah dimigrasikan; tidak boleh memakai database produksi.
+
+**Belum ditentukan:** apakah pada tindakan berbeda aktor yang sama boleh tercatat di ring yang berbeda; apakah closing termasuk tugas Operator Admin; dan apakah ada approval kedua di luar V3. Tercatat sebagai OPEN-15 (aktor/ring), OPEN-01 (closing), dan OPEN-19 (approval kedua/role). Koreksi Staff wajib memiliki alasan dan audit; aturan ini sudah ditetapkan, bukan pertanyaan terbuka.
+
+## Koreksi setelah V3: alur yang berlaku dan celah
+
+Keputusan pemilik produk (DEC-06, lihat [Indeks](./INDEKS.md#log-keputusan)): koreksi setelah V3 tidak boleh menjadi jalan mengubah hasil resmi atau tagihan tanpa jejak. Hasil resmi aktif hanya berubah lewat reopen, koreksi, lalu verifikasi ulang V3. Kolom "Tersedia" di bawah adalah klaim implementasi (belum diverifikasi terhadap kode); kolom "Celah" adalah pekerjaan yang belum selesai, bukan fitur yang sudah berlaku.
+
+| Aspek | Tersedia menurut dokumen | Celah / belum selesai |
+|---|---|---|
+| Reopen V3 | `/unverify` pada hasil resmi: `SENIOR_UP`; menolak bila pembacaan sudah dipakai Tagihan; mempertahankan V1/V2; membuka kesempatan V3 ulang. | Alasan dan before/after belum tercatat eksplisit; hasil resmi lama dihapus, bukan ditandai superseded (OPEN-08); dampak reset field koreksi belum diuji. |
+| Koreksi nilai | `PATCH /:id/koreksi`: alasan wajib, audit before/after, menolak periode terkunci dan hasil bertagihan. | Dokumen tidak menyebut endpoint ini menolak atau mengarahkan koreksi atas hasil V3 resmi aktif ke reopen. Bila endpoint menerimanya, itu jalur mengubah hasil resmi tanpa verifikasi ulang dan bertentangan dengan DEC-06; perlu diverifikasi terhadap kode. |
+| Setelah masuk Tagihan | Ditolak oleh reopen dan koreksi biasa. | Penyesuaian memerlukan workflow koreksi finansial terpisah yang belum ada (PRD FR-10). |
+| Audit | Jalur massal merekam audit per laporan dalam transaksinya. | Form satuan, koreksi, reopen, dan penerbitan ulang belum terbukti append-only. |
+
+Konsekuensi dokumentasi: STAFF mengoreksi nilai hanya pada hasil yang belum resmi atau sedang di-reopen; perubahan hasil V3 resmi aktif lewat V3 ulang. Syarat tambahan (bukti foto, persetujuan supervisor) untuk koreksi STAFF belum diputuskan (OPEN-09). Siapa yang berhak reopen di atas V3 belum didefinisikan (OPEN-15).
+
+## Hasil audit kode saat ini
+
+Audit dilakukan pada `rbac.ts`, endpoint verifikasi dan unverify di `laporan-harian.router.ts`, `verif-massal.ts`, `closing.router.ts`, dan menu aksi UI verifikasi lapangan. Penilaian "Sesuai" berarti sesuai kebijakan menurut audit statis yang dicatat di sini, bukan bukti tes atau E2E.
+
+| Aturan | Temuan kode | Penilaian |
+|---|---|---|
+| Role V1/V2/V3 dapat bertindak sesuai ring masing-masing | Endpoint `/:id/verifikasi-langsung` dan endpoint form `/:id/verif1..3` memakai guard ring. V2/V3 boleh melewati ring bawah; V3 membuat hasil resmi. | **Sesuai kebijakan.** Tes browser per role dan uji massal/domain tetap diperlukan. |
+| V1 tidak dapat mengubah V1 miliknya setelah verifikasi | `/unverify` hanya mensyaratkan `SUPERVISOR_UP`. Pada cabang V1 tidak ada pemeriksaan bahwa peminta lebih tinggi dari V1 atau berbeda dari `verif1ById`. UI juga menampilkan “Batalkan V1” bagi seluruh `SUPERVISOR_UP`. | **Tidak sesuai.** Supervisor yang sama dapat membatalkan V1-nya sendiri lalu mengirim ulang; role V1 lain juga dapat membatalkan. |
+| V2 tidak dapat mengubah V2 miliknya setelah verifikasi; V3 yang memperbaiki berikutnya | Cabang V2 pada `/unverify` hanya memastikan `bolehManajemen` (`MANAGEMENT_UP`); tidak membandingkan dengan `verif2ById` atau mensyaratkan V3. UI menawarkan “Batalkan V2” untuk `MANAGEMENT_UP`. | **Tidak sesuai.** Manager dapat membatalkan V2 miliknya sendiri lalu mengesahkan ulang. |
+| V3 boleh mengoreksi hasil V3 sendiri | Cabang hasil resmi `/unverify` mensyaratkan `SENIOR_UP`, mempertahankan V1/V2, menghapus pembacaan resmi yang belum dipakai Tagihan, lalu membuka kesempatan V3 ulang. | **Sebagian sesuai.** Reopen dapat dilakukan, tetapi alasan dan histori before/after tidak tampak ditulis pada jalur ini. Perlu pastikan implementasi menyimpan hasil resmi lama dalam audit dan menangani ring V3 langsung tanpa V1/V2. |
+| STAFF tidak boleh melakukan verifikasi V1/V2/V3 | Role `STAFF` tidak masuk `SUPERVISOR_UP`, `MANAGEMENT_UP`, atau `SENIOR_UP`; UI juga tidak memberi STAFF tombol ring tersebut. | **Sesuai untuk endpoint ring yang ditinjau.** |
+| STAFF boleh mengedit nilai koreksi tetapi tidak mengesahkan ring | Endpoint `/:id/koreksi` mengizinkan STAFF, mewajibkan alasan, menyimpan audit before/after, dan menolak periode terkunci atau pembacaan yang sudah dipakai Tagihan. | **Implementasi tersedia; tes browser role belum tersedia.** Penyesuaian setelah Tagihan tetap di luar koreksi biasa. |
+| Super Admin mendapat full access lintas modul | `requireRole` dan `requireModuleAccess` melewati guard role untuk `SUPER_ADMIN`; invariant bisnis tetap dievaluasi oleh handler. UI aksi cepat memetakan role ini ke V3. | **Sesuai guard server dan UI verifikasi; tes akun E2E diperlukan untuk semua modul.** |
+
+### Perubahan implementasi setelah audit
+
+- Menu Verifikasi laporan petugas memanggil `PATCH /:id/verifikasi-langsung`; aksi ini tidak lagi membuka modal. UI/server mengizinkan V2/V3 langsung sesuai kebijakan, tanpa membuat ring bawah palsu.
+- Menu Edit laporan petugas memanggil `PATCH /:id/koreksi`; endpoint memeriksa role berdasarkan tahap, periode terkunci, Tagihan, data meter, dan nilai stand, lalu menyimpan audit before/after. Jalur laporan mandiri belum tersambung ke endpoint koreksi.
+- Aksi Baca Ulang/cek ulang tetap memakai modal terpisah karena membutuhkan alasan, bukan bagian dari verifikasi satu klik.
+- Koreksi Staff mensyaratkan alasan dan menyimpan audit before/after; hasil tertagih dan periode terkunci tetap tidak dapat diedit lewat jalur koreksi biasa.
+
+### Temuan audit tambahan
+
+| Aturan | Temuan kode | Penilaian |
+|---|---|---|
+| Staff melakukan closing final | Endpoint penutupan periode membatasi tindakan final ke `SENIOR_UP`; izin closing Staff belum disepakati. | **Tidak diputuskan.** Jangan menyimpulkan Staff boleh menutup periode dari hak input/koreksinya. |
+| Verifikasi massal mendukung skip ring bawah | `/verif-massal` membolehkan V2 tanpa V1 dan V3 tanpa V1/V2; V3 hanya menerbitkan hasil jika update bersyarat berhasil. | **Sesuai pada jalur massal yang diuji.** V2/V3 langsung dan penolakan race V3 memiliki tes regresi. |
+| Indikator progres mencerminkan tindakan terakhir | Tampilan progres memproyeksikan ring terakhir dan menyimpan histori ring pada laporan/audit. | **Sesuai pada proyeksi UI;** validasi lintas status dan audit masih perlu tes. |
+| Menu edit menyimpan koreksi | Menu koreksi tersambung ke `PATCH /:id/koreksi`; endpoint tetap memvalidasi role, kunci periode/tagihan, alasan, dan audit. | **Tersedia.** Tes E2E untuk hak Staff dan pembatasan tahap belum tersedia. |
+| Transisi verifikasi memiliki audit dan guard konkuren | Aksi cepat dan massal memakai update bersyarat serta merekam audit; jalur form satuan masih perlu ditinjau untuk audit append-only dan proteksi race. | **Sebagian sesuai.** Form verifikasi satuan belum terbukti memakai kontrak audit/atomik yang sama. |
+| Reopen menjaga koreksi dan histori tetap konsisten | Jalur `/unverify` masih perlu audit khusus untuk perubahan pembacaan resmi dan penilaian dampak reset field koreksi. | **Belum terbukti.** Uji reopen V1/V2/V3 sebelum menyatakan kontrak terpenuhi. |
+
+## Pekerjaan tersisa
+
+1. Verifikasi E2E pada database terisolasi untuk kesetaraan aksi massal V2 tanpa V1 dan V3 tanpa V1/V2, termasuk tepat satu hasil resmi.
+2. Audit aturan aktor `/unverify`: V1 hanya dibuka kembali oleh V2/V3, V2 hanya oleh V3, dan self-reopen V1/V2 ditolak.
+3. Pastikan koreksi administratif Staff terpisah dari verifikasi ring, mewajibkan alasan/audit, dan ditolak setelah masuk Tagihan.
+4. Lengkapi audit append-only before/after untuk form verifikasi satuan, koreksi, reopen, dan penerbitan ulang. Jalur massal sudah merekam audit per laporan dalam transaksinya.
+5. Tambahkan tes race/retry/partial failure dan E2E per role sebelum menyatakan seluruh kontrak terpenuhi.
+
+## Kriteria tes minimum
+
+- V2/V3 dapat memproses alamat yang belum memiliki ring bawah; hanya ring aktor yang terisi di indikator, tanpa membuat log verifikasi palsu.
+- Hasil V2 menunggu V3 dan belum membuat `PembacaanMeter`; V3 dapat memproses langsung dan membuat tepat satu hasil resmi, baik satuan maupun massal.
+- Setelah tindakan V2/V3, ring sebelumnya tidak tampil sebagai aktif, tetapi histori aktor/waktu/nilai tetap ada dan dapat diaudit.
+- V1/V2 tidak dapat membatalkan tahap sendiri setelah submit; koreksi sesuai kewenangan ring lebih tinggi. V3 dapat reopen hasilnya sendiri sebelum Tagihan.
+- Reopen V3 mempertahankan before/after dan alasan; setelah dipakai Tagihan, koreksi biasa ditolak.
+- Setiap role di luar aturan menerima `403`; menyembunyikan tombol UI tidak dianggap kontrol otorisasi.
+- STAFF tidak dapat memanggil endpoint V1/V2/V3 atau unverify; STAFF hanya mengoreksi lewat endpoint administratif sebelum Tagihan. Izin closing tetap belum diputuskan.
+- Perubahan/rollback koreksi memiliki histori before/after yang tidak hilang setelah diterbitkan ulang.
+- Dua permintaan serentak pada ring yang sama tidak membuat state/hasil resmi ganda atau melewati urutan ring.
+- Verifikasi massal menghasilkan perilaku role dan transisi yang sama dengan aksi satuan, dengan hasil per item dan kegagalan parsial yang jelas.
+- Koreksi atas hasil V3 resmi aktif hanya dapat dilakukan setelah reopen; panggilan koreksi langsung pada hasil resmi aktif ditolak atau diarahkan ke reopen (DEC-06).
+
+## Riwayat perubahan
+
+| Versi | Tanggal | Perubahan |
+|---|---|---|
+| 0.4 | 1 November 2026 | Kontrak diselaraskan dengan matriks RBAC. Versi sebelumnya tidak tercatat pada dokumen ini. |
+| 0.5 | 1 November 2026 | Rekonsiliasi dokumentasi: bagian "Koreksi setelah V3", label klaim implementasi, rujukan DEC/OPEN, klarifikasi kolom Lalu, Pakai, dan Dev %. |

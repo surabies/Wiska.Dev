@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth"
 import { ManualAddClient } from "@/features/dashboard/components/manual-add/manual-add-client"
 
 export const metadata: Metadata = {
-  title: "Manual Add · Tirtawening",
+  title: "Manual Add",
 }
 
 export default async function ManualAddPage() {

@@ -5,7 +5,7 @@ import { PageContainer } from "@/components/layout"
 import { PetugasClient } from "@/features/dashboard/components/petugas/petugas-client"
 import { adalahSupervisorUp } from "@/features/dashboard/lib/wewenang"
 
-export const metadata: Metadata = { title: "Petugas Pencatat Meter · Tirtawening" }
+export const metadata: Metadata = { title: "Petugas Pencatat Meter" }
 
 export default async function PetugasPage() {
   const session = await auth()

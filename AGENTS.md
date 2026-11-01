@@ -7,3 +7,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Struktur kode workspace
+
+Sebelum membuat atau memindahkan source file, ikuti [docs/STRUKTUR-KODE.md](docs/STRUKTUR-KODE.md). Aturan tersebut berlaku untuk semua perubahan kode: organisasi feature-first, modularisasi secukupnya, pemisahan tanggung jawab, arah dependensi, nama file PascalCase berbahasa Indonesia, serta penggunaan komponen dan ikon UI yang benar-benar tersedia di project tanpa menambah primitive/dependency baru tanpa izin.

@@ -33,7 +33,10 @@ import {
 } from "../../lib/pagination"
 import { dateToPeriode, periodeToDate } from "../../lib/periode"
 import { rentangTanggalWIB } from "../../lib/rentang-tanggal"
+import { auditMetaFromRequest } from "../../lib/audit"
+import { pilihPemakaianLalu } from "@/lib/domain/pemakaian-lalu"
 import {
+  ambilPemakaianPeriodeSebelumnya,
   ambilPembacaanResmi,
   denganSumberResmi,
   simpanPembacaanResmi,
@@ -194,6 +197,7 @@ laporanMandiriRouter.get(
               standAkhir: true,
               pemakaianRiil: true,
               pemakaianM3: true,
+              pemakaianLalu: true,
             },
           },
         },
@@ -210,13 +214,23 @@ laporanMandiriRouter.get(
         petaPembacaan.set(kunci, denganSumberResmi(row))
     }
     const standAwalSebelumnya = await muatStandAwalSebelumnya(data)
+    const pemakaianPeriodeSebelumnya = await ambilPemakaianPeriodeSebelumnya(
+      data.map((row) => ({ pelangganId: row.pelangganId, periode: row.periode })),
+    )
     const dataDenganPembacaan = data.map((row) => ({
       ...row,
       standAwal:
         petaPembacaan.get(`${row.pelangganId}:${row.periode}`)?.standLalu ??
         standAwalSebelumnya.get(`${row.pelangganId}:${row.periode}`) ??
         null,
-      pembacaan: petaPembacaan.get(`${row.pelangganId}:${row.periode}`) ?? null,
+      pemakaianLalu: pilihPemakaianLalu(
+        petaPembacaan.get(`${row.pelangganId}:${row.periode}`)?.pemakaianLalu,
+        row.pembacaan?.pemakaianLalu,
+        pemakaianPeriodeSebelumnya.get(`${row.periode}:${row.pelangganId}`),
+      ),
+      pembacaan:
+        petaPembacaan.get(`${row.pelangganId}:${row.periode}`) ??
+        (row.pembacaan ? denganSumberResmi(row.pembacaan) : null),
     }))
     return paginated(c, dataDenganPembacaan, buildMeta(total, query))
   },
@@ -374,16 +388,26 @@ laporanMandiriRouter.patch(
     if (!meter) throw new NotFoundError("Meter")
 
     const standAkhir = standDilaporkan ?? laporan.standDilaporkan
-    const pemakaianRiil = Math.max(0, standAkhir - standLalu)
+    const pemakaianRiil = standAkhir - standLalu
+    if (pemakaianRiil < 0 && pemakaianM3 === undefined) {
+      throw new ConflictError(
+        "ST akhir lebih kecil dari ST awal. Periksa stand atau tetapkan M³ tagihan secara manual.",
+      )
+    }
     const pemakaianTagih = pemakaianM3 ?? pemakaianRiil
 
     const row = await prisma.$transaction(async (tx) => {
       const pembacaan = await simpanPembacaanResmi(tx, {
         pelangganId: laporan.pelangganId,
+        nomorLangganan: laporan.nomorLangganan,
         meterId,
         periode: laporan.periode,
         sumber: "KONSUMEN",
         laporanId: laporan.id,
+        aktor: {
+          userId: requester.id,
+          ...auditMetaFromRequest(c.req.raw),
+        },
         data: {
           standLalu,
           standAkhir,

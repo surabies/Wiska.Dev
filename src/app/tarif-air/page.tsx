@@ -11,7 +11,7 @@ const TARIF = [
   { golongan: "Contoh: Sosial", keterangan: "Isi golongan tarif", tarif: "—" },
 ]
 
-export default function Page() {
+export default function TarifAirPage() {
   return (
     <HalamanInfo
       judul="Tarif Air"

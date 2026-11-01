@@ -149,8 +149,11 @@ export interface PelangganPratinjau extends PelangganPublik {
 /// Lookup identitas SATU pelanggan lewat nomorLangganan lengkap (exact
 /// match) — dipakai kartu pratinjau "ini pelanggan Anda?" di lapor-meter
 /// sebelum sisa form (stand meter, foto, pelapor) ditampilkan.
-export async function cariPelanggan(nomorLangganan: string) {
-  const res = await fetch(`/api/public/pelanggan/${encodeURIComponent(nomorLangganan)}`)
+export async function cariPelanggan(nomorLangganan: string, periodeUji?: number) {
+  const query = periodeUji ? `?periodeUji=${periodeUji}` : ""
+  const res = await fetch(
+    `/api/public/pelanggan/${encodeURIComponent(nomorLangganan)}${query}`,
+  )
   return tangani<PelangganPratinjau>(res)
 }
 
@@ -290,9 +293,19 @@ export interface HasilLaporMeter {
   pesan: string
 }
 
+export interface PeriodeUjiLaporMeter {
+  aktif: boolean
+  periodes: number[]
+}
+
 export async function ambilJendelaLaporMandiri() {
   const res = await fetch("/api/public/lapor-meter/jendela")
   return tangani<JendelaLaporMandiri>(res)
+}
+
+export async function ambilPeriodeUjiLaporMandiri() {
+  const res = await fetch("/api/public/lapor-meter/periode-uji")
+  return tangani<PeriodeUjiLaporMeter>(res)
 }
 
 /// multipart, bukan JSON — membawa berkas foto. JANGAN menyetel header

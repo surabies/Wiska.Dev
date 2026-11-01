@@ -20,7 +20,7 @@ const FAQ = [
   },
 ]
 
-export default function Page() {
+export default function PertanyaanUmumPage() {
   return (
     <HalamanInfo judul="Pertanyaan Umum" deskripsi="Jawaban untuk pertanyaan yang paling sering diajukan pelanggan.">
       <Bagian judul="Pertanyaan yang sering diajukan">

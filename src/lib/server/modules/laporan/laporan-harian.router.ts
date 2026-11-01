@@ -36,10 +36,12 @@ import { rentangTanggalWIB } from "../../lib/rentang-tanggal"
 import { simpanBerkas, BerkasTidakValidError } from "../../lib/storage"
 import { hitungPemakaianGantiMeter } from "@/lib/domain/perhitungan-meter"
 import { tentukanBlok } from "@/lib/domain/tagihan"
+import { pilihPemakaianLalu } from "@/lib/domain/pemakaian-lalu"
 import { recordAudit, auditMetaFromRequest } from "../../lib/audit"
 import JSZip from "jszip"
 import { verifikasiMassal } from "./verif-massal"
 import {
+  ambilPemakaianPeriodeSebelumnya,
   ambilPembacaanResmi,
   denganSumberResmi,
   simpanPembacaanResmi,
@@ -224,7 +226,7 @@ laporanHarianRouter.get(
       // usulan akan mengisi layar tinjauan dengan baris hampa.
       and.push(
         { usulanPerubahan: { not: null } },
-        { NOT: { usulanPerubahan: "" } },
+        { NOT: { usulanPerubahan: "" } }
       )
     }
     if (query.q) {
@@ -240,8 +242,22 @@ laporanHarianRouter.get(
     if (query.alamat) {
       and.push({
         OR: [
-          { alamatPelanggan: { contains: query.alamat, mode: "insensitive" as const } },
-          { pelanggan: { is: { alamat: { contains: query.alamat, mode: "insensitive" as const } } } },
+          {
+            alamatPelanggan: {
+              contains: query.alamat,
+              mode: "insensitive" as const,
+            },
+          },
+          {
+            pelanggan: {
+              is: {
+                alamat: {
+                  contains: query.alamat,
+                  mode: "insensitive" as const,
+                },
+              },
+            },
+          },
         ],
       })
     }
@@ -256,8 +272,19 @@ laporanHarianRouter.get(
     if (query.nama) {
       and.push({
         OR: [
-          { namaPelanggan: { contains: query.nama, mode: "insensitive" as const } },
-          { pelanggan: { is: { nama: { contains: query.nama, mode: "insensitive" as const } } } },
+          {
+            namaPelanggan: {
+              contains: query.nama,
+              mode: "insensitive" as const,
+            },
+          },
+          {
+            pelanggan: {
+              is: {
+                nama: { contains: query.nama, mode: "insensitive" as const },
+              },
+            },
+          },
         ],
       })
     }
@@ -277,7 +304,9 @@ laporanHarianRouter.get(
     }
     if (query.kondisiLanjutan) and.push({ kondisi: query.kondisiLanjutan })
     if (query.tarifGolonganId) {
-      and.push({ pelanggan: { is: { tarifGolonganId: query.tarifGolonganId } } })
+      and.push({
+        pelanggan: { is: { tarifGolonganId: query.tarifGolonganId } },
+      })
     }
     if (query.kecamatanId) {
       and.push({ pelanggan: { is: { kecamatanId: query.kecamatanId } } })
@@ -298,7 +327,7 @@ laporanHarianRouter.get(
           : {
               standAwalRevisi: null,
               standAkhirRevisi: null,
-            },
+            }
       )
     }
     if (query.statusSpt) {
@@ -310,19 +339,27 @@ laporanHarianRouter.get(
                 { pelanggan: { is: { status: { not: "TUTUP_SPT" } } } },
                 { pelanggan: null },
               ],
-            },
+            }
       )
     }
     if (query.statusBaca) {
       and.push({ isVerified: query.statusBaca === "ya" })
     }
-    const tanggalBaca = rentangTanggalWIB(query.tanggalBacaDari, query.tanggalBacaSampai)
+    const tanggalBaca = rentangTanggalWIB(
+      query.tanggalBacaDari,
+      query.tanggalBacaSampai
+    )
     if (tanggalBaca) and.push({ tanggalCatat: tanggalBaca })
     if (query.kategori) and.push({ kategori: query.kategori })
-    if (query.pemakaianRangeDari !== undefined || query.pemakaianRangeSampai !== undefined) {
+    if (
+      query.pemakaianRangeDari !== undefined ||
+      query.pemakaianRangeSampai !== undefined
+    ) {
       const pemakaian: Record<string, number> = {}
-      if (query.pemakaianRangeDari !== undefined) pemakaian.gte = query.pemakaianRangeDari
-      if (query.pemakaianRangeSampai !== undefined) pemakaian.lte = query.pemakaianRangeSampai
+      if (query.pemakaianRangeDari !== undefined)
+        pemakaian.gte = query.pemakaianRangeDari
+      if (query.pemakaianRangeSampai !== undefined)
+        pemakaian.lte = query.pemakaianRangeSampai
       and.push({ pemakaian })
     }
     const operatorPrisma = {
@@ -414,7 +451,16 @@ laporanHarianRouter.get(
       prisma.laporanHarianPetugas.count({ where }),
     ])
     const pembacaanResmi = await ambilPembacaanResmi(
-      data.map((row) => ({ pelangganId: row.pelangganId, periode: row.periode })),
+      data.map((row) => ({
+        pelangganId: row.pelangganId,
+        periode: row.periode,
+      }))
+    )
+    const pemakaianPeriodeSebelumnya = await ambilPemakaianPeriodeSebelumnya(
+      data.map((row) => ({
+        pelangganId: row.pelangganId,
+        periode: row.periode,
+      })),
     )
     const petaPembacaan = new Map()
     for (const row of pembacaanResmi) {
@@ -424,12 +470,16 @@ laporanHarianRouter.get(
     }
     const dataDenganPembacaan = data.map((row) => ({
       ...row,
+      pemakaianLalu: pilihPemakaianLalu(
+        row.pemakaianLalu,
+        pemakaianPeriodeSebelumnya.get(`${row.periode}:${row.pelangganId}`),
+      ),
       pembacaan:
         petaPembacaan.get(`${row.pelangganId}:${row.periode}`) ??
         ("pembacaan" in row ? row.pembacaan : null),
     }))
     return paginated(c, dataDenganPembacaan, buildMeta(total, query))
-  },
+  }
 )
 
 /// Ringkasan untuk halaman verifikasi: hitungan per status + daftar periode
@@ -488,7 +538,7 @@ laporanHarianRouter.get(
       ambangAnomali,
       periodes: periodes.map((p) => p.periode),
     })
-  },
+  }
 )
 
 // ── PROGRES HARIAN PER PENCATAT ──────────────────────────────────────────
@@ -622,10 +672,10 @@ laporanHarianRouter.get(
     ])
 
     const target = new Map(
-      targetPerPencatat.map((t) => [t.pencatatId ?? "", t._count._all]),
+      targetPerPencatat.map((t) => [t.pencatatId ?? "", t._count._all])
     )
     const setor = new Map(
-      setorPerPencatat.map((t) => [t.pencatatId ?? "", t._count._all]),
+      setorPerPencatat.map((t) => [t.pencatatId ?? "", t._count._all])
     )
 
     const harian = new Map<string, Map<string, number>>()
@@ -653,7 +703,7 @@ laporanHarianRouter.get(
       (konfLibur?.nilai ?? "")
         .split(/[\s,;]+/)
         .map((t) => t.trim())
-        .filter((t) => /^\d{4}-\d{2}-\d{2}$/.test(t)),
+        .filter((t) => /^\d{4}-\d{2}-\d{2}$/.test(t))
     )
 
     const jenisHari = (t: string): JenisHari => {
@@ -677,7 +727,7 @@ laporanHarianRouter.get(
     const selisihHari = (a: string, b: string) =>
       Math.round(
         (Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) /
-          86_400_000,
+          86_400_000
       )
 
     // Pencatat yang punya target ATAU punya setoran — termasuk yang sudah
@@ -755,7 +805,7 @@ laporanHarianRouter.get(
       totalPerTanggal,
       pencatat: baris,
     })
-  },
+  }
 )
 
 // ── BELUM DIBACA — pemantauan beban kerja petugas ────────────────────────
@@ -834,7 +884,7 @@ laporanHarianRouter.get(
       prisma.daftarCatat.count({ where }),
     ])
     return paginated(c, data, buildMeta(total, query))
-  },
+  }
 )
 
 // ── Rute Baca Meter (RBM) petugas — dipakai aplikasi mobile pencatat.
@@ -884,7 +934,7 @@ laporanHarianRouter.get(
     })
     if (!pencatat || !pencatat.isAktif) {
       throw new BadRequestError(
-        "Akun Anda belum tertaut ke data Pencatat aktif — minta admin menautkannya di menu Pencatat dashboard web.",
+        "Akun Anda belum tertaut ke data Pencatat aktif — minta admin menautkannya di menu Pencatat dashboard web."
       )
     }
 
@@ -925,7 +975,7 @@ laporanHarianRouter.get(
           seksiCater: pg.rute.seksiCater,
           urutan: pg.urutan,
         },
-      ]),
+      ])
     )
 
     // DAFTAR KERJANYA DITENTUKAN DAFTAR CATAT PERIODE ITU, bukan isi tabel
@@ -1084,7 +1134,7 @@ laporanHarianRouter.get(
       if (daftar.length < 3) riwayatPerMeter.set(b.meterId, [...daftar, b])
     }
     const laporanPerNomor = new Map(
-      laporanPeriode.map((l) => [l.nomorLangganan, l]),
+      laporanPeriode.map((l) => [l.nomorLangganan, l])
     )
     // Ambil hanya tagihan terbaru per pelanggan (baris terurut periode desc).
     const biayaTetapPerPelanggan = new Map<
@@ -1134,7 +1184,7 @@ laporanHarianRouter.get(
         .sort(
           (a, b) =>
             (a.nomorPersil ?? "").localeCompare(b.nomorPersil ?? "") ||
-            a.nomorLangganan.localeCompare(b.nomorLangganan),
+            a.nomorLangganan.localeCompare(b.nomorLangganan)
         )
       anggota.forEach((p, i) => urutDpm.set(p.id, i + 1))
     }
@@ -1244,7 +1294,7 @@ laporanHarianRouter.get(
       daftarBelumTerbit,
       pelanggan: rows,
     })
-  },
+  }
 )
 
 // ── Petugas menyusun ulang urutan kunjungan rutenya sendiri ──────────────
@@ -1321,8 +1371,8 @@ laporanHarianRouter.post(
           prisma.pelanggan.update({
             where: { id },
             data: { noUrutRute: i + j + 1 },
-          }),
-        ),
+          })
+        )
       )
     }
 
@@ -1343,7 +1393,7 @@ laporanHarianRouter.post(
     })
 
     return ok(c, { ruteId, dinomori: final.length, diabaikan: asing })
-  },
+  }
 )
 
 // ── Upload berkas bukti petugas (foto stand / segel / rumah, plus video
@@ -1395,7 +1445,7 @@ laporanHarianRouter.post(
         throw new BadRequestError(err.message)
       throw err
     }
-  },
+  }
 )
 
 laporanHarianRouter.get(
@@ -1421,14 +1471,21 @@ laporanHarianRouter.get(
           { pelangganId: row.pelangganId, periode: row.periode },
         ])
       : []
+    const pemakaianPeriodeSebelumnya = await ambilPemakaianPeriodeSebelumnya([
+      { pelangganId: row.pelangganId, periode: row.periode },
+    ])
     return ok(c, {
       ...row,
+      pemakaianLalu: pilihPemakaianLalu(
+        row.pemakaianLalu,
+        pemakaianPeriodeSebelumnya.get(`${row.periode}:${row.pelangganId}`),
+      ),
       pembacaan: denganSumberResmi(
         pembacaan.find((item) => item.meter.pelangganId === row.pelangganId) ??
-          row.pembacaan,
+          row.pembacaan
       ),
     })
-  },
+  }
 )
 
 const urlFotoSchema = z
@@ -1440,7 +1497,7 @@ const urlFotoSchema = z
       v.startsWith("https://") || v.startsWith("http://") || v.startsWith("/"),
     {
       message: "URL foto harus absolut (http/https) atau path relatif server",
-    },
+    }
   )
 
 const createSchema = z.object({
@@ -1495,7 +1552,7 @@ type CreateLaporanInput = z.infer<typeof createSchema>
 async function hitungJarakMeter(
   pelangganId: string,
   latCatat: number,
-  longCatat: number,
+  longCatat: number
 ): Promise<number | null> {
   const hasil = await prisma.$queryRawUnsafe<{ jarak: number | null }[]>(
     `SELECT ST_DistanceSphere(
@@ -1509,7 +1566,7 @@ async function hitungJarakMeter(
      FROM pelanggan WHERE id = $3`,
     longCatat,
     latCatat,
-    pelangganId,
+    pelangganId
   )
   const jarak = hasil[0]?.jarak
   return jarak == null ? null : Math.round(jarak)
@@ -1528,7 +1585,7 @@ function akhirBulanPeriode(periode: number): Date {
 
 async function simpanLaporan(
   input: CreateLaporanInput,
-  pencatatIdDefault: string | null,
+  pencatatIdDefault: string | null
 ) {
   // notelpBaru bukan kolom laporan — dipisah sebelum spread ke create().
   const { notelpBaru, ...body } = input
@@ -1648,7 +1705,7 @@ laporanHarianRouter.post(
     }
     const row = await simpanLaporan(body, pencatatIdDefault)
     return created(c, row)
-  },
+  }
 )
 
 // ── Sinkronisasi batch dari aplikasi petugas (pola dev_store_data.php
@@ -1730,7 +1787,7 @@ laporanHarianRouter.post(
       gagal: hitung("GAGAL"),
       hasil,
     })
-  },
+  }
 )
 
 // ── Impor cadangan lapangan (berkas backup aplikasi petugas → laporan).
@@ -1845,7 +1902,7 @@ async function kumpulkanEntri(form: FormData): Promise<EntriImpor[]> {
     .filter((f): f is File => f instanceof File)
   if (berkasMasuk.length === 0)
     throw new BadRequestError(
-      "Lampirkan minimal satu berkas di field `berkas`.",
+      "Lampirkan minimal satu berkas di field `berkas`."
     )
 
   const entri: EntriImpor[] = []
@@ -1890,7 +1947,7 @@ async function kumpulkanEntri(form: FormData): Promise<EntriImpor[]> {
   }
   if (entri.length > IMPOR_MAKS_ENTRI)
     throw new BadRequestError(
-      `Terlalu banyak berkas (maks ${IMPOR_MAKS_ENTRI}).`,
+      `Terlalu banyak berkas (maks ${IMPOR_MAKS_ENTRI}).`
     )
   return entri
 }
@@ -1984,7 +2041,7 @@ laporanHarianRouter.post(
           `${periode}_${jenis}_${nomor}.${jenis === "video" ? "mp4" : "jpg"}`,
           {
             type: jenis === "video" ? "video/mp4" : "image/jpeg",
-          },
+          }
         )
         let url: string
         try {
@@ -2019,7 +2076,7 @@ laporanHarianRouter.post(
                 status: "TANPA_PENCATATAN",
                 pesan:
                   "Belum ada pencatatan periode ini — impor catatannya dulu.",
-              },
+              }
         )
       } catch (err) {
         console.error("[impor/foto] gagal:", identitas, err)
@@ -2032,7 +2089,7 @@ laporanHarianRouter.post(
     }
 
     return ok(c, ringkasImpor(hasil))
-  },
+  }
 )
 
 // ── Pintu 2: CATATAN (CSV) ─────────────────────────────────────────────
@@ -2053,7 +2110,7 @@ laporanHarianRouter.post(
     const entriCsv = entri.filter((e) => /\.csv$/i.test(e.nama))
     if (entriCsv.length === 0) {
       throw new BadRequestError(
-        "Tidak ada berkas CSV di unggahan ini. Catatan pencatatan diekspor aplikasi sebagai `<periode>_catatan.csv`.",
+        "Tidak ada berkas CSV di unggahan ini. Catatan pencatatan diekspor aplikasi sebagai `<periode>_catatan.csv`."
       )
     }
 
@@ -2166,7 +2223,7 @@ laporanHarianRouter.post(
     }
 
     return ok(c, ringkasImpor(hasil))
-  },
+  }
 )
 
 // ── Verifikasi berjenjang V1 → V2 → V3. PembacaanMeter resmi BARU
@@ -2204,12 +2261,12 @@ const verif1Schema = z.object({
 function validasiStandAngkat(
   kondisi: string,
   standAngkatLama: number | null | undefined,
-  standAwalMeterBaru: number | null | undefined,
+  standAwalMeterBaru: number | null | undefined
 ) {
   if (kondisi !== "MB") return null
   if (standAngkatLama == null || standAwalMeterBaru == null) {
     throw new BadRequestError(
-      "Kondisi MB memerlukan stand angkat meter lama dan stand awal meter baru.",
+      "Kondisi MB memerlukan stand angkat meter lama dan stand awal meter baru."
     )
   }
   return { standAngkatLama, standAwalMeterBaru }
@@ -2217,14 +2274,14 @@ function validasiStandAngkat(
 
 async function validasiMeterBaru(
   pelangganId: string | null,
-  meterId: string | null | undefined,
+  meterId: string | null | undefined
 ) {
   if (!meterId) throw new BadRequestError("Meter baru belum dipilih.")
   const meter = await prisma.meter.findUnique({ where: { id: meterId } })
   if (!meter) throw new NotFoundError("Meter")
   if (!pelangganId || meter.pelangganId !== pelangganId || !meter.isAktif) {
     throw new BadRequestError(
-      "Kondisi MB harus menggunakan meter baru yang aktif milik pelanggan ini.",
+      "Kondisi MB harus menggunakan meter baru yang aktif milik pelanggan ini."
     )
   }
 }
@@ -2246,23 +2303,25 @@ laporanHarianRouter.patch(
       throw new ConflictError("Laporan sudah menjadi pembacaan resmi")
     if (laporan.verif1At)
       throw new ConflictError(
-        "V1 sudah diisi — batalkan dulu bila perlu mengulang",
+        "V1 sudah diisi — batalkan dulu bila perlu mengulang"
       )
 
-    const meter = await prisma.meter.findUnique({ where: { id: body.meterId } })
+    const meter = await prisma.meter.findUnique({
+      where: { id: body.meterId },
+    })
     if (!meter) throw new NotFoundError("Meter")
     const kondisiEfektif = body.kondisi ?? laporan.kondisi
     validasiStandAngkat(
       kondisiEfektif,
       body.standAngkatLama,
-      body.standAwalMeterBaru,
+      body.standAwalMeterBaru
     )
     if (
       kondisiEfektif === "MB" &&
       (meter.pelangganId !== laporan.pelangganId || !meter.isAktif)
     ) {
       throw new BadRequestError(
-        "Kondisi MB harus menggunakan meter baru yang aktif milik pelanggan ini.",
+        "Kondisi MB harus menggunakan meter baru yang aktif milik pelanggan ini."
       )
     }
 
@@ -2292,7 +2351,7 @@ laporanHarianRouter.patch(
       include: { verif1By: { select: { id: true, name: true } } },
     })
     return ok(c, row)
-  },
+  }
 )
 
 /// V2 & V3 BOLEH MENGOREKSI, bukan sekadar menandatangani.
@@ -2324,7 +2383,7 @@ const catatanSchema = z.object({
 /// TIDAK dikirim sengaja tidak masuk objek sama sekali — bukan diisi null —
 /// supaya "tidak menyebut" tidak pernah berarti "kosongkan".
 function koreksiDari(
-  body: z.infer<typeof catatanSchema>,
+  body: z.infer<typeof catatanSchema>
 ): Record<string, unknown> {
   const data: Record<string, unknown> = {}
   if (body.meterId !== undefined) data.meterVerifId = body.meterId
@@ -2354,13 +2413,9 @@ laporanHarianRouter.patch(
     if (!laporan) throw new NotFoundError("LaporanHarianPetugas")
     if (laporan.pembacaanId)
       throw new ConflictError("Laporan sudah menjadi pembacaan resmi")
-    if (!laporan.verif1At)
-      throw new BadRequestError(
-        "V2 menunggu V1 — laporan belum diperiksa supervisor",
-      )
     if (laporan.verif2At)
       throw new ConflictError(
-        "V2 sudah diisi — batalkan dulu bila perlu mengulang",
+        "V2 sudah diisi — batalkan dulu bila perlu mengulang"
       )
 
     const body = c.req.valid("json")
@@ -2377,7 +2432,7 @@ laporanHarianRouter.patch(
     if (kondisiEfektif === "MB")
       await validasiMeterBaru(
         laporan.pelangganId,
-        body.meterId ?? laporan.meterVerifId,
+        body.meterId ?? laporan.meterVerifId
       )
     const row = await prisma.laporanHarianPetugas.update({
       where: { id },
@@ -2391,7 +2446,7 @@ laporanHarianRouter.patch(
       },
     })
     return ok(c, row)
-  },
+  }
 )
 
 /// V3 = final approval: satu-satunya tempat PembacaanMeter resmi dibuat.
@@ -2416,8 +2471,6 @@ laporanHarianRouter.patch(
     if (!laporan) throw new NotFoundError("LaporanHarianPetugas")
     if (laporan.pembacaanId)
       throw new ConflictError("Laporan sudah menjadi pembacaan resmi")
-    if (!laporan.verif1At || !laporan.verif2At)
-      throw new BadRequestError("V3 menunggu V1 dan V2 selesai")
     // Koreksi yang dikirim BERSAMA V3 berlaku untuk pembacaan yang terbit di
     // transaksi ini juga — bukan cuma tersimpan di laporan. Kalau tidak,
     // senior manager akan melihat angka yang ia perbaiki tetap terbit salah.
@@ -2442,24 +2495,23 @@ laporanHarianRouter.patch(
     const dataStandAngkat = validasiStandAngkat(
       kondisiEfektif,
       standAngkatLama,
-      standAwalMeterBaru,
+      standAwalMeterBaru
     )
     if (kondisiEfektif === "MB")
       await validasiMeterBaru(laporan.pelangganId, meterVerifId)
     const pemakaianTagihVerif =
       (koreksi.pemakaianTagih as number | null | undefined) ??
       laporan.pemakaianTagihVerif
-    const pemakaianRiil =
-      dataStandAngkat
-        ? hitungPemakaianGantiMeter({
-            standAwalLama: laporan.standAwal,
-            ...dataStandAngkat,
-            standAkhirMeterBaru: standAkhir,
-          })
-        : standAkhir - laporan.standAwal
+    const pemakaianRiil = dataStandAngkat
+      ? hitungPemakaianGantiMeter({
+          standAwalLama: laporan.standAwal,
+          ...dataStandAngkat,
+          standAkhirMeterBaru: standAkhir,
+        })
+      : standAkhir - laporan.standAwal
     if (pemakaianRiil < 0)
       throw new BadRequestError(
-        "Pemakaian hasil stand negatif. Koreksi dan tinjau datanya sebelum pengesahan V3.",
+        "Pemakaian hasil stand negatif. Koreksi dan tinjau datanya sebelum pengesahan V3."
       )
 
     // TIDAK ADA TAKSASI OTOMATIS.
@@ -2490,14 +2542,18 @@ laporanHarianRouter.patch(
     const row = await prisma.$transaction(async (tx) => {
       const pembacaan = await simpanPembacaanResmi(tx, {
         pelangganId: laporan.pelangganId,
+        nomorLangganan: laporan.nomorLangganan,
         meterId: meterVerifId,
         periode: laporan.periode,
         sumber: "PETUGAS",
         laporanId: laporan.id,
+        aktor: {
+          userId: requester.id,
+          ...auditMetaFromRequest(c.req.raw),
+        },
         data: {
           ...(meterVerifId ? { meterId: meterVerifId } : {}),
-          standLalu:
-            dataStandAngkat?.standAwalMeterBaru ?? laporan.standAwal,
+          standLalu: dataStandAngkat?.standAwalMeterBaru ?? laporan.standAwal,
           standAkhir,
           pemakaianM3: pemakaianTagih,
           pemakaianRiil,
@@ -2555,7 +2611,7 @@ laporanHarianRouter.patch(
       })
     })
     return ok(c, row)
-  },
+  }
 )
 
 /// Verifikasi satu klik: akun menandai tahap miliknya dengan data yang sudah
@@ -2567,11 +2623,11 @@ laporanHarianRouter.patch(
     const id = c.req.param("id")
     const requester = getSessionUser(c)
     const ring = (ROLE_GROUPS.SENIOR_UP as readonly string[]).includes(
-      requester.role,
+      requester.role
     )
       ? 3
       : (ROLE_GROUPS.MANAGEMENT_UP as readonly string[]).includes(
-            requester.role,
+            requester.role
           )
         ? 2
         : 1
@@ -2589,11 +2645,11 @@ laporanHarianRouter.patch(
         throw new ConflictError("Tahap V1 sudah ditandai diverifikasi")
       if (laporan.verif2At || laporan.verif3At)
         throw new ConflictError(
-          "V1 tidak dapat diulang setelah tahap berikutnya diverifikasi",
+          "V1 tidak dapat diulang setelah tahap berikutnya diverifikasi"
         )
       if (!laporan.pelangganId)
         throw new BadRequestError(
-          "Alamat belum tertaut ke data pelanggan; koreksi data pelanggan sebelum verifikasi.",
+          "Alamat belum tertaut ke data pelanggan; koreksi data pelanggan sebelum verifikasi."
         )
       const meterId = laporan.meterVerifId
         ? (
@@ -2606,12 +2662,12 @@ laporanHarianRouter.patch(
             })
           )?.id
         : (
-            await prisma.meter.findMany({
-              where: { pelangganId: laporan.pelangganId, isAktif: true },
-              select: { id: true },
-              take: 2,
-            })
-          ).length === 1
+              await prisma.meter.findMany({
+                where: { pelangganId: laporan.pelangganId, isAktif: true },
+                select: { id: true },
+                take: 2,
+              })
+            ).length === 1
           ? (
               await prisma.meter.findFirst({
                 where: { pelangganId: laporan.pelangganId, isAktif: true },
@@ -2621,7 +2677,7 @@ laporanHarianRouter.patch(
           : null
       if (!meterId)
         throw new BadRequestError(
-          "Meter aktif tidak dapat ditentukan dengan pasti. Lengkapi pilihan meter lewat Edit sebelum verifikasi.",
+          "Meter aktif tidak dapat ditentukan dengan pasti. Lengkapi pilihan meter lewat Edit sebelum verifikasi."
         )
 
       const row = await prisma.$transaction(async (tx) => {
@@ -2643,15 +2699,24 @@ laporanHarianRouter.patch(
           },
         })
         if (berubah.count !== 1)
-          throw new ConflictError("Status laporan berubah. Muat ulang sebelum mencoba lagi.")
+          throw new ConflictError(
+            "Status laporan berubah. Muat ulang sebelum mencoba lagi."
+          )
         await recordAudit(tx, {
           userId: requester.id,
           aksi: "VERIFIKASI_V1_LANGSUNG",
           entitas: "LaporanHarianPetugas",
           entitasId: id,
           perubahan: {
-            sebelum: { verif1At: laporan.verif1At, verif1ById: laporan.verif1ById },
-            sesudah: { verif1At: kini, verif1ById: requester.id, meterVerifId: meterId },
+            sebelum: {
+              verif1At: laporan.verif1At,
+              verif1ById: laporan.verif1ById,
+            },
+            sesudah: {
+              verif1At: kini,
+              verif1ById: requester.id,
+              meterVerifId: meterId,
+            },
           },
           ...auditMeta,
         })
@@ -2661,36 +2726,37 @@ laporanHarianRouter.patch(
     }
 
     if (ring === 2) {
-      if (!laporan.verif1At)
-        throw new BadRequestError(
-          "V2 menunggu V1 — laporan belum diperiksa supervisor",
-        )
       if (laporan.verif2At)
         throw new ConflictError("Tahap V2 sudah ditandai diverifikasi")
       if (laporan.verif3At)
         throw new ConflictError(
-          "V2 tidak dapat diulang setelah tahap V3 diverifikasi",
+          "V2 tidak dapat diulang setelah tahap V3 diverifikasi"
         )
       const row = await prisma.$transaction(async (tx) => {
         const berubah = await tx.laporanHarianPetugas.updateMany({
           where: {
             id,
-            verif1At: { not: null },
             verif2At: null,
+            verif3At: null,
             pembacaanId: null,
             isVerified: false,
           },
           data: { verif2At: kini, verif2ById: requester.id },
         })
         if (berubah.count !== 1)
-          throw new ConflictError("Status laporan berubah. Muat ulang sebelum mencoba lagi.")
+          throw new ConflictError(
+            "Status laporan berubah. Muat ulang sebelum mencoba lagi."
+          )
         await recordAudit(tx, {
           userId: requester.id,
           aksi: "VERIFIKASI_V2_LANGSUNG",
           entitas: "LaporanHarianPetugas",
           entitasId: id,
           perubahan: {
-            sebelum: { verif2At: laporan.verif2At, verif2ById: laporan.verif2ById },
+            sebelum: {
+              verif2At: laporan.verif2At,
+              verif2ById: laporan.verif2ById,
+            },
             sesudah: { verif2At: kini, verif2ById: requester.id },
           },
           ...auditMeta,
@@ -2700,13 +2766,11 @@ laporanHarianRouter.patch(
       return ok(c, { ring, laporan: row })
     }
 
-    if (!laporan.verif1At || !laporan.verif2At)
-      throw new BadRequestError("V3 menunggu V1 dan V2 selesai")
     if (laporan.verif3At)
       throw new ConflictError("Tahap V3 sudah ditandai diverifikasi")
     if (!laporan.pelangganId)
       throw new BadRequestError(
-        "Alamat belum tertaut ke data pelanggan; koreksi data pelanggan sebelum pengesahan V3.",
+        "Alamat belum tertaut ke data pelanggan; koreksi data pelanggan sebelum pengesahan V3."
       )
     const meter = laporan.meterVerifId
       ? await prisma.meter.findFirst({
@@ -2720,11 +2784,11 @@ laporanHarianRouter.patch(
             where: { pelangganId: laporan.pelangganId!, isAktif: true },
             take: 2,
           })
-          return aktif.length === 1 ? aktif[0] ?? null : null
+          return aktif.length === 1 ? (aktif[0] ?? null) : null
         })()
     if (!meter)
       throw new BadRequestError(
-        "Meter aktif tidak dapat ditentukan dengan pasti. Lengkapi pilihan meter lewat Edit sebelum pengesahan V3.",
+        "Meter aktif tidak dapat ditentukan dengan pasti. Lengkapi pilihan meter lewat Edit sebelum pengesahan V3."
       )
 
     const kondisi = laporan.kondisiRevisi ?? laporan.kondisi
@@ -2736,7 +2800,7 @@ laporanHarianRouter.patch(
       const dataStandAngkat = validasiStandAngkat(
         kondisi,
         laporan.standAngkatLama,
-        laporan.standAwalMeterBaru,
+        laporan.standAwalMeterBaru
       )
       pemakaianRiil = hitungPemakaianGantiMeter({
         standAwalLama: standAwal,
@@ -2749,21 +2813,18 @@ laporanHarianRouter.patch(
     }
     if (pemakaianRiil < 0)
       throw new BadRequestError(
-        "Pemakaian hasil stand negatif. Koreksi dan tinjau datanya sebelum pengesahan V3.",
+        "Pemakaian hasil stand negatif. Koreksi dan tinjau datanya sebelum pengesahan V3."
       )
-    const pemakaianTagih =
-      laporan.pemakaianTagihVerif ?? laporan.pemakaian
+    const pemakaianTagih = laporan.pemakaianTagihVerif ?? laporan.pemakaian
     if (pemakaianTagih < 0)
       throw new BadRequestError(
-        "Pemakaian tagih bernilai negatif dan harus ditinjau sebelum pengesahan V3.",
+        "Pemakaian tagih bernilai negatif dan harus ditinjau sebelum pengesahan V3."
       )
 
     const hasil = await prisma.$transaction(async (tx) => {
       const berubah = await tx.laporanHarianPetugas.updateMany({
         where: {
           id,
-          verif1At: { not: null },
-          verif2At: { not: null },
           verif3At: null,
           pembacaanId: null,
           isVerified: false,
@@ -2771,14 +2832,21 @@ laporanHarianRouter.patch(
         data: { verif3At: kini, verif3ById: requester.id },
       })
       if (berubah.count !== 1)
-        throw new ConflictError("Status laporan berubah. Muat ulang sebelum mencoba lagi.")
+        throw new ConflictError(
+          "Status laporan berubah. Muat ulang sebelum mencoba lagi."
+        )
 
       const pembacaan = await simpanPembacaanResmi(tx, {
         pelangganId: laporan.pelangganId,
+        nomorLangganan: laporan.nomorLangganan,
         meterId: meter.id,
         periode: laporan.periode,
         sumber: "PETUGAS",
         laporanId: id,
+        aktor: {
+          userId: requester.id,
+          ...auditMetaFromRequest(c.req.raw),
+        },
         data: {
           standLalu,
           standAkhir,
@@ -2792,8 +2860,7 @@ laporanHarianRouter.patch(
                   laporan.pemakaianTagihVerif !== pemakaianRiil
                 ? "OVERRIDE_MANUAL"
                 : null,
-          blokTarif:
-            laporan.blokTarifVerif ?? tentukanBlok(pemakaianTagih),
+          blokTarif: laporan.blokTarifVerif ?? tentukanBlok(pemakaianTagih),
           pemakaianLalu: laporan.pemakaianLalu,
           kondisi,
           kategori: laporan.kategori,
@@ -2824,7 +2891,10 @@ laporanHarianRouter.patch(
         entitas: "LaporanHarianPetugas",
         entitasId: id,
         perubahan: {
-          sebelum: { verif3At: laporan.verif3At, pembacaanId: laporan.pembacaanId },
+          sebelum: {
+            verif3At: laporan.verif3At,
+            pembacaanId: laporan.pembacaanId,
+          },
           sesudah: { verif3At: kini, pembacaanId: pembacaan.id },
         },
         ...auditMeta,
@@ -2832,7 +2902,7 @@ laporanHarianRouter.patch(
       return row
     })
     return ok(c, { ring, laporan: hasil })
-  },
+  }
 )
 
 const koreksiLaporanSchema = z.object({
@@ -2861,7 +2931,7 @@ laporanHarianRouter.patch(
 
     const staff = requester.role === "STAFF"
     const bolehSenior = (ROLE_GROUPS.SENIOR_UP as readonly string[]).includes(
-      requester.role,
+      requester.role
     )
     const bolehManajemen = (
       ROLE_GROUPS.MANAGEMENT_UP as readonly string[]
@@ -2880,7 +2950,7 @@ laporanHarianRouter.patch(
             : bolehSupervisor)
     if (!koreksiDiizinkan)
       throw new ForbiddenError(
-        "Role Anda tidak berwenang mengoreksi tahap laporan ini.",
+        "Role Anda tidak berwenang mengoreksi tahap laporan ini."
       )
 
     if (laporan.pembacaanId) {
@@ -2890,7 +2960,7 @@ laporanHarianRouter.patch(
       })
       if (tagihan)
         throw new ConflictError(
-          "Pembacaan ini sudah digunakan tagihan; koreksi biasa ditolak.",
+          "Pembacaan ini sudah digunakan tagihan; koreksi biasa ditolak."
         )
     }
     const periode = await prisma.periodePenagihan.findUnique({
@@ -2898,7 +2968,9 @@ laporanHarianRouter.patch(
       select: { status: true },
     })
     if (periode?.status === "TERKUNCI")
-      throw new ConflictError("Periode sudah ditutup; laporan tidak dapat dikoreksi.")
+      throw new ConflictError(
+        "Periode sudah ditutup; laporan tidak dapat dikoreksi."
+      )
 
     const kondisiRevisi =
       body.kondisiRevisi !== undefined
@@ -2911,11 +2983,11 @@ laporanHarianRouter.patch(
         : laporan.standAwalRevisi
     if (kondisiEfektif === "REV_PENCATAT" && standAwalRevisi == null)
       throw new BadRequestError(
-        "Kondisi Revisi Pencatat memerlukan nilai ST Awal revisi.",
+        "Kondisi Revisi Pencatat memerlukan nilai ST Awal revisi."
       )
     if (kondisiEfektif !== "REV_PENCATAT" && standAwalRevisi != null)
       throw new BadRequestError(
-        "ST Awal revisi hanya boleh diisi untuk kondisi Revisi Pencatat.",
+        "ST Awal revisi hanya boleh diisi untuk kondisi Revisi Pencatat."
       )
 
     const standAkhirRevisi =
@@ -2935,13 +3007,11 @@ laporanHarianRouter.patch(
         ? body.standAwalMeterBaru
         : laporan.standAwalMeterBaru
     const meterVerifId =
-      body.meterVerifId !== undefined
-        ? body.meterVerifId
-        : laporan.meterVerifId
+      body.meterVerifId !== undefined ? body.meterVerifId : laporan.meterVerifId
     if (meterVerifId) {
       if (!laporan.pelangganId)
         throw new BadRequestError(
-          "Pelanggan laporan belum tertaut; meter tujuan tidak dapat divalidasi.",
+          "Pelanggan laporan belum tertaut; meter tujuan tidak dapat divalidasi."
         )
       const meter = await prisma.meter.findFirst({
         where: {
@@ -2951,7 +3021,9 @@ laporanHarianRouter.patch(
         select: { id: true },
       })
       if (!meter)
-        throw new BadRequestError("Meter tujuan bukan milik pelanggan laporan ini.")
+        throw new BadRequestError(
+          "Meter tujuan bukan milik pelanggan laporan ini."
+        )
     }
     if (kondisiEfektif === "MB") {
       validasiStandAngkat(kondisiEfektif, standAngkatLama, standAwalMeterBaru)
@@ -2959,7 +3031,7 @@ laporanHarianRouter.patch(
     }
     if (laporan.pembacaanId && !meterVerifId)
       throw new BadRequestError(
-        "Pembacaan resmi harus tetap terhubung ke meter pelanggan.",
+        "Pembacaan resmi harus tetap terhubung ke meter pelanggan."
       )
 
     const standAwalAktif = standAwalRevisi ?? laporan.standAwal
@@ -2975,7 +3047,7 @@ laporanHarianRouter.patch(
         : standAkhirAktif - standAwalAktif
     if (pemakaianRiil < 0)
       throw new BadRequestError(
-        "Pemakaian hasil koreksi negatif. Periksa kembali stand dan kondisi meter.",
+        "Pemakaian hasil koreksi negatif. Periksa kembali stand dan kondisi meter."
       )
     const perubahan = {
       standAwalRevisi,
@@ -3004,15 +3076,12 @@ laporanHarianRouter.patch(
         data: dataLaporan,
       })
       if (laporan.pembacaanId) {
-        const pakaiTagih =
-          pemakaianTagihVerif ?? laporan.pemakaian
+        const pakaiTagih = pemakaianTagihVerif ?? laporan.pemakaian
         await tx.pembacaanMeter.update({
           where: { id: laporan.pembacaanId },
           data: {
             standLalu:
-              kondisiEfektif === "MB"
-                ? standAwalMeterBaru!
-                : standAwalAktif,
+              kondisiEfektif === "MB" ? standAwalMeterBaru! : standAwalAktif,
             standAkhir: standAkhirAktif,
             pemakaianM3: pakaiTagih,
             pemakaianRiil,
@@ -3052,7 +3121,56 @@ laporanHarianRouter.patch(
       return row
     })
     return ok(c, hasil)
-  },
+  }
+)
+
+const penilaianFotoSchema = z
+  .object({
+    sesuai: z.boolean(),
+    keterangan: z.string().trim().max(500).default(""),
+  })
+  .refine(
+    (nilai) => nilai.sesuai || nilai.keterangan.length >= 5,
+    "Keterangan minimal 5 karakter wajib diisi jika kondisi foto tidak sesuai."
+  )
+
+laporanHarianRouter.post(
+  "/:id/kondisi-foto",
+  requireRole(...ROLE_GROUPS.SUPERVISOR_UP),
+  validate("json", penilaianFotoSchema),
+  async (c) => {
+    const id = c.req.param("id")
+    const requester = getSessionUser(c)
+    const { sesuai, keterangan } = c.req.valid("json")
+    const hasil = await prisma.$transaction(async (tx) => {
+      const laporan = await tx.laporanHarianPetugas.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          nomorLangganan: true,
+          periode: true,
+        },
+      })
+      if (!laporan) throw new NotFoundError("LaporanHarianPetugas")
+
+      await recordAudit(tx, {
+        userId: requester.id,
+        aksi: "PENILAIAN_KONDISI_FOTO_LAPORAN_PETUGAS",
+        entitas: "LaporanHarianPetugas",
+        entitasId: id,
+        perubahan: {
+          sesuai,
+          keterangan,
+          nomorLangganan: laporan.nomorLangganan,
+          periode: laporan.periode,
+        },
+        ...auditMetaFromRequest(c.req.raw),
+      })
+
+      return { id, sesuai, keterangan }
+    })
+    return created(c, hasil)
+  }
 )
 
 // ── Verifikasi massal (V1/V2/V3 untuk banyak baris sekaligus) ────────────
@@ -3086,7 +3204,7 @@ laporanHarianRouter.post(
     // dari body.
     if (!(RING_ROLE[ring] as readonly string[]).includes(requester.role)) {
       throw new ForbiddenError(
-        `Verifikasi V${ring} memerlukan salah satu role: ${RING_ROLE[ring].join(", ")}`,
+        `Verifikasi V${ring} memerlukan salah satu role: ${RING_ROLE[ring].join(", ")}`
       )
     }
 
@@ -3099,19 +3217,21 @@ laporanHarianRouter.post(
       ids,
       ring,
       userId: requester.id,
+      auditMeta: auditMetaFromRequest(c.req.raw),
       ambangAnomali,
       sertakanAnomali: sertakanAnomali ?? false,
     })
     return ok(c, hasil)
-  },
+  }
 )
 
 const rejectSchema = z.object({
   catatanVerif: z.string().trim().min(1).max(500),
 })
 
-/// "Cek ulang": mengembalikan laporan ke petugas. Ring yang sudah terisi
-/// ikut direset — setelah dicek ulang, verifikasi mulai lagi dari V1.
+/// "Baca ulang": kembalikan laporan nonfinal ke petugas. Ring dan koreksi
+/// periode aktif direset dalam transaksi; nilai sebelumnya dan alasan tetap
+/// tersimpan pada audit agar pengiriman ulang tidak menghapus histori.
 laporanHarianRouter.patch(
   "/:id/reject",
   requireRole(...ROLE_GROUPS.SUPERVISOR_UP),
@@ -3123,36 +3243,102 @@ laporanHarianRouter.patch(
       where: { id },
     })
     if (!laporan) throw new NotFoundError("LaporanHarianPetugas")
-    if (laporan.pembacaanId)
-      throw new BadRequestError(
-        "Laporan sudah menjadi pembacaan resmi, tidak bisa ditolak — batalkan verifikasinya dulu",
+    if (laporan.pembacaanId || laporan.isVerified || laporan.verif3At)
+      throw new ConflictError(
+        "Laporan sudah mencapai tahap final; gunakan alur pembatalan V3 yang sesuai."
       )
 
-    const row = await prisma.laporanHarianPetugas.update({
-      where: { id },
-      data: {
-        isVerified: false,
-        verifiedAt: new Date(),
-        verifiedById: requester.id,
-        catatanVerif: c.req.valid("json").catatanVerif,
-        verif1At: null,
-        verif1ById: null,
-        verif2At: null,
-        verif2ById: null,
-        verif3At: null,
-        verif3ById: null,
-        standAwalRevisi: null,
-        standAkhirRevisi: null,
-        kondisiRevisi: null,
-        standAngkatLama: null,
-        standAwalMeterBaru: null,
-        pemakaianTagihVerif: null,
-        meterVerifId: null,
-        blokTarifVerif: null,
-      },
+    const alasan = c.req.valid("json").catatanVerif
+    const kini = new Date()
+    const row = await prisma.$transaction(async (tx) => {
+      const berubah = await tx.laporanHarianPetugas.updateMany({
+        where: {
+          id,
+          isVerified: false,
+          verifiedAt: null,
+          pembacaanId: null,
+          verif3At: null,
+          verif1At: laporan.verif1At,
+          verif2At: laporan.verif2At,
+          standAwalRevisi: laporan.standAwalRevisi,
+          standAkhirRevisi: laporan.standAkhirRevisi,
+          kondisiRevisi: laporan.kondisiRevisi,
+          standAngkatLama: laporan.standAngkatLama,
+          standAwalMeterBaru: laporan.standAwalMeterBaru,
+          pemakaianTagihVerif: laporan.pemakaianTagihVerif,
+          meterVerifId: laporan.meterVerifId,
+          blokTarifVerif: laporan.blokTarifVerif,
+        },
+        data: {
+          isVerified: false,
+          verifiedAt: kini,
+          verifiedById: requester.id,
+          catatanVerif: alasan,
+          verif1At: null,
+          verif1ById: null,
+          verif2At: null,
+          verif2ById: null,
+          verif3At: null,
+          verif3ById: null,
+          standAwalRevisi: null,
+          standAkhirRevisi: null,
+          kondisiRevisi: null,
+          standAngkatLama: null,
+          standAwalMeterBaru: null,
+          pemakaianTagihVerif: null,
+          meterVerifId: null,
+          blokTarifVerif: null,
+        },
+      })
+      if (berubah.count !== 1)
+        throw new ConflictError(
+          "Status laporan berubah. Muat ulang sebelum mengirim baca ulang."
+        )
+
+      await recordAudit(tx, {
+        userId: requester.id,
+        aksi: "KIRIM_BACA_ULANG_LAPORAN_PETUGAS",
+        entitas: "LaporanHarianPetugas",
+        entitasId: id,
+        perubahan: {
+          alasan,
+          sebelum: {
+            catatanVerif: laporan.catatanVerif,
+            verifiedAt: laporan.verifiedAt,
+            verifiedById: laporan.verifiedById,
+            verif1At: laporan.verif1At,
+            verif1ById: laporan.verif1ById,
+            verif2At: laporan.verif2At,
+            verif2ById: laporan.verif2ById,
+            verif3At: laporan.verif3At,
+            verif3ById: laporan.verif3ById,
+            standAwalRevisi: laporan.standAwalRevisi,
+            standAkhirRevisi: laporan.standAkhirRevisi,
+            kondisiRevisi: laporan.kondisiRevisi,
+            standAngkatLama: laporan.standAngkatLama,
+            standAwalMeterBaru: laporan.standAwalMeterBaru,
+            pemakaianTagihVerif: laporan.pemakaianTagihVerif,
+            meterVerifId: laporan.meterVerifId,
+            blokTarifVerif: laporan.blokTarifVerif,
+          },
+          sesudah: {
+            status: "DITOLAK",
+            verifiedAt: kini,
+            verifiedById: requester.id,
+            catatanVerif: alasan,
+            verif1At: null,
+            verif2At: null,
+            verif3At: null,
+            koreksiDireset: true,
+          },
+        },
+        ...auditMetaFromRequest(c.req.raw),
+      })
+
+      return tx.laporanHarianPetugas.findUniqueOrThrow({ where: { id } })
     })
     return ok(c, row)
-  },
+  }
 )
 
 /// "Unverifikasi": membatalkan SATU tahap terakhir (V3 → V2 → V1 → kosong;
@@ -3172,7 +3358,7 @@ laporanHarianRouter.patch(
     if (!laporan) throw new NotFoundError("LaporanHarianPetugas")
 
     const bolehSenior = (ROLE_GROUPS.SENIOR_UP as readonly string[]).includes(
-      requester.role,
+      requester.role
     )
     const bolehManajemen = (
       ROLE_GROUPS.MANAGEMENT_UP as readonly string[]
@@ -3181,14 +3367,14 @@ laporanHarianRouter.patch(
     if (laporan.pembacaanId) {
       if (!bolehSenior)
         throw new ForbiddenError(
-          "Membatalkan approve final (V3) memerlukan Senior Manager ke atas",
+          "Membatalkan approve final (V3) memerlukan Senior Manager ke atas"
         )
       const tagihan = await prisma.tagihan.findUnique({
         where: { pembacaanId: laporan.pembacaanId },
       })
       if (tagihan)
         throw new ConflictError(
-          "Pembacaan resmi laporan ini sudah dipakai tagihan — tidak bisa dibatalkan",
+          "Pembacaan resmi laporan ini sudah dipakai tagihan — tidak bisa dibatalkan"
         )
 
       const pembacaanId = laporan.pembacaanId
@@ -3213,7 +3399,7 @@ laporanHarianRouter.patch(
     if (laporan.isVerified) {
       if (!bolehSenior)
         throw new ForbiddenError(
-          "Membatalkan approve final (V3) memerlukan Senior Manager ke atas",
+          "Membatalkan approve final (V3) memerlukan Senior Manager ke atas"
         )
       return ok(
         c,
@@ -3226,7 +3412,7 @@ laporanHarianRouter.patch(
             verifiedAt: null,
             verifiedById: null,
           },
-        }),
+        })
       )
     }
 
@@ -3238,7 +3424,7 @@ laporanHarianRouter.patch(
         await prisma.laporanHarianPetugas.update({
           where: { id },
           data: { verif2At: null, verif2ById: null },
-        }),
+        })
       )
     }
 
@@ -3259,7 +3445,7 @@ laporanHarianRouter.patch(
             meterVerifId: null,
             blokTarifVerif: null,
           },
-        }),
+        })
       )
     }
 
@@ -3270,10 +3456,10 @@ laporanHarianRouter.patch(
         await prisma.laporanHarianPetugas.update({
           where: { id },
           data: { verifiedAt: null, verifiedById: null, catatanVerif: null },
-        }),
+        })
       )
     }
 
     throw new BadRequestError("Belum ada tahap verifikasi yang bisa dibatalkan")
-  },
+  }
 )

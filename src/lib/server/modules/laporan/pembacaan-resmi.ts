@@ -1,16 +1,71 @@
 import type { Prisma } from "@db"
 import { prisma } from "@db"
+import { dateToPeriode, periodeToDate } from "../../lib/periode"
 import { ConflictError } from "../../lib/errors"
-import { periodeToDate } from "../../lib/periode"
+import { recordAudit } from "../../lib/audit"
+import { pilihPemakaianLalu } from "@/lib/domain/pemakaian-lalu"
+
+function periodeSebelumnya(periode: number) {
+  const date = periodeToDate(periode)
+  date.setUTCMonth(date.getUTCMonth() - 1)
+  return dateToPeriode(date)
+}
+
+export async function ambilPemakaianPeriodeSebelumnya(
+  baris: { pelangganId: string | null; periode: number }[],
+) {
+  const periodePelanggan = new Map<number, Set<string>>()
+  for (const row of baris) {
+    if (!row.pelangganId) continue
+    const pelanggan = periodePelanggan.get(row.periode) ?? new Set<string>()
+    pelanggan.add(row.pelangganId)
+    periodePelanggan.set(row.periode, pelanggan)
+  }
+
+  const hasil = new Map<string, number>()
+  const queries = [...periodePelanggan].flatMap(([periode, pelangganIds]) => {
+    const ids = [...pelangganIds]
+    const sebelumnya = periodeSebelumnya(periode)
+    const kunciPeriode = `${periode}:`
+    return Array.from({ length: Math.ceil(ids.length / 500) }, (_, index) =>
+      prisma.pembacaanMeter
+        .findMany({
+          where: {
+            periode: periodeToDate(sebelumnya),
+            meter: { pelangganId: { in: ids.slice(index * 500, (index + 1) * 500) } },
+          },
+          orderBy: { createdAt: "desc" },
+          select: {
+            pemakaianM3: true,
+            meter: { select: { pelangganId: true } },
+          },
+        })
+        .then((rows) => {
+          for (const row of rows) {
+            const key = `${kunciPeriode}${row.meter.pelangganId}`
+            if (!hasil.has(key)) hasil.set(key, row.pemakaianM3)
+          }
+        }),
+    )
+  })
+  await Promise.all(queries)
+  return hasil
+}
 
 type SumberPembacaan = "PETUGAS" | "KONSUMEN"
 
 type InputPembacaanResmi = {
   pelangganId: string | null
+  nomorLangganan: string
   meterId: string
   periode: number
   sumber: SumberPembacaan
   laporanId: string
+  aktor: {
+    userId: string
+    ipAddress: string | null
+    userAgent: string | null
+  }
   data: Omit<Prisma.PembacaanMeterUncheckedCreateInput, "meterId" | "periode">
 }
 
@@ -39,6 +94,19 @@ export async function simpanPembacaanResmi(
     select: {
       id: true,
       meterId: true,
+      standLalu: true,
+      standAkhir: true,
+      pemakaianM3: true,
+      pemakaianRiil: true,
+      alasanTaksir: true,
+      blokTarif: true,
+      pemakaianLalu: true,
+      blokTarifLalu: true,
+      kondisi: true,
+      kategori: true,
+      pencatatId: true,
+      tanggalCatat: true,
+      fotoBukti: true,
       tagihan: { select: { id: true } },
     },
   })
@@ -57,46 +125,249 @@ export async function simpanPembacaanResmi(
         data,
       })
     : await tx.pembacaanMeter.create({ data })
+  const alasanPenggantian = `Pembacaan resmi digantikan oleh laporan ${
+    input.sumber === "KONSUMEN" ? "Mandiri" : "Petugas"
+  } terbaru.`
+
+  if (reusable) {
+    await recordAudit(tx, {
+      userId: input.aktor.userId,
+      aksi: "PEMBACAAN_RESMI_DIGANTI",
+      entitas: "PembacaanMeter",
+      entitasId: reusable.id,
+      perubahan: {
+        alasan: alasanPenggantian,
+        sumberBaru: input.sumber,
+        laporanBaruId: input.laporanId,
+        sebelum: {
+          ...reusable,
+          tanggalCatat: reusable.tanggalCatat?.toISOString() ?? null,
+        },
+        sesudah: {
+          id: pembacaan.id,
+          meterId: input.meterId,
+          periode: periode.toISOString(),
+          ...input.data,
+        },
+      },
+      ipAddress: input.aktor.ipAddress,
+      userAgent: input.aktor.userAgent,
+    })
+  }
+
+  if (input.nomorLangganan) {
+    const cocokPetugas = input.pelangganId
+      ? {
+          OR: [
+            { pelangganId: input.pelangganId },
+            { pelangganId: null, nomorLangganan: input.nomorLangganan },
+          ],
+        }
+      : { nomorLangganan: input.nomorLangganan }
+    const cocokMandiri = input.pelangganId
+      ? { pelangganId: input.pelangganId }
+      : { nomorLangganan: input.nomorLangganan }
+    const [laporanPetugasLama, laporanMandiriLama] = await Promise.all([
+      tx.laporanHarianPetugas.findMany({
+        where: {
+          periode: input.periode,
+          id: { not: input.laporanId },
+          AND: [
+            cocokPetugas,
+            {
+              OR: [
+                { isVerified: true },
+                { verif3At: { not: null } },
+                { pembacaanId: { not: null } },
+              ],
+            },
+          ],
+        },
+        select: {
+          id: true,
+          pelangganId: true,
+          nomorLangganan: true,
+          isVerified: true,
+          verifiedAt: true,
+          verifiedById: true,
+          verif1At: true,
+          verif1ById: true,
+          verif2At: true,
+          verif2ById: true,
+          verif3At: true,
+          verif3ById: true,
+          pembacaanId: true,
+          catatanVerif: true,
+          pemakaianTagihVerif: true,
+          blokTarifVerif: true,
+          meterVerifId: true,
+          standAkhirRevisi: true,
+          standAwalRevisi: true,
+          kondisiRevisi: true,
+          standAngkatLama: true,
+          standAwalMeterBaru: true,
+        },
+      }),
+      tx.laporanMandiri.findMany({
+        where: {
+          periode: input.periode,
+          id: { not: input.laporanId },
+          AND: [
+            cocokMandiri,
+            {
+              OR: [
+                { status: { in: ["DIVERIFIKASI", "DIGUNAKAN"] } },
+                { pembacaanId: { not: null } },
+              ],
+            },
+          ],
+        },
+        select: {
+          id: true,
+          status: true,
+          verifiedAt: true,
+          verifiedById: true,
+          pembacaanId: true,
+        },
+      }),
+    ])
+
+    if (laporanPetugasLama.length > 0) {
+      await tx.laporanHarianPetugas.updateMany({
+        where: { id: { in: laporanPetugasLama.map((row) => row.id) } },
+        data: {
+          ...(input.pelangganId
+            ? {
+                pelangganId: input.pelangganId,
+              }
+            : {}),
+          isVerified: false,
+          verifiedAt: null,
+          verifiedById: null,
+          verif1At: null,
+          verif1ById: null,
+          verif2At: null,
+          verif2ById: null,
+          verif3At: null,
+          verif3ById: null,
+          pembacaanId: null,
+          catatanVerif: null,
+          pemakaianTagihVerif: null,
+          blokTarifVerif: null,
+          meterVerifId: null,
+          standAkhirRevisi: null,
+          standAwalRevisi: null,
+          kondisiRevisi: null,
+          standAngkatLama: null,
+          standAwalMeterBaru: null,
+        },
+      })
+      for (const row of laporanPetugasLama) {
+        await recordAudit(tx, {
+          userId: input.aktor.userId,
+          aksi: "HASIL_RESMI_DIGANTI_KEMBALI_ANTREAN",
+          entitas: "LaporanHarianPetugas",
+          entitasId: row.id,
+          perubahan: {
+            alasan: alasanPenggantian,
+            sebelum: {
+              ...row,
+              verifiedAt: row.verifiedAt?.toISOString() ?? null,
+              verif1At: row.verif1At?.toISOString() ?? null,
+              verif2At: row.verif2At?.toISOString() ?? null,
+              verif3At: row.verif3At?.toISOString() ?? null,
+            },
+            sesudah: {
+              isVerified: false,
+              verifiedAt: null,
+              verifiedById: null,
+              verif1At: null,
+              verif1ById: null,
+              verif2At: null,
+              verif2ById: null,
+              verif3At: null,
+              verif3ById: null,
+              pembacaanId: null,
+              catatanVerif: null,
+              pemakaianTagihVerif: null,
+              blokTarifVerif: null,
+              meterVerifId: null,
+              standAkhirRevisi: null,
+              standAwalRevisi: null,
+              kondisiRevisi: null,
+              standAngkatLama: null,
+              standAwalMeterBaru: null,
+            },
+          },
+          ipAddress: input.aktor.ipAddress,
+          userAgent: input.aktor.userAgent,
+        })
+      }
+    }
+
+    if (laporanMandiriLama.length > 0) {
+      await tx.laporanMandiri.updateMany({
+        where: { id: { in: laporanMandiriLama.map((row) => row.id) } },
+        data: {
+          status: "MENUNGGU",
+          verifiedAt: null,
+          verifiedById: null,
+          alasanDitolak: null,
+          pembacaanId: null,
+        },
+      })
+      for (const row of laporanMandiriLama) {
+        await recordAudit(tx, {
+          userId: input.aktor.userId,
+          aksi: "HASIL_RESMI_DIGANTI_KEMBALI_ANTREAN",
+          entitas: "LaporanMandiri",
+          entitasId: row.id,
+          perubahan: {
+            alasan: alasanPenggantian,
+            sebelum: {
+              ...row,
+              verifiedAt: row.verifiedAt?.toISOString() ?? null,
+            },
+            sesudah: {
+              status: "MENUNGGU",
+              verifiedAt: null,
+              verifiedById: null,
+              alasanDitolak: null,
+              pembacaanId: null,
+            },
+          },
+          ipAddress: input.aktor.ipAddress,
+          userAgent: input.aktor.userAgent,
+        })
+      }
+    }
+  }
 
   const obsoleteIds = existing
     .filter((row) => row.id !== pembacaan.id)
     .map((row) => row.id)
   if (obsoleteIds.length > 0) {
-    await tx.laporanHarianPetugas.updateMany({
-      where: { pembacaanId: { in: obsoleteIds } },
-      data: { pembacaanId: null },
-    })
-    await tx.laporanMandiri.updateMany({
-      where: { pembacaanId: { in: obsoleteIds }, status: "DIGUNAKAN" },
-      data: { pembacaanId: null, status: "DIVERIFIKASI" },
-    })
-    await tx.pembacaanMeter.deleteMany({
-      where: { id: { in: obsoleteIds } },
-    })
-  }
-
-  if (input.sumber === "PETUGAS") {
-    if (input.pelangganId) {
-      await tx.laporanMandiri.updateMany({
-        where: {
-          pelangganId: input.pelangganId,
-          periode: input.periode,
-          pembacaanId: pembacaan.id,
-          id: { not: input.laporanId },
-          status: "DIGUNAKAN",
+    for (const row of existing.filter((item) => obsoleteIds.includes(item.id))) {
+      await recordAudit(tx, {
+        userId: input.aktor.userId,
+        aksi: "PEMBACAAN_RESMI_DIHAPUS_SAAT_PENGGANTIAN",
+        entitas: "PembacaanMeter",
+        entitasId: row.id,
+        perubahan: {
+          alasan: alasanPenggantian,
+          sumberBaru: input.sumber,
+          laporanBaruId: input.laporanId,
+          sebelum: {
+            ...row,
+            tanggalCatat: row.tanggalCatat?.toISOString() ?? null,
+          },
         },
-        data: { pembacaanId: null, status: "DIVERIFIKASI" },
+        ipAddress: input.aktor.ipAddress,
+        userAgent: input.aktor.userAgent,
       })
     }
-  } else if (input.pelangganId) {
-    await tx.laporanHarianPetugas.updateMany({
-      where: {
-        pelangganId: input.pelangganId,
-        periode: input.periode,
-        pembacaanId: pembacaan.id,
-        id: { not: input.laporanId },
-      },
-      data: { pembacaanId: null },
+    await tx.pembacaanMeter.deleteMany({
+      where: { id: { in: obsoleteIds } },
     })
   }
 

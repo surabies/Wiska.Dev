@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 import { auth } from "@/lib/auth/auth";
 import { PageContainer } from "@/components/layout"
-import { VerifikasiLapangan } from "@/features/dashboard/components/verifikasi/verifikasi-lapangan";
+import { VerifikasiLapangan } from "@/features/dashboard/components/verifikasi/VerifikasiLapangan";
 
-export const metadata: Metadata = { title: "Verifikasi Pembacaan · Tirtawening" }
+export const metadata: Metadata = { title: "Verifikasi Pembacaan Petugas" }
 
 export default async function VerifikasiLapanganPage() {
   const session = await auth();
