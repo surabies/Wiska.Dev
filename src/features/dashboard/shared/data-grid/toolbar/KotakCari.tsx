@@ -16,7 +16,7 @@ export function KotakCari({
   return (
     <div
       role="search"
-      className="relative w-full min-w-0 sm:w-64 lg:w-auto lg:max-w-72 lg:min-w-44 lg:flex-1"
+      className="relative w-full min-w-0 focus-within:z-10 sm:w-64 lg:w-auto lg:max-w-72 lg:min-w-44 lg:flex-1"
     >
       <HugeiconsIcon
         icon={Search01Icon}
