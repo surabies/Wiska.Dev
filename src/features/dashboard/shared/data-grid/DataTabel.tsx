@@ -59,12 +59,16 @@ import {
 } from "ag-grid-community"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
+  ArrowDown01Icon,
+  ArrowUp01Icon,
+  ArrowUpDownIcon,
   FilterHorizontalIcon,
   RotateLeft01Icon,
 } from "@hugeicons/core-free-icons"
 import { useIsMobile } from "@/hooks/UseSeluler"
 import { cn } from "@/lib/Utilitas"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { ToggleGroup } from "@/components/ui/toggle-group"
 import { ambilList, ApiError } from "@/features/dashboard/api/ApiDashboard"
 import {
@@ -96,28 +100,60 @@ ModuleRegistry.registerModules([AllCommunityModule])
 /// tidak ikut memicu onRowClicked milik halaman.
 const ID_KOLOM_PILIH = "ag-Grid-SelectionColumn"
 
-/// Garis sel ala spreadsheet: vertikal antar kolom + horizontal antar baris,
-/// juga di header. Ditumpuk di atas temaGrid (tema.ts) supaya semua halaman
-/// yang memakai DataGrid mendapat garis yang sama tanpa mengubah tema.ts.
-const garis = () => ({
-  style: "solid" as const,
-  width: 1,
-  color: "var(--border)",
-})
-const temaSpreadsheet = temaGrid.withParams({
-  columnBorder: garis(),
-  rowBorder: garis(),
-  headerColumnBorder: garis(),
-  headerRowBorder: garis(),
-  wrapperBorder: false,
-})
+function HeaderKolom({
+  column,
+  displayName,
+  enableSorting,
+  progressSort,
+}: CustomHeaderProps) {
+  const [sort, setSort] = React.useState(column.getSort())
+
+  React.useEffect(() => {
+    const sinkronkanSort = () => setSort(column.getSort())
+    column.addEventListener("sortChanged", sinkronkanSort)
+    return () => column.removeEventListener("sortChanged", sinkronkanSort)
+  }, [column])
+
+  const ikonSort =
+    sort === "asc"
+      ? ArrowUp01Icon
+      : sort === "desc"
+        ? ArrowDown01Icon
+        : ArrowUpDownIcon
+
+  if (!enableSorting) {
+    return (
+      <span className="block min-w-0 truncate text-xs leading-4 font-medium tracking-wide text-muted-foreground">
+        {displayName}
+      </span>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      className="flex w-full min-w-0 items-center gap-1 text-left text-xs leading-4 font-medium tracking-wide text-muted-foreground"
+      aria-label={`Urutkan ${displayName}`}
+      aria-pressed={Boolean(sort)}
+      title={`Urutkan ${displayName}`}
+      onClick={(event) => progressSort(event.shiftKey)}
+    >
+      <span className="min-w-0 truncate">{displayName}</span>
+      <HugeiconsIcon
+        icon={ikonSort}
+        strokeWidth={2}
+        className="size-3 shrink-0 opacity-60"
+        aria-hidden
+      />
+    </button>
+  )
+}
 
 /// Checkbox "pilih semua" di header. Header bawaan AG Grid tidak tersedia di
 /// Infinite Row Model, jadi dibuat sendiri: memilih/membatalkan SEMUA baris
 /// yang sedang termuat di cache (maks. maxBlocksInCache × PAGE_SIZE baris),
 /// dengan status kosong / sebagian (indeterminate) / semua.
 function HeaderPilihSemua({ api }: CustomHeaderProps) {
-  const ref = React.useRef<HTMLInputElement>(null)
   const [status, setStatus] = React.useState<"kosong" | "sebagian" | "semua">(
     "kosong"
   )
@@ -146,10 +182,6 @@ function HeaderPilihSemua({ api }: CustomHeaderProps) {
     }
   }, [api])
 
-  React.useEffect(() => {
-    if (ref.current) ref.current.indeterminate = status === "sebagian"
-  }, [status])
-
   function toggle() {
     const nodes: IRowNode[] = []
     api.forEachNode((n) => {
@@ -160,35 +192,29 @@ function HeaderPilihSemua({ api }: CustomHeaderProps) {
 
   return (
     <div className="flex h-full w-full items-center justify-center">
-      <input
-        ref={ref}
-        type="checkbox"
-        checked={status === "semua"}
-        onChange={toggle}
+      <Checkbox
+        checked={
+          status === "semua"
+            ? true
+            : status === "sebagian"
+              ? "indeterminate"
+              : false
+        }
+        onCheckedChange={toggle}
         aria-label="Pilih semua baris yang termuat"
         title="Pilih semua baris yang termuat"
-        className="size-4 cursor-pointer accent-blue-600"
       />
     </div>
   )
 }
 
-/// Prop tambahan di luar DataGridProps (tipe.ts tidak perlu diubah).
+/// Opsi tambahan DataGrid yang belum menjadi bagian dari kontrak publik.
 type PropTambahan = {
   toolbarModal?: boolean
   /// Tampilkan kolom checkbox sticky di kiri. Bawaan: true.
   checkbox?: boolean
   /// Dipanggil saat pilihan checkbox berubah (hanya baris yang termuat).
   onSelectionChanged?: (baris: BarisData[]) => void
-  /// Toolbar (cari, filter, jumlah baris, ikon aksi) berada DI LUAR card
-  /// tabel, tanpa background/border — gaya halaman Verifikasi. Card ber-border
-  /// hanya membungkus tabel. Bawaan: false (toolbar di dalam card).
-  toolbarTerpisah?: boolean
-  /// Hanya berlaku bersama `toolbarTerpisah`. Tabel menempel ke tepi card
-  /// halaman: tanpa margin, tanpa sudut membulat, tanpa bingkai samping/bawah,
-  /// hanya garis tipis di atas (gaya Neon). Bawaan: false (tabel berbingkai card
-  /// dengan margin, seperti halaman Verifikasi).
-  tabelPenuh?: boolean
 }
 
 export function DataGrid({
@@ -211,8 +237,6 @@ export function DataGrid({
   toolbarModal = false,
   checkbox = true,
   onSelectionChanged,
-  toolbarTerpisah = false,
-  tabelPenuh = false,
 }: DataGridProps & PropTambahan) {
   const mobil = useIsMobile()
   const idPanelFilter = React.useId()
@@ -446,24 +470,12 @@ export function DataGrid({
     // dirender. Toolbar `shrink-0`, grid wrapper `flex-1 min-h-0` mengisi sisanya.
     <section
       aria-label={judul}
-      className={cn(
-        "flex h-full flex-col overflow-hidden",
-        // Mode terpisah: section hanya penata tinggi; bingkai pindah ke
-        // pembungkus tabel di bawah.
-        !toolbarTerpisah &&
-          "rounded-lg border border-border bg-card shadow-panel"
-      )}
+      className="flex h-full flex-col gap-2 overflow-hidden"
     >
-      {/* Toolbar: SATU baris di layar lebar (lg+), membungkus di bawahnya. */}
       <div
         role="group"
         aria-label="Penyaring dan aksi tabel"
-        className={cn(
-          "flex shrink-0 flex-wrap items-center gap-2 lg:flex-nowrap",
-          toolbarTerpisah
-            ? "px-3 py-3 sm:px-4"
-            : "border-b border-border-subtle bg-card px-3 py-2.5 sm:px-4"
-        )}
+        className="flex shrink-0 flex-wrap items-center gap-1"
       >
         {searchParam && (
           <KotakCari
@@ -607,18 +619,7 @@ export function DataGrid({
         </ToggleGroup>
       </div>
 
-      {/* Pembungkus tabel: bingkai card hanya di mode terpisah. Selain itu
-          `contents` = tidak ada kotak, anak-anaknya tetap langsung di section
-          sehingga tata letak lama tidak berubah. */}
-      <div
-        className={
-          toolbarTerpisah
-            ? tabelPenuh
-              ? "flex min-h-0 flex-1 flex-col overflow-hidden border-t border-border bg-card"
-              : "mx-3 mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-panel sm:mx-4"
-            : "contents"
-        }
-      >
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-border/70 bg-card">
         {toolbarModal && filterBuka && (
           <ModalFilter
             onBuka={setFilterBuka}
@@ -674,14 +675,37 @@ export function DataGrid({
             )}
           >
             <AgGridReact
-              theme={temaSpreadsheet}
+              theme={temaGrid}
               columnDefs={defsTampil}
               defaultColDef={{
                 sortable: false,
                 resizable: true,
                 flex: 1,
                 minWidth: 110,
+                headerComponent: HeaderKolom,
+                suppressHeaderMenuButton: true,
+                tooltip: (params) => {
+                  const nilai = params.valueFormatted ?? params.value
+                  const rendererKustom =
+                    params.colDef &&
+                    "cellRenderer" in params.colDef &&
+                    params.colDef.cellRenderer
+                  if (
+                    nilai === null ||
+                    nilai === undefined ||
+                    nilai === "" ||
+                    (rendererKustom && !params.valueFormatted)
+                  ) {
+                    return undefined
+                  }
+                  return typeof nilai === "string" || typeof nilai === "number"
+                    ? String(nilai)
+                    : undefined
+                },
               }}
+              tooltipShowMode="whenTruncated"
+              tooltipShowDelay={500}
+              headerHeight={40}
               rowModelType="infinite"
               cacheBlockSize={PAGE_SIZE}
               maxBlocksInCache={10}
@@ -705,11 +729,12 @@ export function DataGrid({
                 checkbox
                   ? {
                       pinned: "left", // sticky saat scroll horizontal
-                      width: 48,
-                      minWidth: 48,
-                      maxWidth: 48,
+                      width: 40,
+                      minWidth: 40,
+                      maxWidth: 40,
                       resizable: false,
                       suppressMovable: true,
+                      suppressHeaderMenuButton: true,
                       headerComponent: HeaderPilihSemua,
                     }
                   : undefined

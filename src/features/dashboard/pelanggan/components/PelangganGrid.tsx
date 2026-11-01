@@ -161,10 +161,6 @@ export function PelangganGrid() {
       searchParam="q"
       searchPlaceholder="Cari nama / nomor / alamat…"
       advancedFilters={FILTER_PELANGGAN}
-      // Toolbar (cari, filter, jumlah baris, ikon aksi) di luar tabel, tanpa
-      // background/border; tabel menempel ke tepi card utama (gaya Neon).
-      toolbarTerpisah
-      tabelPenuh
     />
   )
 }

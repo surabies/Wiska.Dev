@@ -11,41 +11,56 @@ export {
   KELAS_INPUT_TOOLBAR,
 } from "./KelasKontrol"
 
-/// Tema dipetakan ke token CSS proyek (bukan warna hardcode) — dark mode
-/// ikut benar otomatis karena nilai var berubah saat class `dark` menempel.
-///
-/// Resep Geist: kepala kolom memakai kanvas (--background) sehingga sedikit
-/// berbeda dari badan tabel (--card); garis antar baris memakai
-/// --border-subtle (satu langkah lebih terang dari --border, khusus garis di
-/// DALAM panel); hover dan baris terpilih memakai aksen tabel netral Geist.
-/// Garis vertikal antar kolom dimatikan, tinggi baris 42px, dan bingkai luar
-/// dilepas karena <section> pembungkus sudah punya bingkai sendiri.
+const garisTabel = () => ({
+  style: "solid" as const,
+  width: 1,
+  color: "var(--border)",
+})
+
 export const temaGrid = themeQuartz.withParams({
   accentColor: "var(--ring)",
   backgroundColor: "var(--card)",
   foregroundColor: "var(--foreground)",
-  borderColor: "var(--border-subtle)",
-  headerBackgroundColor: "var(--background)",
+  borderColor: "var(--border)",
+  headerBackgroundColor: "var(--muted)",
   headerTextColor: "var(--muted-foreground)",
+  cellTextColor: "var(--foreground)",
   headerFontWeight: 500,
   fontFamily: "var(--font-geist-sans)",
-  fontSize: 13,
+  cellFontFamily: "var(--font-geist-sans)",
+  fontSize: 14,
+  cellFontSize: 14,
+  cellFontWeight: 400,
   headerFontSize: 12,
   borderRadius: 0,
   wrapperBorderRadius: 0,
   wrapperBorder: false,
-  columnBorder: false,
-  rowHeight: 42,
-  cellHorizontalPadding: 14,
+  columnBorder: garisTabel(),
+  rowBorder: garisTabel(),
+  headerColumnBorder: garisTabel(),
+  headerColumnResizeHandleColor: "transparent",
+  headerRowBorder: false,
+  rowHeight: 44,
+  cellHorizontalPadding: 12,
+  spacing: 8,
   oddRowBackgroundColor: "transparent",
-  rowHoverColor: "var(--table-accent)",
+  rowHoverColor: "var(--table-hover)",
   selectedRowBackgroundColor: "var(--table-accent)",
+  checkboxBorderRadius: 4,
+  checkboxBorderWidth: 1,
+  checkboxUncheckedBackgroundColor: "var(--card)",
+  checkboxUncheckedBorderColor: "var(--input)",
+  checkboxCheckedBackgroundColor: "var(--primary)",
+  checkboxCheckedBorderColor: "var(--primary)",
+  checkboxCheckedShapeColor: "var(--primary-foreground)",
+  checkboxIndeterminateBackgroundColor: "var(--primary)",
+  checkboxIndeterminateBorderColor: "var(--primary)",
+  checkboxIndeterminateShapeColor: "var(--primary-foreground)",
   browserColorScheme: "inherit",
 })
 
 export const KELAS_AREA_GRID =
   // min-h-0: AG Grid perlu ruang terukur agar bisa menggulir di panel.
-  "min-h-0 scrollbar-tipis " +
-  "[&_.ag-header-cell-text]:text-xs [&_.ag-header-cell-text]:font-medium [&_.ag-header-cell-text]:tracking-normal [&_.ag-header-cell-text]:normal-case " +
+  "min-h-0 scrollbar-tipis [&_.ag-header]:border-b-0 " +
   "[&_.ag-cell]:tabular-nums " +
   "[&_.baris-terpilih]:bg-table-accent "

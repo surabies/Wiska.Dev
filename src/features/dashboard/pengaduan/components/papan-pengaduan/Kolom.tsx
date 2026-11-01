@@ -1,7 +1,10 @@
 // features/dashboard/pengaduan/components/papan-pengaduan/Kolom.tsx —
 // definisi kolom AG Grid daftar pengaduan.
 import type { ColDef } from "ag-grid-community"
-import { LABEL_JENIS_PENGADUAN } from "@/features/public/lib/Format"
+import {
+  LABEL_JENIS_PENGADUAN,
+  formatSisaWaktu,
+} from "@/features/public/lib/Format"
 import {
   LABEL_PRIORITAS_PENGADUAN,
   LABEL_STATUS_PENGADUAN_STAF_RINGKAS,
@@ -95,6 +98,11 @@ export const KOLOM_PENGADUAN: ColDef[] = [
     headerName: "Tenggat",
     minWidth: 130,
     cellRenderer: SelSla,
+    tooltip: (params) => {
+      const sla = params.data?.sla
+      if (!sla?.targetSelesaiAt) return undefined
+      return sla.terjeda ? "Dijeda" : formatSisaWaktu(sla.sisaMenit)
+    },
     sortable: false,
   },
   {

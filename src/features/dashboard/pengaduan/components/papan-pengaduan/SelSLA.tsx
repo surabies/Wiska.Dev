@@ -22,9 +22,14 @@ function Penanda({
   tebal?: boolean
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span className="inline-flex max-w-full items-center gap-1.5 overflow-hidden">
       <span aria-hidden className={cn("size-1.5 rounded-full", titik)} />
-      <span className={cn(tebal && "font-medium text-destructive")}>
+      <span
+        className={cn(
+          "min-w-0 truncate",
+          tebal && "font-medium text-destructive"
+        )}
+      >
         {teks}
       </span>
     </span>
@@ -41,5 +46,5 @@ export function SelSla(p: ICellRendererParams) {
   if (sla.melanggar) return <Penanda titik="bg-destructive" teks={teks} tebal />
   if (sla.sisaMenit !== null && sla.sisaMenit < AMBANG_MENIT_MENDEKAT)
     return <Penanda titik="bg-warning" teks={teks} />
-  return <span className="text-muted-foreground">{teks}</span>
+  return <span className="block truncate text-muted-foreground">{teks}</span>
 }
