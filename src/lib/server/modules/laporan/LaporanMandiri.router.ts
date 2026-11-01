@@ -410,6 +410,30 @@ laporanMandiriRouter.patch(
           },
         },
       })
+      const daftarCatat = await tx.daftarCatat.findFirst({
+        where: {
+          periode: laporan.periode,
+          pelangganId: laporan.pelangganId,
+        },
+        select: { pencatatId: true },
+      })
+      const penugasanRute =
+        laporanPetugas?.pencatatId || daftarCatat?.pencatatId
+          ? null
+          : await tx.pelanggan.findUnique({
+              where: { id: laporan.pelangganId },
+              select: {
+                rute: {
+                  select: {
+                    penugasanRute: {
+                      orderBy: { urutan: "asc" },
+                      take: 1,
+                      select: { pencatatId: true },
+                    },
+                  },
+                },
+              },
+            })
       const sudahDiverifikasi =
         laporanPetugas &&
         (laporanPetugas.verif1At != null ||
@@ -467,6 +491,11 @@ laporanMandiriRouter.patch(
         ),
         kategori: "OFFSITE" as const,
         jenisInput: JenisInputLaporanHarian.KONSUMEN,
+        pencatatId:
+          laporanPetugas?.pencatatId ??
+          daftarCatat?.pencatatId ??
+          penugasanRute?.rute?.penugasanRute[0]?.pencatatId ??
+          null,
         fotoStandUrl: laporan.fotoUrl,
         tanggalCatat: laporanPetugas?.tanggalCatat ?? laporan.createdAt,
         isVerified: false,

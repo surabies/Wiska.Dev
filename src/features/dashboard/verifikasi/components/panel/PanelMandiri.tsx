@@ -183,7 +183,7 @@ export function PanelMandiri({
 
   return (
     <div className="flex min-w-0 flex-col gap-2 p-3">
-      <Seksi id="info" judul="Informasi pelanggan" awalBuka>
+      <Seksi judul="Informasi pelanggan">
         <InfoPelanggan
           nama={detail.pelanggan?.nama ?? "—"}
           status={detail.status}
@@ -192,7 +192,7 @@ export function PanelMandiri({
         />
       </Seksi>
 
-      <Seksi id="stand" judul="Stand meter" awalBuka>
+      <Seksi judul="Stand meter">
         <GridStand
           sel={[
             { label: "ST awal", nilai: standAwal },
@@ -202,25 +202,25 @@ export function PanelMandiri({
         />
       </Seksi>
 
-      <Seksi id="histori" judul="Histori pemakaian (3 bulan)">
+      <Seksi judul="Histori pemakaian (3 bulan)">
         <HistoriPemakaian pelangganId={detail.pelangganId} />
       </Seksi>
 
-      <Seksi id="foto" judul="Foto periode berjalan">
+      <Seksi judul="Foto periode berjalan">
         <FotoBukti
           url={detail.fotoUrl}
           label={`Foto meter — ${formatPeriode(detail.periode)}`}
         />
       </Seksi>
 
-      <Seksi id="foto-lalu" judul="Foto periode sebelumnya">
+      <Seksi judul="Foto periode sebelumnya">
         <FotoSebelumnya
           pelangganId={detail.pelangganId}
           periode={detail.periode}
         />
       </Seksi>
 
-      <Seksi id="lokasi" judul="Lokasi">
+      <Seksi judul="Lokasi">
         <PetaLokasi
           langsung
           lat={detail.pelanggan?.geoLat}

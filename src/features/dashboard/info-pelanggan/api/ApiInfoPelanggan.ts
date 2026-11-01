@@ -64,6 +64,7 @@ type LaporanRingkas = {
 
 type LaporanDetail = LaporanRingkas & {
   kondisi?: string | null
+  ruteKodeCatat?: string | null
   standAwal?: number | null
   standAkhir?: number | null
   standAkhirRevisi?: number | null
@@ -238,6 +239,7 @@ export async function ambilInfoPelanggan(
           kondisi: baca?.kondisi ?? det?.kondisi ?? null,
           petugas:
             baca?.pencatat?.namaLapangan ?? det?.pencatat?.namaLapangan ?? null,
+          kodeRute: det?.ruteKodeCatat ?? null,
           waktuCatat: det?.tanggalCatat ?? baca?.createdAt ?? null,
           waktuUpload: null,
         }

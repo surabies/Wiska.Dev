@@ -9,7 +9,7 @@ export default function StandKonsumenPage() {
     <PageContainer
       className="flex min-h-0 flex-1 flex-col"
       breadcrumbs={[
-        { label: "Pemetaan Rute", href: "/meter/pemetaan" },
+        { label: "Pengolahan Data", href: "#" },
         { label: "Stand Konsumen" },
       ]}
     >

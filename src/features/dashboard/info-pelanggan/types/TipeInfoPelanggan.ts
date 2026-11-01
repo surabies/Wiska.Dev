@@ -27,6 +27,7 @@ export type DataCatat = {
   /** Kode kondisi catat; dilabeli lewat LABEL_KONDISI_CATAT. */
   kondisi: string | null
   petugas: string | null
+  kodeRute: string | null
   /** ISO 8601. */
   waktuCatat: string | null
   waktuUpload: string | null

@@ -106,7 +106,9 @@ function pelangganAktif() {
         pembacaan: [{ pemakaianRiil: 8 }],
       },
     ],
-    daftarCatat: [{ id: "daftar-1", status: "DICATAT" }],
+    daftarCatat: [
+      { id: "daftar-1", status: "DICATAT", pencatatId: "petugas-1" },
+    ],
   }
 }
 
@@ -347,6 +349,7 @@ describe("Manual Add API end-to-end", () => {
       standAkhir: 123,
       pemakaian: 3,
       pemakaianLalu: 9,
+      pencatatId: "petugas-1",
       tanggalCatat: new Date("2026-10-15T00:00:00.000Z"),
       jenisInput: "MANUAL_SATUAN",
       isVerified: false,

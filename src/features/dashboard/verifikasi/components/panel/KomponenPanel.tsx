@@ -38,12 +38,10 @@ export function Bagian({
 }
 
 export function Seksi({
-  id,
   judul,
   awalBuka = true,
   children,
 }: {
-  id: string
   judul: string
   /** Terbuka saat pertama kali, sebelum Anda mengubahnya. */
   awalBuka?: boolean

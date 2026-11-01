@@ -588,7 +588,7 @@ manualAddRouter.post(
           daftarCatat: {
             where: { periode: input.periode },
             take: 1,
-            select: { id: true, status: true },
+            select: { id: true, status: true, pencatatId: true },
           },
         },
       })
@@ -616,6 +616,7 @@ manualAddRouter.post(
           id: true,
           pelangganId: true,
           nomorLangganan: true,
+          pencatatId: true,
           standAwal: true,
           standAkhir: true,
           pemakaian: true,
@@ -723,6 +724,7 @@ manualAddRouter.post(
         jenisInput: JenisInputLaporanHarian.MANUAL_SATUAN,
         alasanManual: input.alasanManual,
         nomorMeter: meter.nomorMeter,
+        pencatatId: daftar?.pencatatId ?? existing?.pencatatId ?? null,
         fotoStandUrl: FOTO_MANUAL_ADD_SATUAN,
         tanggalCatat: input.tanggalCatat
           ? new Date(`${input.tanggalCatat}T00:00:00.000Z`)
@@ -816,6 +818,7 @@ manualAddRouter.post(
                 kondisi: existing.kondisi,
                 kategori: existing.kategori,
                 jenisInput: existing.jenisInput,
+                pencatatId: existing.pencatatId,
                 alasanManual: existing.alasanManual,
                 manualProvenance: existing.manualProvenance,
                 nomorMeter: existing.nomorMeter,
@@ -858,6 +861,7 @@ manualAddRouter.post(
             standAwal: input.standAwal,
             standAkhir: input.standAkhir,
             pemakaian,
+            pencatatId: laporan.pencatatId,
             alasanManual: input.alasanManual,
             fotoStandUrl: FOTO_MANUAL_ADD_SATUAN,
             isVerified: false,

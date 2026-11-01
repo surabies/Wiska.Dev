@@ -7,12 +7,8 @@
 // klik kanan; dialog tindakan dikelola halaman agar terbuka tanpa menunggu
 // panel detail selesai memuat.
 //
-// Isi panel berupa tumpukan SEKSI LIPAT (kartu). Informasi dan Stand terbuka
-// bawaan; histori, foto, ring, dan lokasi tertutup — dan baru mengambil data
-// saat dibuka.
 import * as React from "react"
 import {
-  Alert02Icon,
   CheckmarkCircle02Icon,
   CursorPointer01Icon,
 } from "@hugeicons/core-free-icons"
@@ -93,13 +89,7 @@ function ProgresRing({ detail }: { detail: LaporanHarianDetail }) {
   )
 }
 
-export function PanelLapangan({
-  id,
-  ambangAnomali,
-}: {
-  id: string | null
-  ambangAnomali: number
-}) {
+export function PanelLapangan({ id }: { id: string | null }) {
   const [detail, setDetail] = React.useState<LaporanHarianDetail | null>(null)
   const [galat, setGalat] = React.useState<string | null>(null)
   // Pemicu muat ulang setelah aksi. State awal selalu bersih tiap ganti baris
@@ -158,9 +148,6 @@ export function PanelLapangan({
   const tahap = tahapLaporanHarian(detail)
   const nama = detail.pelanggan?.nama ?? detail.namaPelanggan ?? "Tanpa nama"
   const alamat = detail.pelanggan?.alamat ?? detail.alamatPelanggan
-  const anomali =
-    detail.persentase != null && Math.abs(detail.persentase) > ambangAnomali
-
   // Tiga angka yang sama di panel Petugas dan Pelanggan.
   const {
     standAwal,
@@ -170,7 +157,7 @@ export function PanelLapangan({
 
   return (
     <div className="flex min-w-0 flex-col gap-2 p-3">
-      <Seksi id="info" judul="Informasi pelanggan" awalBuka>
+      <Seksi judul="Informasi pelanggan">
         <InfoPelanggan
           nama={nama}
           status={tahap}
@@ -186,7 +173,7 @@ export function PanelLapangan({
         )}
       </Seksi>
 
-      <Seksi id="stand" judul="Stand meter" awalBuka>
+      <Seksi judul="Stand meter">
         <GridStand
           sel={[
             { label: "ST awal", nilai: standAwal },
@@ -196,11 +183,11 @@ export function PanelLapangan({
         />
       </Seksi>
 
-      <Seksi id="histori" judul="Histori pemakaian (3 bulan)">
+      <Seksi judul="Histori pemakaian (3 bulan)">
         <HistoriPemakaian pelangganId={detail.pelanggan?.id} />
       </Seksi>
 
-      <Seksi id="foto" judul="Foto periode berjalan">
+      <Seksi judul="Foto periode berjalan">
         <TabFoto
           varian="panel"
           item={[
@@ -227,18 +214,18 @@ export function PanelLapangan({
         />
       </Seksi>
 
-      <Seksi id="foto-lalu" judul="Foto periode sebelumnya">
+      <Seksi judul="Foto periode sebelumnya">
         <FotoSebelumnya
           pelangganId={detail.pelanggan?.id}
           periode={detail.periode}
         />
       </Seksi>
 
-      <Seksi id="ring" judul="Verifikasi berjenjang">
+      <Seksi judul="Verifikasi berjenjang">
         <ProgresRing detail={detail} />
       </Seksi>
 
-      <Seksi id="lokasi" judul="Lokasi">
+      <Seksi judul="Lokasi">
         <PetaLokasi
           langsung
           lat={detail.pelanggan?.geoLat}

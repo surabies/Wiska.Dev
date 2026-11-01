@@ -4,6 +4,8 @@ const mocks = vi.hoisted(() => {
   const aktor = { id: "staff-1", role: "STAFF" }
   const tx = {
     periodePenagihan: { findUnique: vi.fn() },
+    daftarCatat: { findFirst: vi.fn() },
+    pelanggan: { findUnique: vi.fn() },
     laporanMandiri: {
       updateMany: vi.fn(),
       findUniqueOrThrow: vi.fn(),
@@ -80,6 +82,9 @@ describe("PATCH /:id/verify laporan mandiri", () => {
     })
     mocks.tx.periodePenagihan.findUnique.mockResolvedValue(null)
     mocks.tx.laporanHarianPetugas.findUnique.mockResolvedValue(null)
+    mocks.tx.daftarCatat.findFirst.mockResolvedValue({
+      pencatatId: "pencatat-1",
+    })
     mocks.tx.meter.findMany.mockResolvedValue([])
     mocks.tx.pembacaanMeter.findFirst.mockResolvedValue(null)
     mocks.tx.laporanHarianPetugas.create.mockResolvedValue({
@@ -123,6 +128,7 @@ describe("PATCH /:id/verify laporan mandiri", () => {
           pelangganId: "pelanggan-1",
           standAkhir: 125,
           jenisInput: "KONSUMEN",
+          pencatatId: "pencatat-1",
           fotoStandUrl: "https://foto.example/meter.jpg",
           verif1At: null,
           verif2At: null,
@@ -138,6 +144,47 @@ describe("PATCH /:id/verify laporan mandiri", () => {
           sebelum: { status: "MENUNGGU", standDilaporkan: 123 },
           sesudah: { status: "DIVERIFIKASI", standDilaporkan: 125 },
         }),
+      })
+    )
+  })
+
+  it("mengambil petugas dari penugasan rute jika snapshot daftar catat belum tersedia", async () => {
+    mocks.tx.daftarCatat.findFirst.mockResolvedValue(null)
+    mocks.tx.pelanggan.findUnique.mockResolvedValue({
+      rute: {
+        penugasanRute: [{ pencatatId: "pencatat-rute-1" }],
+      },
+    })
+
+    const response = await laporanMandiriRouter.request("/laporan-1/verify", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ standDilaporkan: 125 }),
+    })
+
+    expect(response.status).toBe(200)
+    expect(mocks.tx.laporanHarianPetugas.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          jenisInput: "KONSUMEN",
+          pencatatId: "pencatat-rute-1",
+        }),
+      })
+    )
+    expect(mocks.tx.pelanggan.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "pelanggan-1" },
+        select: {
+          rute: {
+            select: {
+              penugasanRute: {
+                orderBy: { urutan: "asc" },
+                take: 1,
+                select: { pencatatId: true },
+              },
+            },
+          },
+        },
       })
     )
   })

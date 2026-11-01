@@ -602,7 +602,6 @@ export function VerifikasiLapangan({ role }: { role: string }) {
                   <PanelLapangan
                     key={`${idTerpilih ?? "kosong"}-${refreshKey}`}
                     id={idTerpilih}
-                    ambangAnomali={ambang}
                   />
                 )}
               </div>

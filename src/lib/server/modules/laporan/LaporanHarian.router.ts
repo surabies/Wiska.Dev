@@ -1461,6 +1461,7 @@ laporanHarianRouter.get(
         pelanggan: {
           include: {
             tarifGolongan: { select: { kodeAsli: true } },
+            rute: { select: { kode: true } },
           },
         },
         pencatat: true,
@@ -1473,6 +1474,12 @@ laporanHarianRouter.get(
       },
     })
     if (!row) throw new NotFoundError("LaporanHarianPetugas")
+    const daftarCatat = row.pelangganId
+      ? await prisma.daftarCatat.findFirst({
+          where: { periode: row.periode, pelangganId: row.pelangganId },
+          select: { rute: { select: { kode: true } } },
+        })
+      : null
     const pembacaan = row.pelangganId
       ? await ambilPembacaanResmi([
           { pelangganId: row.pelangganId, periode: row.periode },
@@ -1487,6 +1494,8 @@ laporanHarianRouter.get(
         row.pemakaianLalu,
         pemakaianPeriodeSebelumnya.get(`${row.periode}:${row.pelangganId}`)
       ),
+      ruteKodeCatat:
+        daftarCatat?.rute?.kode ?? row.pelanggan?.rute?.kode ?? null,
       pembacaan: denganSumberResmi(
         pembacaan.find((item) => item.meter.pelangganId === row.pelangganId) ??
           row.pembacaan

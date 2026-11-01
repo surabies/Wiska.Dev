@@ -216,6 +216,12 @@ export const navGroups: NavGroup[] = [
         description: "Verifikasi foto petugas pada peta.",
         keywords: ["foto", "petugas", "cek"],
       },
+      {
+        title: "Cek Stand Konsumen",
+        href: "/stand-konsumen",
+        description: "Verifikasi stand meter konsumen.",
+        keywords: ["stand", "konsumen", "cek"],
+      },
     ],
   },
   {

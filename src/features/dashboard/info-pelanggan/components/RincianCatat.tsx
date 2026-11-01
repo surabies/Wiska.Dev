@@ -24,6 +24,9 @@ export function RincianCatat({
         <BarisInfo label="Periode">{fmtPeriode(catat.periode)}</BarisInfo>
         {kondisi && <BarisInfo label="Kondisi">{kondisi}</BarisInfo>}
         <BarisInfo label="Petugas">{fmtTeks(catat.petugas)}</BarisInfo>
+        {catat.kodeRute && (
+          <BarisInfo label="Kode rute">{catat.kodeRute}</BarisInfo>
+        )}
         <BarisInfo label="Dicatat">{fmtWaktu(catat.waktuCatat)}</BarisInfo>
         {catat.waktuUpload && (
           <BarisInfo label="Diunggah">{fmtWaktu(catat.waktuUpload)}</BarisInfo>

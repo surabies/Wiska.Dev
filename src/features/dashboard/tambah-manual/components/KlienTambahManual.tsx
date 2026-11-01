@@ -639,19 +639,19 @@ export function ManualAddClient() {
                     <dt className="text-xs text-muted-foreground">
                       No. pelanggan
                     </dt>
-                    <dd className="mt-1 font-mono text-sm font-medium break-words tabular-nums">
+                    <dd className="warp-break-word mt-1 font-mono text-sm font-medium tabular-nums">
                       {pilihan.nomorLangganan}
                     </dd>
                   </dl>
                   <dl className="min-w-0">
                     <dt className="text-xs text-muted-foreground">Nama</dt>
-                    <dd className="mt-1 text-sm font-medium break-words">
+                    <dd className="warp-break-word mt-1 text-sm font-medium">
                       {pilihan.nama}
                     </dd>
                   </dl>
                   <dl className="min-w-0">
                     <dt className="text-xs text-muted-foreground">Alamat</dt>
-                    <dd className="mt-1 text-sm break-words">
+                    <dd className="warp-break-word mt-1 text-sm">
                       {pilihan.alamat}
                     </dd>
                   </dl>
@@ -856,8 +856,8 @@ export function ManualAddClient() {
                           : `Tambah yang dipilih (${pilihanIds.size})`}
                       </Button>
                     </div>
-                    <div className="min-h-0 flex-1 overflow-auto [&_[data-slot=table-container]]:overflow-visible">
-                      <Table className="min-w-[72rem] table-fixed text-left">
+                    <div className="min-h-0 flex-1 overflow-auto **:data-[slot=table-container]:overflow-visible">
+                      <Table className="min-w-6xl table-fixed text-left">
                         <TableHeader className="sticky top-0 z-10 bg-muted text-xs text-muted-foreground">
                           <TableRow>
                             <TableHead className="w-12 text-center">

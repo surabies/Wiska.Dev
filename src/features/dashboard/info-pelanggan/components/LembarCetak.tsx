@@ -289,6 +289,9 @@ export function LembarCetak({ data }: { data: InfoPelanggan }) {
                 <BarisRincian label="Periode" nilai={fmtPeriode(c.periode)} />
                 {kondisi && <BarisRincian label="Kondisi" nilai={kondisi} />}
                 <BarisRincian label="Petugas" nilai={fmtTeks(c.petugas)} />
+                {c.kodeRute && (
+                  <BarisRincian label="Kode rute" nilai={c.kodeRute} />
+                )}
                 <BarisRincian label="Dicatat" nilai={fmtWaktu(c.waktuCatat)} />
                 {c.waktuUpload && (
                   <BarisRincian
