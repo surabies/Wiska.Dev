@@ -10,7 +10,7 @@
 // Tanpa prop ini, perilakunya sama persis seperti sebelumnya.
 import Link from "next/link"
 import type { ReactNode } from "react"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 
 export type Crumb = { label: string; href?: string }
 
@@ -36,19 +36,19 @@ export function PageContainer({
       className={cn(
         "mx-auto w-full min-w-0",
         !penuh && "px-3 pt-4 pb-2.5 sm:px-5 sm:pt-5 sm:pb-3 lg:px-8",
-        className,
+        className
       )}
     >
       {!tanpaHeader && (
         <header
           className={cn(
-            "mb-2 flex shrink-0 min-h-7 items-center justify-between gap-3 sm:mb-2.5",
+            "mb-2 flex min-h-7 shrink-0 items-center justify-between gap-3 sm:mb-2.5",
             // Mode penuh: padding pindah ke header, garis bawah memisahkan dari tabel.
             // px-4 (16px) disengaja: sama dengan tepi kiri checkbox di kolom
             // seleksi DataGrid (lebar 48px, checkbox 16px di tengah) dan dengan
             // padding toolbar DataGrid, jadi breadcrumb, checkbox, dan kotak
             // cari berada pada satu garis vertikal di semua ukuran layar.
-            penuh && "mb-0  px-4 pt-4 pb-3 sm:mb-0 sm:pt-5",
+            penuh && "mb-0 px-4 pt-4 pb-3 sm:mb-0 sm:pt-5"
           )}
         >
           {breadcrumbs && breadcrumbs.length > 0 && (
@@ -87,7 +87,9 @@ export function PageContainer({
               </ol>
             </nav>
           )}
-          {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+          {actions && (
+            <div className="flex shrink-0 items-center gap-2">{actions}</div>
+          )}
         </header>
       )}
 

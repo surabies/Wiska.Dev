@@ -121,7 +121,7 @@ Perubahan lanjutan (2026-07-16) — verifikasi berjenjang laporan lapangan:
   (koreksi V1 — TIDAK menimpa `standAkhir` catat), serta
   `meterVerifId`/`blokTarifVerif` (pilihan V1, dipakai V3 saat membuat
   PembacaanMeter resmi). Spesifikasi alur:
-  `features/dashboard/components/verifikasi/tabel.md`; penegakan urutan
+  `features/dashboard/verifikasi/components/tabel.md`; penegakan urutan
   ring ada di `server/modules/laporan/laporan-harian.router.ts`.
   Kolom legacy `isVerified`/`verifiedAt`/`verifiedById` TIDAK dihapus dan
   tetap diisi (V3 = final, reject = tolak) supaya baris hasil sistem lama
@@ -326,7 +326,7 @@ Contoh pola pemakaian di route Hono (`app/api/[[...route]]/route.ts` atau
 modul yang di-mount di sana):
 
 ```ts
-import { Prisma, prisma } from "@/lib/prisma" // singleton PrismaClient + adapter-pg
+import { Prisma, prisma } from "@/lib/Prisma" // singleton PrismaClient + adapter-pg
 
 // Tulis titik koordinat pelanggan baru (Pelanggan.koordinat: geometry(Point, 4326))
 await prisma.$executeRaw`

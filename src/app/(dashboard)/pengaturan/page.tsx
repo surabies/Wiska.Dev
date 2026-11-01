@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
-import { PageContainer } from "@/components/layout"
-import { JendelaLaporMandiri } from "@/features/dashboard/components/pengaturan/jendela-lapor-mandiri"
-import { auth } from "@/lib/auth"
+import { PageContainer } from "@/components/layout/index"
+import { JendelaLaporMandiri } from "@/features/dashboard/pengaturan/components/JendelaLaporMandiri"
+import { auth } from "@/lib/auth/index"
 
 export const metadata: Metadata = {
   title: "Pengaturan Laporan Mandiri",

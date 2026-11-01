@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
-import { PageContainer } from "@/components/layout"
-import { TarifGrid } from "@/features/dashboard/components/grids/tarif-grid"
+import { PageContainer } from "@/components/layout/index"
+import { TarifGrid } from "@/features/dashboard/tarif/components/TarifGrid"
 
 export const metadata: Metadata = { title: "Struktur Tarif" }
 

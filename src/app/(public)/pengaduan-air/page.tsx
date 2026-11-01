@@ -4,16 +4,16 @@
 // bahasa visual dengan beranda). Lihat FRONTEND.md.
 import type { Metadata } from "next"
 import { MessageSquare, Ticket } from "@/components/ui/hugeicons-compat"
-import { auth } from "@/lib/auth"
+import { auth } from "@/lib/auth/index"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PengaduanForm } from "@/features/public/components/pengaduan-form"
-import { LacakTiketForm } from "@/features/public/components/lacak-tiket-form"
-import { getPetaCakupan } from "@/features/beranda/lib/peta"
+import { PengaduanForm } from "@/features/public/components/PengaduanFormulir"
+import { LacakTiketForm } from "@/features/public/components/LacakTiketFormulir"
+import { getPetaCakupan } from "@/features/beranda/lib/Peta"
 import {
   HalamanPublik,
   AsideBlok,
   KartuBerbingkai,
-} from "@/features/public/components/halaman-publik"
+} from "@/features/public/components/HalamanPublik"
 
 export const metadata: Metadata = {
   title: "Pengaduan",

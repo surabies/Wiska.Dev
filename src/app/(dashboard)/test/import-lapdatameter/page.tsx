@@ -1,9 +1,8 @@
-import {  PageContainer } from "@/components/layout"
+import { PageContainer } from "@/components/layout/index"
 import { redirect } from "next/navigation"
-import { auth } from "@/lib/auth"
-import { ImporDataClient } from "@/features/dashboard/components/test/import-lapdatameter/impor-data-client"
+import { auth } from "@/lib/auth/index"
+import { ImporLapdatameterView } from "@/features/dashboard/impor-lapdatameter/ImporLapdatameterView"
 import type { Metadata } from "next"
-
 
 export const metadata: Metadata = { title: "Import Lapdatameter" }
 
@@ -18,7 +17,7 @@ export default async function ImportLapdatameterPage() {
         { label: "Import Lapdatameter" },
       ]}
     >
-      <ImporDataClient />
+      <ImporLapdatameterView />
     </PageContainer>
   )
 }

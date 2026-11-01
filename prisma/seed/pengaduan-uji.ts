@@ -5,12 +5,12 @@ import {
   StatusPengaduan,
 } from "@generated"
 import { prisma } from "./lib/db"
-import { catatRiwayat, transisiPengaduan } from "../../src/lib/server/modules/pengaduan/alur"
+import { catatRiwayat, transisiPengaduan } from "../../src/lib/server/modules/pengaduan/Alur"
 import {
   ambilBatasKonfirmasiJam,
   hitungKonfirmasiBatasAt,
-} from "../../src/lib/server/modules/pengaduan/otomatis"
-import { hitungTargetSla } from "../../src/lib/domain/sla"
+} from "../../src/lib/server/modules/pengaduan/Otomatis"
+import { hitungTargetSla } from "../../src/lib/domain/SLA"
 
 // Neon development/testing memerlukan opt-in `-- --allow-neon-test-data`.
 // Gunakan `-- --dry-run` untuk pratinjau tanpa menulis data.

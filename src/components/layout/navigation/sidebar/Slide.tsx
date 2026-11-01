@@ -2,8 +2,8 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "@/lib/utils"
-import type { Direction } from "./types/types"
+import { cn } from "@/lib/Utilitas"
+import type { Direction } from "./types/Tipe"
 
 /** Animasi geser tipis saat berganti tampilan (root <-> detail). */
 export function Slide({
@@ -28,7 +28,7 @@ export function Slide({
           ? "translate-x-0 opacity-100"
           : direction === "forward"
             ? "translate-x-4 opacity-0"
-            : "-translate-x-4 opacity-0",
+            : "-translate-x-4 opacity-0"
       )}
     >
       {children}

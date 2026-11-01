@@ -1,7 +1,7 @@
 // GrafikPemakaian menampilkan batang per periode (terlama → terbaru). CSS murni, tanpa pustaka
 // grafik. Periode yang sedang dilihat memakai warna seri grafik pertama.
 // Tinggi mengisi sisa kartu (flex-1) sehingga kartu grafik dan rincian sama tinggi.
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 import { fmtAngka, fmtPeriode, fmtPeriodeSingkat } from "../lib/FormatTampilan"
 import type { BarisRiwayat } from "../types/TipeInfoPelanggan"
 

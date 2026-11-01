@@ -7,9 +7,9 @@
 // token bisa saja kedaluwarsa atau dipakai di tab lain).
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
-import { auth } from "@/lib/auth"
-import { tokenResetValid } from "@/features/auth/lib/password-reset"
-import { ResetPasswordCard } from "@/features/auth/components/reset-password-card"
+import { auth } from "@/lib/auth/index"
+import { tokenResetValid } from "@/features/auth/lib/SandiAturUlang"
+import { ResetPasswordCard } from "@/features/auth/components/KartuAturUlangSandi"
 
 export const metadata: Metadata = {
   title: "Atur ulang password",

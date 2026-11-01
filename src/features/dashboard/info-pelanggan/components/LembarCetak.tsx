@@ -16,8 +16,9 @@
 // hasil cetak sama di mode terang maupun gelap.
 import * as React from "react"
 import { flushSync, createPortal } from "react-dom"
-import { cn } from "@/lib/utils"
-import { LABEL_KONDISI_CATAT, LABEL_STATUS_PELANGGAN } from "../../lib/label"
+import { cn } from "@/lib/Utilitas"
+import { LABEL_KONDISI_CATAT } from "@/features/dashboard/lib/LabelPencatatan"
+import { LABEL_STATUS_PELANGGAN } from "@/features/dashboard/lib/LabelPelanggan"
 import {
   fmtAngka,
   fmtPeriode,

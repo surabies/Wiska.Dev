@@ -12,7 +12,7 @@ import {
   type BorderBeamSize,
 } from "border-beam"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 import { Button } from "@/components/ui/button"
 
 type BeamShellProps = Pick<
@@ -71,7 +71,7 @@ export const BorderBeamButton = forwardRef<
       borderRadius={borderRadius}
       brightness={brightness}
       className={cn(
-        "overflow-visible! inline-flex w-fit min-w-0 flex-col items-stretch leading-none",
+        "inline-flex w-fit min-w-0 flex-col items-stretch overflow-visible! leading-none",
         borderBeamClassName
       )}
       colorVariant={colorVariant}
@@ -103,7 +103,7 @@ export const BorderBeamIconButton = forwardRef<
 ) {
   return (
     <BorderBeamButton
-      className={cn("!leading-none [&_svg]:block [&_svg]:shrink-0", className)}
+      className={cn("leading-none! [&_svg]:block [&_svg]:shrink-0", className)}
       ref={ref}
       size={size}
       {...props}

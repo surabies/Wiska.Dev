@@ -15,7 +15,7 @@ import {
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 
 const LABEL_STAGGER_SEC = 0.018
 const LABEL_CHAR_DURATION_SEC = 0.16
@@ -115,7 +115,7 @@ function StaggeredTextLabel({
   return (
     <motion.span
       animate="visible"
-      className="inline-flex items-center font-medium text-foreground text-sm tracking-tight antialiased"
+      className="inline-flex items-center text-sm font-medium tracking-tight text-foreground antialiased"
       initial="hidden"
       key={text}
       variants={{
@@ -165,7 +165,7 @@ function TrailingLoadingSlot({
       aria-hidden
       className={cn(
         "absolute inset-0 flex items-center justify-center rounded-full",
-        "pointer-events-none bg-muted text-muted-foreground shadow-foreground/10 shadow-sm ring-1 ring-foreground/10"
+        "pointer-events-none bg-muted text-muted-foreground shadow-sm ring-1 shadow-foreground/10 ring-foreground/10"
       )}
       exit={{ ...cross.exit, transition: trailingExitTransition(reduceMotion) }}
       initial={cross.initial}
@@ -183,8 +183,10 @@ function TrailingLoadingSlot({
   )
 }
 
-export interface HaloButtonProps
-  extends Omit<ComponentProps<typeof ButtonPrimitive>, "children"> {
+export interface HaloButtonProps extends Omit<
+  ComponentProps<typeof ButtonPrimitive>,
+  "children"
+> {
   children: ReactNode
   /** Frosted inner surface so gradient blobs read through (matches search translucent mode). */
   translucent?: boolean
@@ -291,7 +293,7 @@ export function HaloButton({
         )
       }
       return (
-        <span className="font-medium text-foreground text-sm tracking-tight antialiased">
+        <span className="text-sm font-medium tracking-tight text-foreground antialiased">
           {loadingText}
         </span>
       )
@@ -300,7 +302,7 @@ export function HaloButton({
       return <StaggeredTextLabel reduceMotion={reduceMotion} text={children} />
     }
     return (
-      <span className="font-medium text-foreground text-sm tracking-tight antialiased">
+      <span className="text-sm font-medium tracking-tight text-foreground antialiased">
         {children}
       </span>
     )
@@ -347,7 +349,7 @@ export function HaloButton({
               animate={{
                 left: borderGlow.primaryLeft,
               }}
-              className="-bottom-4 absolute h-16 w-48 blur-xl"
+              className="absolute -bottom-4 h-16 w-48 blur-xl"
               style={{
                 background: borderGlow.primaryBg,
               }}
@@ -361,7 +363,7 @@ export function HaloButton({
               animate={{
                 left: borderGlow.secondaryLeft,
               }}
-              className="-bottom-3 absolute h-12 w-32 blur-lg"
+              className="absolute -bottom-3 h-12 w-32 blur-lg"
               style={{
                 background: borderGlow.secondaryBg,
               }}
@@ -375,7 +377,7 @@ export function HaloButton({
               animate={{
                 left: borderGlow.tertiaryLeft,
               }}
-              className="-bottom-2 absolute h-10 w-24 blur-lg"
+              className="absolute -bottom-2 h-10 w-24 blur-lg"
               style={{
                 background: borderGlow.tertiaryBg,
               }}
@@ -391,7 +393,7 @@ export function HaloButton({
         <ButtonPrimitive
           aria-busy={isLoading || undefined}
           className={cn(
-            "relative flex min-h-11 min-w-0 select-none items-center gap-2.5 rounded-full px-6 py-2.5",
+            "relative flex min-h-11 min-w-0 items-center gap-2.5 rounded-full px-6 py-2.5 select-none",
             "border border-border/90",
             "shadow-[0_1px_0_rgba(255,255,255,0.1)_inset,0_1px_2px_rgba(0,0,0,0.04),0_4px_14px_rgba(0,0,0,0.05)]",
             "dark:border-border dark:shadow-[0_1px_0_rgba(255,255,255,0.06)_inset,0_1px_2px_rgba(0,0,0,0.35),0_4px_20px_rgba(0,0,0,0.35)]",

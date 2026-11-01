@@ -34,7 +34,7 @@ import {
   useTransform,
 } from "motion/react"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 
 const paddingClass = {
   none: "",
@@ -98,7 +98,7 @@ function HaloCardBorderTrail({ active }: { active: boolean }) {
   return (
     <div
       className={cn(
-        "pointer-events-none absolute inset-0 rounded-[inherit] border border-transparent [mask-clip:padding-box,border-box] [mask-composite:intersect] [mask-image:linear-gradient(transparent,transparent),linear-gradient(#000,#000)]",
+        "pointer-events-none absolute inset-0 rounded-[inherit] border border-transparent [mask-image:linear-gradient(transparent,transparent),linear-gradient(#000,#000)] [mask-composite:intersect] [mask-clip:padding-box,border-box]",
         active ? "visible opacity-100" : "invisible opacity-0"
       )}
     >
@@ -187,7 +187,7 @@ function GradientRimPillBlobs({
           animate={{
             left: borderGlow.primaryLeft,
           }}
-          className="-bottom-5 absolute h-20 w-56 blur-2xl"
+          className="absolute -bottom-5 h-20 w-56 blur-2xl"
           style={{
             background: borderGlow.primaryBg,
           }}
@@ -201,7 +201,7 @@ function GradientRimPillBlobs({
           animate={{
             left: borderGlow.secondaryLeft,
           }}
-          className="-bottom-4 absolute h-16 w-40 blur-xl"
+          className="absolute -bottom-4 h-16 w-40 blur-xl"
           style={{
             background: borderGlow.secondaryBg,
           }}
@@ -215,7 +215,7 @@ function GradientRimPillBlobs({
           animate={{
             left: borderGlow.tertiaryLeft,
           }}
-          className="-bottom-3 absolute h-14 w-32 blur-lg"
+          className="absolute -bottom-3 h-14 w-32 blur-lg"
           style={{
             background: borderGlow.tertiaryBg,
           }}
@@ -345,7 +345,7 @@ const HaloCard = forwardRef<HTMLDivElement, HaloCardProps>(function HaloCard(
               animate={{
                 left: borderGlow.primaryLeft,
               }}
-              className="-bottom-10 absolute h-32 w-88 blur-2xl"
+              className="absolute -bottom-10 h-32 w-88 blur-2xl"
               style={{
                 background: borderGlow.primaryBg,
               }}
@@ -359,7 +359,7 @@ const HaloCard = forwardRef<HTMLDivElement, HaloCardProps>(function HaloCard(
               animate={{
                 left: borderGlow.secondaryLeft,
               }}
-              className="-bottom-7 absolute h-24 w-52 blur-2xl"
+              className="absolute -bottom-7 h-24 w-52 blur-2xl"
               style={{
                 background: borderGlow.secondaryBg,
               }}
@@ -373,7 +373,7 @@ const HaloCard = forwardRef<HTMLDivElement, HaloCardProps>(function HaloCard(
               animate={{
                 left: borderGlow.tertiaryLeft,
               }}
-              className="-bottom-5 absolute h-20 w-44 blur-xl"
+              className="absolute -bottom-5 h-20 w-44 blur-xl"
               style={{
                 background: borderGlow.tertiaryBg,
               }}
@@ -391,7 +391,7 @@ const HaloCard = forwardRef<HTMLDivElement, HaloCardProps>(function HaloCard(
             "relative z-0 flex flex-col gap-6 rounded-[15px] border border-border/90",
             "shadow-[0_1px_0_rgba(255,255,255,0.1)_inset,0_1px_2px_rgba(0,0,0,0.04),0_4px_14px_rgba(0,0,0,0.05)]",
             "dark:border-border dark:shadow-[0_1px_0_rgba(255,255,255,0.06)_inset,0_1px_2px_rgba(0,0,0,0.35),0_4px_20px_rgba(0,0,0,0.35)]",
-            "outline-none transition-[background-color,backdrop-filter,border-color,box-shadow] duration-200 ease-out",
+            "transition-[background-color,backdrop-filter,border-color,box-shadow] duration-200 ease-out outline-none",
             interactive &&
               "fine-hover:hover:border-ring/50 fine-hover:hover:shadow-[0_1px_0_rgba(255,255,255,0.14)_inset,0_1px_2px_rgba(0,0,0,0.09),0_4px_14px_rgba(0,0,0,0.11)]",
             interactive &&
@@ -447,7 +447,7 @@ const HaloCardTitle = forwardRef<HTMLHeadingElement, ComponentProps<"h3">>(
     return (
       <h3
         className={cn(
-          "col-start-1 row-start-1 text-balance font-semibold text-foreground text-lg leading-tight tracking-tight antialiased",
+          "col-start-1 row-start-1 text-lg leading-tight font-semibold tracking-tight text-balance text-foreground antialiased",
           className
         )}
         data-slot="halo-card-title"
@@ -466,7 +466,7 @@ const HaloCardDescription = forwardRef<
   return (
     <p
       className={cn(
-        "col-start-1 row-start-2 text-pretty text-muted-foreground text-sm leading-relaxed",
+        "col-start-1 row-start-2 text-sm leading-relaxed text-pretty text-muted-foreground",
         className
       )}
       data-slot="halo-card-description"
@@ -516,8 +516,10 @@ function HaloCardFooter({ className, ...props }: ComponentProps<"div">) {
 }
 HaloCardFooter.displayName = "HaloCardFooter"
 
-export interface HaloCardButtonProps
-  extends Omit<ComponentProps<typeof ButtonPrimitive>, "children"> {
+export interface HaloCardButtonProps extends Omit<
+  ComponentProps<typeof ButtonPrimitive>,
+  "children"
+> {
   children: ReactNode
   /**
    * `primary` — animated gradient rim + frosted fill (matches card chrome).
@@ -578,12 +580,12 @@ const HaloCardButton = forwardRef<HTMLButtonElement, HaloCardButtonProps>(
           >
             <ButtonPrimitive
               className={cn(
-                "relative flex min-w-0 select-none items-center justify-center rounded-full",
-                "border border-border/90 bg-muted font-medium text-foreground text-sm tracking-tight antialiased",
+                "relative flex min-w-0 items-center justify-center rounded-full select-none",
+                "border border-border/90 bg-muted text-sm font-medium tracking-tight text-foreground antialiased",
                 "shadow-[0_1px_0_rgba(255,255,255,0.1)_inset,0_1px_2px_rgba(0,0,0,0.06)]",
                 "dark:border-border dark:bg-muted dark:text-foreground",
                 "fine-hover:hover:border-ring/50 fine-hover:hover:bg-accent fine-hover:hover:text-accent-foreground",
-                "outline-none transition-[background-color,border-color,box-shadow,color,transform] duration-200 ease-out",
+                "transition-[background-color,border-color,box-shadow,color,transform] duration-200 ease-out outline-none",
                 "focus-visible:border-ring/70 focus-visible:ring-2 focus-visible:ring-ring/30 dark:focus-visible:border-zinc-500/45",
                 "enabled:active:scale-[0.96] motion-reduce:enabled:active:scale-100",
                 "disabled:pointer-events-none disabled:opacity-50",
@@ -632,18 +634,18 @@ const HaloCardButton = forwardRef<HTMLButtonElement, HaloCardButtonProps>(
           />
           <ButtonPrimitive
             className={cn(
-              "relative flex min-w-0 select-none items-center justify-center rounded-full",
+              "relative flex min-w-0 items-center justify-center rounded-full select-none",
               "border border-border/90",
               "shadow-[0_1px_0_rgba(255,255,255,0.1)_inset,0_1px_2px_rgba(0,0,0,0.04),0_4px_14px_rgba(0,0,0,0.05)]",
               "dark:border-border dark:shadow-[0_1px_0_rgba(255,255,255,0.06)_inset,0_1px_2px_rgba(0,0,0,0.35),0_4px_20px_rgba(0,0,0,0.35)]",
-              "outline-none transition-[transform,background-color,backdrop-filter,border-color,box-shadow] duration-200 ease-out",
+              "transition-[transform,background-color,backdrop-filter,border-color,box-shadow] duration-200 ease-out outline-none",
               "fine-hover:hover:border-ring/50 fine-hover:hover:shadow-[0_1px_0_rgba(255,255,255,0.12)_inset,0_2px_6px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.08)]",
               "dark:fine-hover:hover:border-zinc-500/60 dark:fine-hover:hover:shadow-[0_1px_0_rgba(255,255,255,0.08)_inset,0_4px_12px_rgba(0,0,0,0.45),0_12px_32px_rgba(0,0,0,0.45)]",
               "focus-visible:border-ring/70 focus-visible:ring-2 focus-visible:ring-ring/30 dark:focus-visible:border-zinc-500/45",
               "enabled:active:scale-[0.96] motion-reduce:enabled:active:scale-100",
               "disabled:pointer-events-none disabled:opacity-50",
               "backdrop-blur-xl backdrop-saturate-150",
-              "font-medium text-foreground text-sm tracking-tight antialiased",
+              "text-sm font-medium tracking-tight text-foreground antialiased",
               size === "icon"
                 ? "size-11 p-0 [&_svg]:shrink-0"
                 : "min-h-11 gap-2 px-6 py-2.5"

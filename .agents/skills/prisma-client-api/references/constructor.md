@@ -145,7 +145,7 @@ The value must be a non-negative integer. Set it to `0` to disable query-plan ca
 Prevent multiple client instances in development:
 
 ```typescript
-// lib/prisma.ts
+// lib/Prisma.ts
 import { PrismaClient } from '../generated/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 
@@ -170,7 +170,7 @@ if (process.env.NODE_ENV !== 'production') {
 ## Next.js Pattern
 
 ```typescript
-// lib/prisma.ts
+// lib/Prisma.ts
 import { PrismaClient } from '@/generated/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 

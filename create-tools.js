@@ -38,7 +38,7 @@ subFolders.forEach(folder => {
     .join(' ');
 
   // Konten file page.tsx sesuai format yang Anda inginkan
-  const pageContent = `import { MenuPage } from "@/components/layout"
+  const pageContent = `import { MenuPage } from "@/components/layout/index"
 
 export const metadata = { title: "${title} · Tirtawening" }
 

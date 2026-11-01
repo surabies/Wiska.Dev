@@ -2,23 +2,23 @@
 //
 // Page tipis: metadata + rakit fitur lewat kerangka HalamanPublik (satu
 // bahasa visual dengan beranda). Lihat FRONTEND.md.
-import type { Metadata } from "next";
-import { CalendarClock, Upload } from "@/components/ui/hugeicons-compat";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LaporMeterForm } from "@/features/public/components/lapor-meter-form";
-import { CekLaporanMeterForm } from "@/features/public/components/cek-laporan-meter-form";
+import type { Metadata } from "next"
+import { CalendarClock, Upload } from "@/components/ui/hugeicons-compat"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { LaporMeterForm } from "@/features/public/components/LaporMeterFormulir"
+import { CekLaporanMeterForm } from "@/features/public/components/CekLaporanMeterFormulir"
 import {
   HalamanPublik,
   AsideBlok,
   LangkahList,
   KartuBerbingkai,
-} from "@/features/public/components/halaman-publik";
+} from "@/features/public/components/HalamanPublik"
 
 export const metadata: Metadata = {
   title: "Lapor meter mandiri",
   description:
     "Laporkan sendiri angka meter air Anda ke PERUMDA Tirtawening Kota Bandung",
-};
+}
 
 const LANGKAH = [
   {
@@ -36,7 +36,7 @@ const LANGKAH = [
     detail:
       "Laporan berstatus menunggu sampai foto dicek petugas — baru menjadi dasar tagihan.",
   },
-] as const;
+] as const
 
 export default async function LaporMeterPage({
   searchParams,
@@ -45,10 +45,10 @@ export default async function LaporMeterPage({
   // laporan" dengan nomor langganan terisi + langsung dicari — pola sama
   // dengan ?nomor= di /pengaduan (lihat app/(public)/pengaduan/page.tsx).
   // ?tab=cek membuka tab itu langsung (deep-link umum).
-  searchParams: Promise<{ nomor?: string; tab?: string }>;
+  searchParams: Promise<{ nomor?: string; tab?: string }>
 }) {
-  const { nomor, tab } = await searchParams;
-  const tabAwal = nomor || tab === "cek" ? "cek" : "lapor";
+  const { nomor, tab } = await searchParams
+  const tabAwal = nomor || tab === "cek" ? "cek" : "lapor"
 
   return (
     <HalamanPublik
@@ -121,5 +121,5 @@ export default async function LaporMeterPage({
         </Tabs>
       </KartuBerbingkai>
     </HalamanPublik>
-  );
+  )
 }

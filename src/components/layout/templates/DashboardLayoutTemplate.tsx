@@ -2,7 +2,7 @@
 // Tugas: membungkus semua halaman dashboard dengan kerangka (sidebar + pola).
 // Tanda kurung pada (dashboard) = route group: tidak muncul di URL.
 import type { ReactNode } from "react"
-import { DashboardShell } from "@/components/layout"
+import { DashboardShell } from "@/components/layout/index"
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return <DashboardShell>{children}</DashboardShell>

@@ -1,10 +1,2 @@
-export {
-  daftarAnomali,
-  riwayatSambungan,
-  trenAnomali,
-} from "./anomali.service"
-export type {
-  BarisAnomali,
-  OpsiDaftar,
-  TitikTren,
-} from "./anomali.service"
+export { daftarAnomali, riwayatSambungan, trenAnomali } from "./Anomali.service"
+export type { BarisAnomali, OpsiDaftar, TitikTren } from "./Anomali.service"

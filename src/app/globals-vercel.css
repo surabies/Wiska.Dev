@@ -52,7 +52,7 @@
     --lp-grid: rgba(0, 0, 0, 0.045);
     /* CTA selalu KEBALIKAN latarnya — bidang paling kontras di halaman.
        Itu cara Vercel membuat tombol utamanya menonjol: kontras, bukan warna. */
-      --lp-cta-bg: #171717;
+    --lp-cta-bg: #171717;
     --lp-cta-fg: #ffffff;
     --lp-cta-bg-hover: #333333;
 

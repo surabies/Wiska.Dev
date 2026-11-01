@@ -24,7 +24,7 @@ import {
   useReducedMotion,
 } from "motion/react"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 
 /** Placeholder line: snappy stagger. */
 const PLACEHOLDER_STAGGER_SEC = 0.018
@@ -190,7 +190,7 @@ function TrailingLoadingSlot({ reduceMotion }: { reduceMotion: boolean }) {
       aria-hidden
       className={cn(
         "absolute inset-0 flex items-center justify-center rounded-full",
-        "pointer-events-none bg-muted text-muted-foreground shadow-foreground/10 shadow-sm ring-1 ring-foreground/10"
+        "pointer-events-none bg-muted text-muted-foreground shadow-sm ring-1 shadow-foreground/10 ring-foreground/10"
       )}
       exit={cross.exit}
       initial={cross.initial}
@@ -218,7 +218,7 @@ function TrailingClearSlot({
       className={cn(
         "absolute inset-0 flex items-center justify-center rounded-full",
         "bg-muted text-muted-foreground",
-        "shadow-foreground/10 shadow-sm ring-1 ring-foreground/10",
+        "shadow-sm ring-1 shadow-foreground/10 ring-foreground/10",
         "hover:bg-accent hover:text-accent-foreground",
         "transition-[background-color,color] duration-150 ease-out"
       )}
@@ -554,7 +554,7 @@ export function HaloSearchInput({
               animate={{
                 left: borderGlow.primaryLeft,
               }}
-              className="-bottom-4 absolute h-16 w-48 blur-xl"
+              className="absolute -bottom-4 h-16 w-48 blur-xl"
               key={`g-primary-${isDeleting ? "del" : "idle"}`}
               style={{
                 background: borderGlow.primaryBg,
@@ -570,7 +570,7 @@ export function HaloSearchInput({
               animate={{
                 left: borderGlow.secondaryLeft,
               }}
-              className="-bottom-3 absolute h-12 w-32 blur-lg"
+              className="absolute -bottom-3 h-12 w-32 blur-lg"
               key={`g-secondary-${isDeleting ? "del" : "idle"}`}
               style={{
                 background: borderGlow.secondaryBg,
@@ -586,7 +586,7 @@ export function HaloSearchInput({
               animate={{
                 left: borderGlow.tertiaryLeft,
               }}
-              className="-bottom-2 absolute h-10 w-24 blur-lg"
+              className="absolute -bottom-2 h-10 w-24 blur-lg"
               key={`g-tertiary-${isDeleting ? "del" : "idle"}`}
               style={{
                 background: borderGlow.tertiaryBg,
@@ -606,7 +606,7 @@ export function HaloSearchInput({
           className={cn(
             "relative flex items-center gap-3 rounded-full px-4 py-3",
             "border border-border",
-            "shadow-black/5 shadow-sm dark:shadow-black/30",
+            "shadow-sm shadow-black/5 dark:shadow-black/30",
             "transition-[background,backdrop-filter,border-color,box-shadow] duration-200",
             isFocused && "border-ring/70 dark:border-zinc-500/45",
             showBlobTranslucent && "backdrop-blur-xl backdrop-saturate-150"
@@ -786,7 +786,7 @@ export function DeletedTextBlurReveal({
         >
           <span
             className={cn(
-              "relative z-10 block min-w-0 select-none text-base text-current",
+              "relative z-10 block min-w-0 text-base text-current select-none",
               textClassName
             )}
             style={{
@@ -841,7 +841,7 @@ export function DeletedTextBlurReveal({
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
               <motion.div
                 animate={{ x: "-125%" }}
-                className="-right-8 absolute inset-y-0 w-24"
+                className="absolute inset-y-0 -right-8 w-24"
                 initial={{ x: "125%" }}
                 style={{
                   backdropFilter: `blur(${blurPx}px) saturate(${saturatePercent}%)`,
@@ -861,7 +861,7 @@ export function DeletedTextBlurReveal({
               <motion.svg
                 animate={{ x: "-125%", opacity: 0 }}
                 aria-hidden="true"
-                className="-right-8 absolute inset-y-0 h-full w-24 mix-blend-soft-light"
+                className="absolute inset-y-0 -right-8 h-full w-24 mix-blend-soft-light"
                 focusable="false"
                 initial={{ x: "125%", opacity: 0.08 }}
                 style={{
@@ -964,7 +964,7 @@ export const AiBlobWarpAvatar = forwardRef<
   return (
     <div
       className={cn(
-        "relative isolate size-8 overflow-hidden rounded-full bg-muted shadow-foreground/10 shadow-sm ring-1 ring-foreground/10",
+        "relative isolate size-8 overflow-hidden rounded-full bg-muted shadow-sm ring-1 shadow-foreground/10 ring-foreground/10",
         className
       )}
       ref={setRefs}

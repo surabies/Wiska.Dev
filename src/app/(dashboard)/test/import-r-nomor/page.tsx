@@ -1,10 +1,8 @@
-import {  PageContainer } from "@/components/layout"
+import { PageContainer } from "@/components/layout/index"
 import { redirect } from "next/navigation"
-import { auth } from "@/lib/auth"
+import { auth } from "@/lib/auth/index"
 import type { Metadata } from "next"
-import { PemutusanGrid } from "@/features/dashboard/components/grids/pemutusan-grid"
-import { TerapkanStatusPemutusan } from "@/features/dashboard/components/test/import-r-nomor/terapkan-status"
-
+import { PemutusanView } from "@/features/dashboard/pemutusan/PemutusanView"
 
 export const metadata: Metadata = { title: "Import R-Nomor" }
 
@@ -19,10 +17,7 @@ export default async function ImporRNomorPage() {
         { label: "Import R-Nomor" },
       ]}
     >
-      <div className="flex flex-col gap-4">
-        <TerapkanStatusPemutusan />
-        <PemutusanGrid />
-      </div>
+      <PemutusanView />
     </PageContainer>
   )
 }

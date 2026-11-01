@@ -328,7 +328,7 @@ step 11 ≈ 227 dtk. Impor bulanan penuh jadi hitungan menit, bukan jam.
 
 2. **Pemakaian riil dipisah dari pemakaian tagih** — `PembacaanMeter`
    mendapat `pemakaianRiil` + `alasanTaksir`. Aturannya (termasuk minimum
-   5 m³ menurut Perdir) hidup di `prisma/seed/lib/domain/tagihan.ts` sebagai modul
+   5 m³ menurut Perdir) hidup di `prisma/seed/lib/domain/Tagihan.ts` sebagai modul
    murni tanpa impor, dipakai bersama oleh server, seed, dan skrip
    verifikasi. Seed **melabeli** alasan dari apa yang terjadi di data —
    tidak pernah menghitung ulang lalu menimpa angka tagih dari sumber.
@@ -368,7 +368,7 @@ DIDIN 2.464, DANI 2.446, dan 11 belum berpetugas — persis angka yang
 sebelumnya cuma bisa didapat dengan menghitung ulang CSV secara manual.
 
 Angka **10.160** patut digarisbawahi: ia dihasilkan ulang oleh jalur yang
-sepenuhnya berbeda (aturan di `prisma/seed/lib/domain/tagihan.ts` yang diterapkan
+sepenuhnya berbeda (aturan di `prisma/seed/lib/domain/Tagihan.ts` yang diterapkan
 baris per baris saat impor) dan bertemu persis dengan hitungan langsung atas
 file mentah. Aturan taksiran & minimum yang direkonstruksi memang benar.
 
@@ -402,7 +402,7 @@ Arah aliran data sudah dibalik. Aplikasi kini **memproduksi** closing:
 | Mesin buka bulan baru | `packages/server/modules/closing/bulan-baru.service.ts` |
 | API | `packages/server/modules/closing/closing.router.ts` |
 | Layar operator | `apps/web/app/(dashboard)/dashboard/closing/page.tsx` + `features/dashboard/components/closing/` |
-| Uji regresi | `src/lib/server/scripts/cek-closing.ts` → `pnpm server:cek-closing [periode]` |
+| Uji regresi | `src/lib/server/scripts/CekClosing.ts` → `pnpm server:cek-closing [periode]` |
 
 Enam endpoint, kewenangan berjenjang: `GET /closing` (daftar, STAFF_UP),
 `GET /closing/:periode` (pratinjau, tidak menulis, STAFF_UP),

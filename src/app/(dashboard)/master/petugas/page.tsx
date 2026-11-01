@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
-import { auth } from "@/lib/auth"
-import { PageContainer } from "@/components/layout"
-import { PetugasClient } from "@/features/dashboard/components/petugas/petugas-client"
-import { adalahSupervisorUp } from "@/features/dashboard/lib/wewenang"
+import { auth } from "@/lib/auth/index"
+import { PageContainer } from "@/components/layout/index"
+import { PetugasClient } from "@/features/dashboard/petugas/components/KlienPetugas"
+import { adalahSupervisorUp } from "@/features/dashboard/lib/Wewenang"
 
 export const metadata: Metadata = { title: "Petugas Pencatat Meter" }
 

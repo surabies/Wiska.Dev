@@ -11,8 +11,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { versions } from "@/config/navigation"
-import { BRAND } from "@/lib/landing/content"
+import { versions } from "@/config/Navigasi"
+import { BRAND } from "@/lib/landing/Konten"
 
 export function NavbarBrand() {
   return (

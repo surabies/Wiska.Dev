@@ -1,16 +1,16 @@
 // components/layout/navigation/sidebar/PrimaryNav.tsx
 // Tiga menu utama di atas daftar grup: Dashboard, Analytics, Report.
-// Datanya dari `primaryNav` di config/navigation.ts.
+// Datanya dari `primaryNav` di config/Navigasi.ts.
 
 "use client"
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { primaryNav } from "@/config/navigation"
-import { getPrimaryIcon } from "./types/icons"
+import { primaryNav } from "@/config/Navigasi"
+import { getPrimaryIcon } from "./types/Icons"
 import { NavRowContent } from "./NavRow"
-import { navRowClass } from "./types/styles"
-import { isPrimaryActive } from "./types/utils"
+import { navRowClass } from "./types/Styles"
+import { isPrimaryActive } from "./types/Utilitas"
 
 export function PrimaryNav() {
   const pathname = usePathname()

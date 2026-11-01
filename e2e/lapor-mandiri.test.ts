@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { jendelaLaporMandiri } from "../src/lib/domain/lapor-mandiri"
+import { jendelaLaporMandiri } from "../src/lib/domain/LaporMandiri"
 
 describe("jendela laporan mandiri", () => {
   it("menggunakan periode dan tanggal berdasarkan WIB", () => {

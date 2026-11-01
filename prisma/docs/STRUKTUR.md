@@ -18,7 +18,7 @@ Pemetaan alias TypeScript ada di `tsconfig.paths.json`:
 
 | Alias | Tujuan | Contoh |
 |---|---|---|
-| `@/*` | `src/*` | `@/lib/prisma` |
+| `@/*` | `src/*` | `@/lib/Prisma` |
 | `@db` | `prisma/index.ts` | `@db` untuk client dan enum |
 | `@db/*` | `prisma/*` | `@db/seed/lib/csv` |
 | `@generated` | `generated/client` | `@generated` untuk Prisma Client |

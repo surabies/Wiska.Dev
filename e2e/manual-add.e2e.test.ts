@@ -54,7 +54,7 @@ vi.mock("@db", () => ({
   },
 }))
 
-vi.mock("../src/lib/server/lib/audit", () => ({
+vi.mock("../src/lib/server/lib/Audit", () => ({
   auditMetaFromRequest: vi.fn(() => ({
     ipAddress: null,
     userAgent: null,
@@ -62,7 +62,7 @@ vi.mock("../src/lib/server/lib/audit", () => ({
   recordAudit: mocks.recordAudit,
 }))
 
-vi.mock("../src/lib/server/lib/session", () => ({
+vi.mock("../src/lib/server/lib/Sesi", () => ({
   getSessionUser: vi.fn(() => ({
     id: "staff-test",
     name: "Staff Test",
@@ -73,15 +73,17 @@ vi.mock("../src/lib/server/lib/session", () => ({
   })),
 }))
 
-vi.mock("../src/lib/server/middleware/rbac", () => ({
+vi.mock("../src/lib/server/middleware/RBAC", () => ({
   ROLE_GROUPS: { STAFF_UP: [] },
-  requireRole: vi.fn(() => async (_context: unknown, next: () => Promise<void>) => {
-    await next()
-  }),
+  requireRole: vi.fn(
+    () => async (_context: unknown, next: () => Promise<void>) => {
+      await next()
+    }
+  ),
 }))
 
-import { manualAddRouter } from "../src/lib/server/modules/laporan/manual-add.router"
-import { errorHandler } from "../src/lib/server/lib/errors"
+import { manualAddRouter } from "../src/lib/server/modules/laporan/ManualTambah.router"
+import { errorHandler } from "../src/lib/server/lib/Galat"
 
 const app = new Hono()
 app.route("/", manualAddRouter)
@@ -156,7 +158,11 @@ function laporanTerverifikasi() {
   }
 }
 
-async function requestJson(path: string, method: "GET" | "POST", body?: unknown) {
+async function requestJson(
+  path: string,
+  method: "GET" | "POST",
+  body?: unknown
+) {
   const response = await app.request(path, {
     method,
     headers: body ? { "content-type": "application/json" } : undefined,
@@ -174,7 +180,7 @@ async function requestJson(path: string, method: "GET" | "POST", body?: unknown)
 function transactionMock() {
   mocks.prisma.$transaction.mockImplementation(
     async (operation: (tx: typeof mocks.tx) => Promise<unknown>) =>
-      operation(mocks.tx),
+      operation(mocks.tx)
   )
 }
 
@@ -192,6 +198,7 @@ describe("Manual Add API end-to-end", () => {
         nomorLangganan: "00800600474",
         nama: "Pelanggan Tepat",
         alamat: "Jalan Uji",
+        tarifGolongan: { kodeAsli: "R1" },
         meter: [],
       },
     ])
@@ -203,7 +210,7 @@ describe("Manual Add API end-to-end", () => {
 
     const result = await requestJson(
       "/cari-pelanggan?nomor=00800600474&periode=202608",
-      "GET",
+      "GET"
     )
 
     expect(result.response.status).toBe(200)
@@ -211,6 +218,7 @@ describe("Manual Add API end-to-end", () => {
       {
         id: "pelanggan-tepat",
         nomorLangganan: "00800600474",
+        tarifGolongan: { kodeAsli: "R1" },
         pemakaianTerakhir: 9,
       },
     ])
@@ -220,17 +228,39 @@ describe("Manual Add API end-to-end", () => {
           nomorLangganan: "00800600474",
           status: "AKTIF",
         },
-      }),
+      })
     )
   })
 
   it("menolak pencarian nomor pelanggan yang tidak lengkap", async () => {
     const result = await requestJson(
       "/cari-pelanggan?nomor=0080060047&periode=202608",
-      "GET",
+      "GET"
     )
 
     expect(result.response.status).toBe(422)
+  })
+
+  it("menolak tanggal pencatatan yang tidak valid", async () => {
+    const result = await requestJson("/satuan", "POST", {
+      pelangganId: "pelanggan-1",
+      periode: PERIODE,
+      tanggalCatat: "2026-02-31",
+      standAwal: 120,
+      standAkhir: 123,
+      alasanManual: "Pencatatan berdasarkan hasil pembacaan meter.",
+    })
+
+    expect(result.response.status).toBe(422)
+    const tanggalDiLuarPeriode = await requestJson("/satuan", "POST", {
+      pelangganId: "pelanggan-1",
+      periode: PERIODE,
+      tanggalCatat: "2026-09-30",
+      standAwal: 120,
+      standAkhir: 123,
+      alasanManual: "Pencatatan berdasarkan hasil pembacaan meter.",
+    })
+    expect(tanggalDiLuarPeriode.response.status).toBe(422)
     expect(mocks.prisma.pelanggan.findMany).not.toHaveBeenCalled()
   })
 
@@ -264,7 +294,7 @@ describe("Manual Add API end-to-end", () => {
 
     const lookup = await requestJson(
       `/cari-pelanggan?nomor=00000100001&periode=${PERIODE}`,
-      "GET",
+      "GET"
     )
     expect(lookup.response.status).toBe(200)
     expect(lookup.json.success).toBe(true)
@@ -290,7 +320,7 @@ describe("Manual Add API end-to-end", () => {
       async ({ data }: { data: Record<string, unknown> }) => {
         dataPengganti = data
         return { count: 1 }
-      },
+      }
     )
     mocks.tx.pembacaanMeter.delete.mockResolvedValue({ id: "bacaan-lama" })
     mocks.tx.laporanHarianPetugas.findUniqueOrThrow.mockImplementation(
@@ -298,12 +328,13 @@ describe("Manual Add API end-to-end", () => {
         ...reportBefore,
         ...dataPengganti,
         id: where.id,
-      }),
+      })
     )
 
     const replacement = await requestJson("/satuan", "POST", {
       pelangganId: "pelanggan-1",
       periode: PERIODE,
+      tanggalCatat: "2026-10-15",
       standAwal: 120,
       standAkhir: 123,
       alasanManual: "Koreksi laporan setelah pemeriksaan.",
@@ -316,6 +347,7 @@ describe("Manual Add API end-to-end", () => {
       standAkhir: 123,
       pemakaian: 3,
       pemakaianLalu: 9,
+      tanggalCatat: new Date("2026-10-15T00:00:00.000Z"),
       jenisInput: "MANUAL_SATUAN",
       isVerified: false,
       verifiedAt: null,
@@ -330,7 +362,7 @@ describe("Manual Add API end-to-end", () => {
     })
     expect(mocks.recordAudit).toHaveBeenCalledWith(
       mocks.tx,
-      expect.objectContaining({ aksi: "MANUAL_ADD_SATUAN_REPLACE" }),
+      expect.objectContaining({ aksi: "MANUAL_ADD_SATUAN_REPLACE" })
     )
   })
 
@@ -413,7 +445,7 @@ describe("Manual Add API end-to-end", () => {
       async ({ where }: { where: { id?: { in: string[] } } }) => {
         if (where.id?.in) {
           return dataLaporanDibuat.filter((row) =>
-            where.id!.in.includes(row.id as string),
+            where.id!.in.includes(row.id as string)
           )
         }
         return [
@@ -422,13 +454,13 @@ describe("Manual Add API end-to-end", () => {
             nomorLangganan: "100002",
           },
         ]
-      },
+      }
     )
     mocks.tx.pembacaanMeter.findMany.mockImplementation(
       async ({
         where,
       }: {
-        where: { periode: { lt?: Date }; meterId?: { in: string[] } };
+        where: { periode: { lt?: Date }; meterId?: { in: string[] } }
       }) =>
         where.periode.lt
           ? where.meterId?.in.includes("meter-histori")
@@ -456,7 +488,7 @@ describe("Manual Add API end-to-end", () => {
                 },
               ]
             : []
-          : [{ meter: { pelangganId: "pelanggan-resmi" } }],
+          : [{ meter: { pelangganId: "pelanggan-resmi" } }]
     )
     mocks.tx.tagihan.findMany.mockImplementation(
       async ({ where }: { where: { pelangganId: { in: string[] } } }) =>
@@ -481,7 +513,7 @@ describe("Manual Add API end-to-end", () => {
                 pemakaianM3: 10,
               },
             ]
-          : [],
+          : []
     )
     mocks.tx.meter.findMany.mockResolvedValue([
       {
@@ -512,7 +544,7 @@ describe("Manual Add API end-to-end", () => {
       async ({ data }: { data: Record<string, unknown>[] }) => {
         dataLaporanDibuat = data
         return { count: data.length }
-      },
+      }
     )
     mocks.tx.daftarCatat.updateMany.mockResolvedValue({ count: 1 })
     mocks.tx.auditLog.createMany.mockResolvedValue({ count: 1 })
@@ -565,14 +597,14 @@ describe("Manual Add API end-to-end", () => {
           pelangganId: { in: expect.arrayContaining(["pelanggan-histori"]) },
           pemakaianM3: { gte: 0 },
         }),
-      }),
+      })
     )
     expect(mocks.tx.daftarCatat.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           status: "BELUM_DICATAT",
         }),
-      }),
+      })
     )
 
     const invalidSubmit = await requestJson("/massal", "POST", {
@@ -587,6 +619,7 @@ describe("Manual Add API end-to-end", () => {
 
     const submit = await requestJson("/massal", "POST", {
       periode: PERIODE,
+      tanggalCatat: "2026-10-12",
       ruteId: "rute-1",
       pencatatId: "petugas-1",
       daftarCatatIds: ["daftar-belum"],
@@ -605,15 +638,17 @@ describe("Manual Add API end-to-end", () => {
       standAwal: 125,
       standAkhir: 125,
       pemakaian: 5,
+      tanggalCatat: new Date("2026-10-12T00:00:00.000Z"),
       jenisInput: "MANUAL_MASSAL",
     })
+    expect(dataLaporanDibuat[0]?.createdAt).toEqual(expect.any(Date))
     expect(mocks.tx.daftarCatat.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           id: { in: ["daftar-belum"] },
           status: "BELUM_DICATAT",
         }),
-      }),
+      })
     )
   })
 })

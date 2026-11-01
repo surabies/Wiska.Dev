@@ -12,7 +12,7 @@ Dokumen ini menjadi acuan kebijakan akses lintas modul dan harus dibaca bersama 
 ## Prinsip rancangan
 
 - **Role menjawab siapa yang bertindak; izin menjawab aksi apa; cakupan menjawab data mana.** Role jabatan saja belum cukup untuk membatasi petugas pada wilayah, bagian, atau rute yang menjadi tanggung jawabnya.
-- Gunakan hak minimum yang diperlukan (*least privilege*) dan **tolak secara default** bila role atau izin belum dipetakan.
+- Gunakan hak minimum yang diperlukan (_least privilege_) dan **tolak secara default** bila role atau izin belum dipetakan.
 - Periksa otorisasi pada setiap request API. Menyembunyikan atau menonaktifkan tombol di UI membantu UX, tetapi bukan pengganti pemeriksaan server.
 - Pisahkan izin baca, input/perubahan, verifikasi, pengaturan, dan administrasi akun. Hak melakukan perubahan data tidak otomatis berarti hak mengesahkan perubahan tersebut.
 - Perubahan sensitif—koreksi, persetujuan, pembatalan, perubahan role, dan tindakan Super Admin—perlu aktor, waktu, alasan, serta jejak audit yang sesuai.
@@ -22,22 +22,22 @@ Dokumen ini menjadi acuan kebijakan akses lintas modul dan harus dibaca bersama 
 
 Enum aplikasi saat ini berada di [`auth.prisma`](../../prisma/schema/auth.prisma):
 
-| Role teknis | Makna awal |
-|---|---|
-| `SUPER_ADMIN` | Administrator teknis dengan akses istimewa aplikasi. |
-| `DIREKSI` | Direksi/pimpinan; berbeda dari Super Admin. |
-| `SENIOR_MANAGER` | Senior Manager; pada alur Verifikasi sekarang dipetakan ke V3. |
-| `MANAGER` | Manager; pada alur Verifikasi sekarang dipetakan ke V2. |
-| `SUPERVISOR` | Supervisor; pada alur Verifikasi sekarang dipetakan ke V1. |
-| `STAFF` | Staf kantor/operator administrasi. |
-| `PELAKSANA` | Petugas lapangan; tidak termasuk jenjang staf kantor. |
-| `USER` | Akun umum/pelanggan; arti dan cakupan portalnya perlu dikonfirmasi. |
+| Role teknis      | Makna awal                                                          |
+| ---------------- | ------------------------------------------------------------------- |
+| `SUPER_ADMIN`    | Administrator teknis dengan akses istimewa aplikasi.                |
+| `DIREKSI`        | Direksi/pimpinan; berbeda dari Super Admin.                         |
+| `SENIOR_MANAGER` | Senior Manager; pada alur Verifikasi sekarang dipetakan ke V3.      |
+| `MANAGER`        | Manager; pada alur Verifikasi sekarang dipetakan ke V2.             |
+| `SUPERVISOR`     | Supervisor; pada alur Verifikasi sekarang dipetakan ke V1.          |
+| `STAFF`          | Staf kantor/operator administrasi.                                  |
+| `PELAKSANA`      | Petugas lapangan; tidak termasuk jenjang staf kantor.               |
+| `USER`           | Akun umum/pelanggan; arti dan cakupan portalnya perlu dikonfirmasi. |
 
 `PELAKSANA` adalah jalur kerja lapangan, bukan sekadar level yang lebih rendah dari `STAFF`. Model organisasi juga memisahkan jenis tugas petugas dari role akun.
 
 ## Kondisi implementasi yang ditemukan
 
-1. [`rbac.ts`](../lib/server/middleware/rbac.ts) memiliki dua pola akses:
+1. [`rbac.ts`](../lib/server/middleware/RBAC.ts) memiliki dua pola akses:
    - `ROLE_GROUPS` berisi grup kumulatif yang dipakai sejumlah endpoint lama.
    - `MODULE_ACCESS` mendefinisikan akses per modul; `SUPER_ADMIN` memperoleh full untuk setiap modul dan melewati guard role.
 2. Role `STAFF` tidak boleh disamakan dengan administrator sistem: ia memiliki kewenangan operasional yang disebutkan di bawah, bukan pengelolaan RBAC atau konfigurasi sensitif.
@@ -50,16 +50,16 @@ Enum aplikasi saat ini berada di [`auth.prisma`](../../prisma/schema/auth.prisma
 
 Kolom aksi (Verifikasi, Operasional, Pengaturan) mencatat kebijakan yang disepakati menurut dokumen ini; kolom "Cakupan yang diusulkan" masih usulan dan belum terbukti ditegakkan. “Cakupan” harus ditegakkan oleh server, bukan hanya filter UI.
 
-| Role | Verifikasi | Operasional pendataan | Pengaturan & akses administratif | Cakupan yang diusulkan |
-|---|---|---|---|---|
-| **Super Admin** | Akses penuh ke semua modul dan aksi yang diizinkan modul, termasuk kewenangan V3; bypass guard role. | Akses penuh ke semua modul operasional. | Pengelolaan sistem, role, akun, konfigurasi, dan seluruh modul. Semua aksi tetap mematuhi invariant domain dan tercatat sesuai audit. | Seluruh sistem, tanpa pembatasan cakupan modul/data berbasis role. |
-| **Direksi** | Dapat bertindak pada kewenangan V3. V3 adalah hasil akhir; **tidak ada ring atau persetujuan tambahan Direksi setelah V3**. | Dapat melakukan taksasi untuk pemakaian besar atau potensial melalui workflow aplikasi yang tersedia (definisi dan alur belum ada: OPEN-13). | Tidak otomatis mengelola RBAC atau konfigurasi sistem. | Seluruh organisasi untuk kewenangan Direksi; pembatasan teknis rinci perlu diselaraskan. |
-| **Senior Manager (V3)** | Kewenangan V3/final; reopen atau koreksi harus punya alasan dan audit. | Baca dan tinjau data wilayah/bagian yang menjadi tanggung jawabnya. | Tidak otomatis memiliki hak konfigurasi sistem atau administrasi akun. | Bagian/wilayah sesuai penempatan. |
-| **Manager (V2)** | Tinjau dan tandai V2; hasilnya menunggu tahap final V3. V2 boleh memproses tanpa ring yang lebih rendah. | Tinjau pekerjaan dan lakukan koreksi sesuai workflow yang disetujui. | Tidak mengelola RBAC atau pengaturan sistem. | Bagian/wilayah tanggung jawab. |
-| **Supervisor (V1)** | Pemeriksaan awal V1, evaluasi hasil lapangan, dan tindak lanjut sesuai proses. | Mengelola pekerjaan/rute petugas sesuai kewenangan. | Pengaturan operasional terbatas bila memang dibutuhkan; bukan administrasi role. | Wilayah/rute pengawasan. |
-| **Staff / Operator Admin** | Tidak mengisi atau mengesahkan ring V1/V2/V3. | Input/impor data, Manual ADD satuan/ALL, serta edit nilai hasil koreksi V1/V2/V3 melalui workflow dengan alasan dan audit. Dilarang mengedit setelah masuk tagihan. | Tanpa akses penuh ke pengaturan pendataan, RBAC, akun, atau konfigurasi sensitif. | Unit kerja yang ditugaskan; semua impor/koreksi sensitif diaudit. |
-| **Pelaksana** | Tidak melakukan verifikasi internal. | Membaca tugas, mencatat meter, mengirim foto, dan memperbaiki setoran sesuai aturan. | Tidak mengakses dashboard administrasi, master data global, atau pengaturan. | Rute yang ditugaskan dan kiriman miliknya sendiri. |
-| **User** | Tidak melakukan verifikasi internal. | Mengakses layanan pelanggan yang tersedia. | Tidak memiliki akses administrasi internal. | Data pelanggan miliknya sendiri. |
+| Role                       | Verifikasi                                                                                                                  | Operasional pendataan                                                                                                                                               | Pengaturan & akses administratif                                                                                                      | Cakupan yang diusulkan                                                                   |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **Super Admin**            | Akses penuh ke semua modul dan aksi yang diizinkan modul, termasuk kewenangan V3; bypass guard role.                        | Akses penuh ke semua modul operasional.                                                                                                                             | Pengelolaan sistem, role, akun, konfigurasi, dan seluruh modul. Semua aksi tetap mematuhi invariant domain dan tercatat sesuai audit. | Seluruh sistem, tanpa pembatasan cakupan modul/data berbasis role.                       |
+| **Direksi**                | Dapat bertindak pada kewenangan V3. V3 adalah hasil akhir; **tidak ada ring atau persetujuan tambahan Direksi setelah V3**. | Dapat melakukan taksasi untuk pemakaian besar atau potensial melalui workflow aplikasi yang tersedia (definisi dan alur belum ada: OPEN-13).                        | Tidak otomatis mengelola RBAC atau konfigurasi sistem.                                                                                | Seluruh organisasi untuk kewenangan Direksi; pembatasan teknis rinci perlu diselaraskan. |
+| **Senior Manager (V3)**    | Kewenangan V3/final; reopen atau koreksi harus punya alasan dan audit.                                                      | Baca dan tinjau data wilayah/bagian yang menjadi tanggung jawabnya.                                                                                                 | Tidak otomatis memiliki hak konfigurasi sistem atau administrasi akun.                                                                | Bagian/wilayah sesuai penempatan.                                                        |
+| **Manager (V2)**           | Tinjau dan tandai V2; hasilnya menunggu tahap final V3. V2 boleh memproses tanpa ring yang lebih rendah.                    | Tinjau pekerjaan dan lakukan koreksi sesuai workflow yang disetujui.                                                                                                | Tidak mengelola RBAC atau pengaturan sistem.                                                                                          | Bagian/wilayah tanggung jawab.                                                           |
+| **Supervisor (V1)**        | Pemeriksaan awal V1, evaluasi hasil lapangan, dan tindak lanjut sesuai proses.                                              | Mengelola pekerjaan/rute petugas sesuai kewenangan.                                                                                                                 | Pengaturan operasional terbatas bila memang dibutuhkan; bukan administrasi role.                                                      | Wilayah/rute pengawasan.                                                                 |
+| **Staff / Operator Admin** | Tidak mengisi atau mengesahkan ring V1/V2/V3.                                                                               | Input/impor data, Manual ADD satuan/ALL, serta edit nilai hasil koreksi V1/V2/V3 melalui workflow dengan alasan dan audit. Dilarang mengedit setelah masuk tagihan. | Tanpa akses penuh ke pengaturan pendataan, RBAC, akun, atau konfigurasi sensitif.                                                     | Unit kerja yang ditugaskan; semua impor/koreksi sensitif diaudit.                        |
+| **Pelaksana**              | Tidak melakukan verifikasi internal.                                                                                        | Membaca tugas, mencatat meter, mengirim foto, dan memperbaiki setoran sesuai aturan.                                                                                | Tidak mengakses dashboard administrasi, master data global, atau pengaturan.                                                          | Rute yang ditugaskan dan kiriman miliknya sendiri.                                       |
+| **User**                   | Tidak melakukan verifikasi internal.                                                                                        | Mengakses layanan pelanggan yang tersedia.                                                                                                                          | Tidak memiliki akses administrasi internal.                                                                                           | Data pelanggan miliknya sendiri.                                                         |
 
 ### Aturan turunan
 
@@ -94,4 +94,4 @@ Kolom aksi (Verifikasi, Operasional, Pengaturan) mencatat kebijakan yang disepak
 - Dokumen organisasi aplikasi: [`organisasi.md`](../../prisma/docs/organisasi.md).
 - Kontrak alur Verifikasi aplikasi: [`VERIFIKASI.md`](./VERIFIKASI.md).
 - Indeks dokumentasi, glosarium, dan register OPEN: [`INDEKS.md`](./INDEKS.md).
-- Implementasi role dan akses modul: [`rbac.ts`](../lib/server/middleware/rbac.ts).
+- Implementasi role dan akses modul: [`rbac.ts`](../lib/server/middleware/RBAC.ts).

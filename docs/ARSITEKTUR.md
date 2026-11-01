@@ -10,7 +10,7 @@ Dokumen kebutuhan produk dan rencana rilis: [PRD](./PRD.md), [Definisi MVP](./MV
 
 ## 1. Tujuan dan keputusan awal
 
-Bangun sistem pencatatan meter yang menghasilkan data terukur, dapat diverifikasi, dapat ditagihkan ulang secara reproduktif, dan dapat diaudit. Sasaran desain adalah *modular monolith* terlebih dahulu, bukan microservices:
+Bangun sistem pencatatan meter yang menghasilkan data terukur, dapat diverifikasi, dapat ditagihkan ulang secara reproduktif, dan dapat diaudit. Sasaran desain adalah _modular monolith_ terlebih dahulu, bukan microservices:
 
 - **Aplikasi mobile petugas:** mengambil daftar kerja, menyimpan pekerjaan di database lokal, menangkap bukti, dan menyinkronkan operasi saat jaringan tersedia.
 - **Dashboard web:** pengelolaan pelanggan/aset/rute, pemantauan, verifikasi, koreksi, pengaturan tarif, closing, dan rekonsiliasi.
@@ -23,7 +23,7 @@ Hono saat ini dipasang di route handler Next.js. Pertahankan model itu untuk tah
 
 ### Keputusan scope dan batas yang masih terbuka
 
-**Sudah diputuskan:** aplikasi ini hanya untuk meter air; satu akun warga dapat menautkan beberapa sambungan; laporan mandiri dan laporan petugas masuk ke antrean sumbernya masing-masing tetapi menghasilkan satu `PembacaanMeter` resmi; jendela laporan mandiri dikonfigurasi per tanggal; laporan anonim tetap diterima sebagai kiriman berisiko rendah yang wajib diverifikasi petugas.
+**Sudah diputuskan:** aplikasi ini hanya untuk meter air; satu akun warga dapat menautkan beberapa sambungan; laporan mandiri tetap disimpan sebagai sumber bukti dan saat diverifikasi disinkronkan ke antrean `LaporanHarianPetugas`; penimpaan tahap lama memerlukan role V3 ke atas dan mereset tahapan agar Petugas mengesahkan ulang; periode terkunci tidak dapat diubah; verifikasi Mandiri tidak menerbitkan `PembacaanMeter` resmi; jendela laporan mandiri dikonfigurasi per tanggal; laporan anonim tetap diterima sebagai kiriman berisiko rendah yang wajib diverifikasi.
 
 `LanggananWarga` saat ini adalah klaim tautan dan belum membuktikan kepemilikan. API akun harus memastikan `pelangganId` yang dikirim memang tertaut ke `userId` yang login, tetapi tautan itu bukan pengganti verifikasi identitas. Sampai mekanisme verifikasi kepemilikan diputuskan, laporan akun maupun tamu tetap berstatus menunggu dan tidak langsung mengubah hasil/tagihan.
 
@@ -53,16 +53,16 @@ erDiagram
 
 ### Entitas inti
 
-| Konsep | Model canonical saat ini | Catatan |
-|---|---|---|
-| Akun dan sambungan | `User`, `LanggananWarga`, `Pelanggan` | Relasi akun-pelanggan many-to-many; klaim tautan belum membuktikan kepemilikan. |
-| Meter dan riwayat | `Meter` (`meter`) | Baris meter menyimpan pelanggan dan `isAktif`; jangan menambah tabel assignment paralel sebelum inventaris dinormalisasi. |
-| Periode dan rute kerja | `PeriodePenagihan` (`periode_penagihan`), `DaftarCatat` | `PeriodePenagihan` hanya punya status `BERJALAN/TERKUNCI`; jendela laporan warga disimpan di `Konfigurasi`, bukan tabel periode baru. |
-| Intake petugas | `LaporanHarianPetugas` (`laporan_harian_petugas`) | Tetap menjadi sumber petugas; pencatat ditautkan lewat `Pencatat`, bukan langsung ke `User`. |
-| Intake warga | `LaporanMandiri` (`laporan_mandiri`), `KirimanLaporanMandiri` (`kiriman_laporan_mandiri`) | Tabel pertama adalah status antrean terkini; tabel kedua menyimpan setiap percobaan/bukti secara append-only. |
-| Hasil resmi | `PembacaanMeter` (`pembacaan_meter`) | Satu sumber hasil resmi untuk petugas dan mandiri; pemakaian tagih berbeda dari delta stand pada banyak data historis. Kunci unik yang dilaporkan STATUS adalah `[meterId, periode]`; kunci domain target dan kasus MB: OPEN-06. |
-| Tagihan | `Tagihan` (`tagihan`) | Dokumen historis; tidak diperbarui otomatis saat koreksi hasil baca. |
-| Audit | `AuditLog` (`audit_log`) | SQL harus memakai nama tabel hasil `@@map`, bukan `"AuditLog"`. |
+| Konsep                 | Model canonical saat ini                                                                  | Catatan                                                                                                                                                                                                                          |
+| ---------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Akun dan sambungan     | `User`, `LanggananWarga`, `Pelanggan`                                                     | Relasi akun-pelanggan many-to-many; klaim tautan belum membuktikan kepemilikan.                                                                                                                                                  |
+| Meter dan riwayat      | `Meter` (`meter`)                                                                         | Baris meter menyimpan pelanggan dan `isAktif`; jangan menambah tabel assignment paralel sebelum inventaris dinormalisasi.                                                                                                        |
+| Periode dan rute kerja | `PeriodePenagihan` (`periode_penagihan`), `DaftarCatat`                                   | `PeriodePenagihan` hanya punya status `BERJALAN/TERKUNCI`; jendela laporan warga disimpan di `Konfigurasi`, bukan tabel periode baru.                                                                                            |
+| Intake petugas         | `LaporanHarianPetugas` (`laporan_harian_petugas`)                                         | Tetap menjadi sumber petugas; pencatat ditautkan lewat `Pencatat`, bukan langsung ke `User`.                                                                                                                                     |
+| Intake warga           | `LaporanMandiri` (`laporan_mandiri`), `KirimanLaporanMandiri` (`kiriman_laporan_mandiri`) | Tabel pertama adalah status antrean terkini; tabel kedua menyimpan setiap percobaan/bukti secara append-only.                                                                                                                    |
+| Hasil resmi            | `PembacaanMeter` (`pembacaan_meter`)                                                      | Satu sumber hasil resmi untuk petugas dan mandiri; pemakaian tagih berbeda dari delta stand pada banyak data historis. Kunci unik yang dilaporkan STATUS adalah `[meterId, periode]`; kunci domain target dan kasus MB: OPEN-06. |
+| Tagihan                | `Tagihan` (`tagihan`)                                                                     | Dokumen historis; tidak diperbarui otomatis saat koreksi hasil baca.                                                                                                                                                             |
+| Audit                  | `AuditLog` (`audit_log`)                                                                  | SQL harus memakai nama tabel hasil `@@map`, bukan `"AuditLog"`.                                                                                                                                                                  |
 
 Tidak ada skema listrik. Nilai fisik pembacaan air saat ini disimpan dalam bilangan bulat m³. Perubahan presisi/satuan harus didasarkan pada karakteristik meter dan kebijakan yang disahkan.
 
@@ -129,17 +129,17 @@ Gunakan `EXPLAIN (ANALYZE, BUFFERS)` dengan data yang representatif sebelum meny
 
 ### Kasus tepi yang perlu diputuskan sebagai aturan bisnis
 
-| Keadaan | Perlakuan sistem yang disarankan |
-|---|---|
-| **Rollover counter** | Periksa digit/kapasitas register perangkat dan jenis meter. Hitung konsumsi lintas rollover hanya bila nilainya masuk akal dan sesuai konfigurasi. Simpan flag/metode kalkulasi; jika data alat tidak cukup, kirim ke review, bukan menjadikan pemakaian nol. |
-| **Meter diganti** | Pertahankan baris meter lama dan buat baris meter baru; simpan waktu efektif, stand cabut/pasang, serta segel. Kalkulasi pemakaian periode menjadi jumlah segmen yang sah. Jangan menyamakan ini dengan counter mundur biasa. |
-| **Meter rusak/mati/terbalik** | Catat kondisi dan bukti; hasil terukur dan nilai tagih/taksiran adalah dua atribut berbeda. Gunakan kebijakan taksiran yang disahkan, alasan, dasar periode pembanding, rentang berlakunya, dan approval. |
+| Keadaan                            | Perlakuan sistem yang disarankan                                                                                                                                                                                                                                                                                                                |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Rollover counter**               | Periksa digit/kapasitas register perangkat dan jenis meter. Hitung konsumsi lintas rollover hanya bila nilainya masuk akal dan sesuai konfigurasi. Simpan flag/metode kalkulasi; jika data alat tidak cukup, kirim ke review, bukan menjadikan pemakaian nol.                                                                                   |
+| **Meter diganti**                  | Pertahankan baris meter lama dan buat baris meter baru; simpan waktu efektif, stand cabut/pasang, serta segel. Kalkulasi pemakaian periode menjadi jumlah segmen yang sah. Jangan menyamakan ini dengan counter mundur biasa.                                                                                                                   |
+| **Meter rusak/mati/terbalik**      | Catat kondisi dan bukti; hasil terukur dan nilai tagih/taksiran adalah dua atribut berbeda. Gunakan kebijakan taksiran yang disahkan, alasan, dasar periode pembanding, rentang berlakunya, dan approval.                                                                                                                                       |
 | **Rumah terkunci/tidak ada akses** | Catat kondisi akses yang tersedia pada enum `KondisiCatat` (lihat [codebook](./CODEBOOK.md); mis. `TERHALANG`) beserta alasan, waktu, dan bukti sesuai kebijakan; `NO_ACCESS` pada rancangan awal bukan nilai enum aplikasi. Jangan membuat angka stand/pemakaian palsu; jadwalkan kunjungan ulang atau gunakan metode estimasi yang disetujui. |
-| **Rumah kosong/tidak dipakai** | Bedakan dari rumah terkunci. Angka nol hanya jika aturan dan bukti mendukung; jangan menghapus bea tetap secara otomatis kecuali tarif mengaturnya. |
-| **Foto tidak tersedia** | Simpan status kegagalan unggah secara eksplisit, retry terukur, dan kebijakan pengecualian berdasarkan kondisi. Foto tidak boleh membuat pembacaan tampak lengkap bila upload gagal. |
-| **GPS tidak akurat/offline** | Simpan koordinat, akurasi, waktu pengambilan dan status izin bila tersedia. Tandai sebagai sinyal review, bukan satu-satunya bukti kehadiran. Perangkat dapat dimanipulasi dan GPS indoor bisa meleset. |
-| **Angka abnormal** | Gunakan aturan berbasis histori, meter, musim, pelanggan, dan batas layanan. Simpan versi aturan/ambang yang memicu alert. Alert adalah alat bantu review, bukan pengganti keputusan manusia. |
-| **Koreksi setelah tagihan terbit** | Simpan revisi append-only dengan maker-checker dan tautan ke tagihan terdampak. Jangan mengubah tagihan otomatis. Nota debit/kredit, saldo kredit, dan refund belum masuk lingkup implementasi ini. |
+| **Rumah kosong/tidak dipakai**     | Bedakan dari rumah terkunci. Angka nol hanya jika aturan dan bukti mendukung; jangan menghapus bea tetap secara otomatis kecuali tarif mengaturnya.                                                                                                                                                                                             |
+| **Foto tidak tersedia**            | Simpan status kegagalan unggah secara eksplisit, retry terukur, dan kebijakan pengecualian berdasarkan kondisi. Foto tidak boleh membuat pembacaan tampak lengkap bila upload gagal.                                                                                                                                                            |
+| **GPS tidak akurat/offline**       | Simpan koordinat, akurasi, waktu pengambilan dan status izin bila tersedia. Tandai sebagai sinyal review, bukan satu-satunya bukti kehadiran. Perangkat dapat dimanipulasi dan GPS indoor bisa meleset.                                                                                                                                         |
+| **Angka abnormal**                 | Gunakan aturan berbasis histori, meter, musim, pelanggan, dan batas layanan. Simpan versi aturan/ambang yang memicu alert. Alert adalah alat bantu review, bukan pengganti keputusan manusia.                                                                                                                                                   |
+| **Koreksi setelah tagihan terbit** | Simpan revisi append-only dengan maker-checker dan tautan ke tagihan terdampak. Jangan mengubah tagihan otomatis. Nota debit/kredit, saldo kredit, dan refund belum masuk lingkup implementasi ini.                                                                                                                                             |
 
 ## 5. Rancangan backend Hono
 
@@ -170,10 +170,10 @@ Permukaan yang tersedia saat ini:
 - `GET /api/public/lapor-meter/jendela` — baca aturan tanggal/periode WIB yang dikonfigurasi.
 - `POST /api/public/lapor-meter` — kiriman tamu multipart, rate-limited dan menunggu verifikasi.
 - `POST /api/v1/laporan-mandiri` — kiriman akun warga, wajib sambungan yang tertaut ke akun.
-- `PATCH /api/v1/laporan-mandiri/:id/verify` — hanya verifikator; membuat `PembacaanMeter` resmi.
+- `PATCH /api/v1/laporan-mandiri/:id/verify` — memeriksa bukti, menyinkronkan stand ke antrean Petugas, dan mereset tahap lama; penimpaan V1–V3 memerlukan role V3 ke atas; tidak membuat `PembacaanMeter`.
 - Endpoint catat petugas di `/api/v1/laporan-harian` tetap terpisah sebagai intake.
 
-Kedua sumber harus melewati aturan domain/use case yang sama saat menyimpan hasil resmi; jangan menambah tabel pembacaan resmi paralel.
+Laporan Mandiri hanya diverifikasi dan dikoreksi sebagai bukti. Penerbitan hasil resmi mengikuti aturan domain/use case laporan Petugas; jangan menambah tabel pembacaan resmi paralel.
 
 Gunakan schema Zod bersama untuk body, query, parameter, dan respons yang penting. Tolak field tak dikenal pada DTO sensitif (`strict`/allow-list), dan jangan spread objek request langsung ke `data` Prisma. Terapkan batas panjang, ukuran batch, rentang tanggal, enum, dan ukuran upload. Dokumentasikan kontrak API, contoh error, versi, dan kode idempotensi.
 
@@ -217,7 +217,7 @@ Closing puluhan ribu baris tidak perlu satu transaksi raksasa. Gunakan status/ch
 
 ## 6. Arsitektur aplikasi lapangan offline
 
-Pola yang disarankan adalah *local-first*: layar membaca database lokal, operasi baru disimpan sebagai outbox, lalu worker mengirimkannya saat koneksi tersedia. Jangan menjadikan request HTTP yang sedang aktif sebagai satu-satunya salinan pekerjaan lapangan.
+Pola yang disarankan adalah _local-first_: layar membaca database lokal, operasi baru disimpan sebagai outbox, lalu worker mengirimkannya saat koneksi tersedia. Jangan menjadikan request HTTP yang sedang aktif sebagai satu-satunya salinan pekerjaan lapangan.
 
 Data lokal minimal:
 
@@ -253,15 +253,15 @@ Dokumentasi Android offline-first mendukung prinsip database lokal sebagai sumbe
 
 ### Bottleneck yang paling mungkin
 
-| Bottleneck | Mitigasi |
-|---|---|
-| Batch upload mengirim ulang ratusan data setelah timeout | Idempotensi per item, cursor/checkpoint, hasil parsial, payload terbatas, exponential backoff+jitter. |
-| Upload foto/video memakai koneksi API dan memory terlalu lama | Direct/resumable upload ke object storage privat, validasi metadata dan ukuran server-side, worker untuk pemrosesan lanjutan. |
-| Kueri daftar kerja melakukan N+1 query | Muat relasi secara set-based, indeks sesuai filter, pagination/cursor; ukur query dengan data realistis. |
-| Banyak staf membuka antrean verifikasi bersamaan | Cursor pagination, filter berbasis indeks, summary/query agregat, klaim tugas bila diperlukan, optimistic concurrency/conditional update. |
-| Job closing memegang transaksi lama | Job resumable, chunked writes, checkpoint, constraint unik, validasi hasil, dan finalization terpisah yang atomik. |
-| Pool koneksi PostgreSQL habis | Pool terukur untuk jumlah instance, connection pooling terkelola, concurrency limit worker, timeout dan observasi jumlah koneksi. |
-| GPS/anomali menghasilkan terlalu banyak false positive | Simpan accuracy/konteks; ukur tingkat false-positive; gunakan sebagai sinyal review yang dapat dikalibrasi, bukan auto-reject. |
+| Bottleneck                                                    | Mitigasi                                                                                                                                  |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Batch upload mengirim ulang ratusan data setelah timeout      | Idempotensi per item, cursor/checkpoint, hasil parsial, payload terbatas, exponential backoff+jitter.                                     |
+| Upload foto/video memakai koneksi API dan memory terlalu lama | Direct/resumable upload ke object storage privat, validasi metadata dan ukuran server-side, worker untuk pemrosesan lanjutan.             |
+| Kueri daftar kerja melakukan N+1 query                        | Muat relasi secara set-based, indeks sesuai filter, pagination/cursor; ukur query dengan data realistis.                                  |
+| Banyak staf membuka antrean verifikasi bersamaan              | Cursor pagination, filter berbasis indeks, summary/query agregat, klaim tugas bila diperlukan, optimistic concurrency/conditional update. |
+| Job closing memegang transaksi lama                           | Job resumable, chunked writes, checkpoint, constraint unik, validasi hasil, dan finalization terpisah yang atomik.                        |
+| Pool koneksi PostgreSQL habis                                 | Pool terukur untuk jumlah instance, connection pooling terkelola, concurrency limit worker, timeout dan observasi jumlah koneksi.         |
+| GPS/anomali menghasilkan terlalu banyak false positive        | Simpan accuracy/konteks; ukur tingkat false-positive; gunakan sebagai sinyal review yang dapat dikalibrasi, bukan auto-reject.            |
 
 ## 8. Roadmap implementasi
 
@@ -301,23 +301,23 @@ Diakses 31 Oktober 2026. Rujukan ini mendukung prinsip desain; kebijakan teknis 
    <https://www.oiml.org/en/publications/recommendations/49/2024/>
    OIML menyatakan edisi 2024 sebagai current dan menjelaskan scope metrologi/teknis meter air pada conduit tertutup. Referensi untuk karakteristik alat ukur, bukan spesifikasi lengkap aplikasi billing.
 4. **PostgreSQL — Constraints**
-    <https://www.postgresql.org/docs/current/ddl-constraints.html>
-    Constraint CHECK, unique, foreign key dan integritas data di database.
+   <https://www.postgresql.org/docs/current/ddl-constraints.html>
+   Constraint CHECK, unique, foreign key dan integritas data di database.
 5. **PostgreSQL — Partial Indexes**
-    <https://www.postgresql.org/docs/current/indexes-partial.html>
-    Partial index dan contoh unik untuk subset data; dasar penegakan satu assignment meter terbuka.
+   <https://www.postgresql.org/docs/current/indexes-partial.html>
+   Partial index dan contoh unik untuk subset data; dasar penegakan satu assignment meter terbuka.
 6. **PostgreSQL — Transaction Isolation**
-    <https://www.postgresql.org/docs/current/transaction-iso.html>
-    Tingkat isolasi dan perilaku transaksi konkurens; pilih dan uji isolasi untuk workflow berisiko.
+   <https://www.postgresql.org/docs/current/transaction-iso.html>
+   Tingkat isolasi dan perilaku transaksi konkurens; pilih dan uji isolasi untuk workflow berisiko.
 7. **Prisma ORM 7 — Transactions and batch queries**
-    <https://www.prisma.io/docs/orm/v7/prisma-client/queries/transactions>
-    API transaksi interaktif/batch, isolation level, konflik tulis, dan retry `P2034`; dokumentasi juga memperingatkan transaksi interaktif panjang merugikan performa.
+   <https://www.prisma.io/docs/orm/v7/prisma-client/queries/transactions>
+   API transaksi interaktif/batch, isolation level, konflik tulis, dan retry `P2034`; dokumentasi juga memperingatkan transaksi interaktif panjang merugikan performa.
 8. **Hono — Validation**
-    <https://hono.dev/docs/guides/validation>
-    Pola validasi request Hono dan integrasi validator pihak ketiga seperti Zod.
+   <https://hono.dev/docs/guides/validation>
+   Pola validasi request Hono dan integrasi validator pihak ketiga seperti Zod.
 9. **Android Developers — Offline-first data layer**
-    <https://developer.android.com/topic/architecture/data-layer/offline-first>
-    Prinsip membaca dari sumber lokal, antrean/sinkronisasi saat jaringan kembali, dan desain offline-first.
+   <https://developer.android.com/topic/architecture/data-layer/offline-first>
+   Prinsip membaca dari sumber lokal, antrean/sinkronisasi saat jaringan kembali, dan desain offline-first.
 10. **PostGIS — `ST_DistanceSphere`**
     <https://postgis.net/docs/ST_DistanceSphere.html>
     Fungsi jarak lon/lat dalam meter menggunakan model bumi bola; dokumentasi menyebut lebih cepat namun kurang akurat daripada jarak spheroid. Gunakan sesuai kebutuhan/ambang, bukan sebagai bukti lokasi yang sempurna.

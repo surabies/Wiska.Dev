@@ -3,7 +3,7 @@
 // versi + hak cipta instansi di kanan. Kredit pembuat ditaruh di dialog "Tentang".
 import type { ReactNode } from "react"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 
 type SystemStatus = "normal" | "degraded" | "offline" | "unknown"
 
@@ -60,14 +60,17 @@ export function DashboardFooter({
     <footer
       className={cn(
         "border-t border-t-(--pattern-fg) px-3 py-3 text-xs/5 text-muted-foreground sm:px-5 lg:px-8",
-        className,
+        className
       )}
     >
       <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {/* role="status": perubahan kondisi diumumkan pembaca layar secara sopan */}
           <p role="status" className="inline-flex items-center gap-1.5">
-            <span aria-hidden="true" className={cn("size-1.5 rounded-full", dot)} />
+            <span
+              aria-hidden="true"
+              className={cn("size-1.5 rounded-full", dot)}
+            />
             {label}
           </p>
 

@@ -1,9 +1,8 @@
-import {  PageContainer } from "@/components/layout"
+import { PageContainer } from "@/components/layout/index"
 import { redirect } from "next/navigation"
-import { auth } from "@/lib/auth"
-import { PbpkClient } from "@/features/dashboard/components/pbpk/pbpk-client"
+import { auth } from "@/lib/auth/index"
+import { PbpkView } from "@/features/dashboard/pbpk/PbpkView"
 import type { Metadata } from "next"
-
 
 export const metadata: Metadata = { title: "Import PBPK" }
 
@@ -18,7 +17,7 @@ export default async function ImportPbpkPage() {
         { label: "Import PBPK" },
       ]}
     >
-      <PbpkClient role={session.user.role} />
+      <PbpkView role={session.user.role} />
     </PageContainer>
   )
 }

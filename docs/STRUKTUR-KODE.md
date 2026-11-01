@@ -16,7 +16,7 @@ Panduan ini menentukan di mana sebuah file diletakkan, bagaimana diberi nama, da
 6. **Pertahankan perilaku saat refactor.** Jangan menggabungkan perubahan struktur dengan perubahan aturan bisnis, API, atau UX kecuali memang diminta. Tambah atau perbarui tes pada batas yang dipindahkan.
 7. **Pakai UI dan ikon yang sudah ada di project.** Periksa `src/components/ui`, pemakaian di feature terkait, dan `package.json` sebelum membuat elemen UI. Jangan mengarang nama komponen, ekspor, API, atau library.
 8. **Jangan menambah primitive UI bersama atau dependency tanpa izin.** Jelaskan kebutuhan beserta alternatifnya, lalu tunggu persetujuan (detail di bagian "UI dan ikon").
-9. **Nama file buatan aplikasi memakai PascalCase berbahasa Indonesia yang ringkas** (detail di bagian "Penamaan").
+9. **Nama file buatan aplikasi memakai PascalCase yang ringkas dan konsisten** (detail di bagian "Penamaan").
 
 ## Struktur target
 
@@ -57,6 +57,8 @@ Catatan:
 - Tipe respons mentah endpoint boleh berada di dekat adapter `api/` bila tidak menjadi kontrak UI. Tipe yang dipakai lintas komponen feature berada di `types/`.
 - Validasi runtime input tetap wajib di batas kepercayaan; tipe TypeScript bukan validasi request.
 - Konstanta ditempatkan di modul pemiliknya, bukan di file `Konstanta` global.
+- Untuk dashboard, infrastruktur `DataGrid` dan renderer/formatter sel generik boleh dipakai bersama di `components/data-grid`; definisi kolom dan grid yang memahami domain tetap berada di feature pemiliknya. `dashboard/lib` hanya untuk helper atau kontrak yang memang dipakai lintas feature dengan semantik sama.
+- Komponen presentasional yang dipakai beberapa feature dashboard dan memiliki semantik visual yang sama boleh ditempatkan di `dashboard/shared`; gunakan `PanelDasbor` sebagai bingkai panel bersama, sementara judul, data, dan isi panel tetap ditentukan feature pemilik.
 
 ## Kapan membuat file atau folder baru
 
@@ -73,9 +75,9 @@ Bila tidak ada yang terpenuhi, biarkan di file pemakainya. Subkomponen pendek ya
 
 ### File
 
-- Nama file source buatan aplikasi memakai **PascalCase berbahasa Indonesia**, singkat, dan menyebut domain atau tanggung jawab.
+- Nama file source buatan aplikasi memakai **PascalCase**, singkat, dan menyebut domain atau tanggung jawab. Gunakan istilah Indonesia bila terasa alami; pertahankan istilah industri/teknis yang sudah lazim bila lebih jelas. Jangan menerjemahkan istilah secara mekanis hanya demi bahasa.
 - Nama file komponen sama dengan komponen utamanya: `InfoPelangganView.tsx`, `BlokLokasi.tsx`, `GrafikPemakaian.tsx`.
-- File non-UI di folder peran memakai pola berikut agar nama unik dan mudah dicari:
+- File non-UI di folder peran dapat memakai pola berikut agar nama unik dan mudah dicari. Sesuaikan istilah dengan konvensi feature dan industri; contoh di bawah bukan kewajiban untuk menerjemahkan istilah lain:
 
 | Peran | Pola file                | Contoh file                | Contoh simbol utama     |
 | ----- | ------------------------ | -------------------------- | ----------------------- |

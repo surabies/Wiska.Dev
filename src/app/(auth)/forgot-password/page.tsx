@@ -1,8 +1,8 @@
 // app/(auth)/forgot-password/page.tsx — /forgot-password
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
-import { auth } from "@/lib/auth"
-import { ForgotPasswordCard } from "@/features/auth/components/forgot-password-card"
+import { auth } from "@/lib/auth/index"
+import { ForgotPasswordCard } from "@/features/auth/components/KartuLupaSandi"
 
 export const metadata: Metadata = {
   title: "Lupa password",

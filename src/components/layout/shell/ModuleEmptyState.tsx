@@ -3,10 +3,13 @@
 // Satu ikon, satu judul, satu kalimat arahan, aksi opsional. Tanpa border putus-putus.
 import type { ComponentType, ReactNode } from "react"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 
 type ModuleEmptyStateProps = {
-  icon: ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>
+  icon: ComponentType<{
+    className?: string
+    "aria-hidden"?: boolean | "true" | "false"
+  }>
   title: string
   description: string
   action?: ReactNode
@@ -25,14 +28,17 @@ export function ModuleEmptyState({
       aria-labelledby="empty-state-title"
       className={cn(
         "flex flex-col items-center justify-center gap-3 rounded-lg border bg-card px-6 py-16 text-center",
-        className,
+        className
       )}
     >
       <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
         <Icon className="size-5" aria-hidden="true" />
       </span>
       <div className="max-w-prose space-y-1">
-        <h2 id="empty-state-title" className="text-sm font-semibold text-foreground">
+        <h2
+          id="empty-state-title"
+          className="text-sm font-semibold text-foreground"
+        >
           {title}
         </h2>
         <p className="text-sm text-muted-foreground">{description}</p>

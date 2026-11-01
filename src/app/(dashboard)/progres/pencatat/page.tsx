@@ -1,9 +1,8 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
-import { auth } from "@/lib/auth"
-import { PageContainer } from "@/components/layout"
-import { LaporanHarianClient } from "@/features/dashboard/components/laporan-harian/laporan-harian-client"
-
+import { auth } from "@/lib/auth/index"
+import { PageContainer } from "@/components/layout/index"
+import { LaporanHarianClient } from "@/features/dashboard/laporan-harian/components/KlienLaporanHarian"
 
 export const metadata: Metadata = { title: "Laporan Pencatatan Meter" }
 

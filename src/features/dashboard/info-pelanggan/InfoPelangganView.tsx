@@ -6,11 +6,13 @@
 // jadi pita judul membawa tombol Kembali.
 // Pita judul: biru (chart-1) di tema terang, kartu gelap di tema gelap.
 // Semua warna memakai token dari globals.css.
-// Keadaan pencarian disimpan di URL (?no=...&periode=...) sehingga hasil bisa
-// di-bookmark dan ditautkan dari halaman lain (mis. baris tabel DPM).
+// Keadaan pencarian memakai URL (?no=...&periode=...) agar bisa ditautkan dari
+// halaman lain; muat ulang halaman mengosongkan pencarian.
+import { useEffect, useRef, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { BlokLokasi } from "./components/BlokLokasi"
 import { FormCari } from "./components/FormCari"
+import { PanelDasbor } from "../shared/PanelDasbor"
 import { fmtPeriode } from "./lib/FormatTampilan"
 import { GaleriFoto } from "./components/GaleriFoto"
 import { KartuGrafik } from "./components/KartuGrafik"
@@ -36,14 +38,37 @@ export function InfoPelangganView() {
   const router = useRouter()
   const pathname = usePathname()
   const sp = useSearchParams()
-  const nomor = sp.get("no") ?? ""
-  const periode = sp.get("periode") ?? ""
+  const [modeQuery, setModeQuery] = useState<"awal" | "aktif" | "reset">("awal")
+  const sudahInisialisasi = useRef(false)
+  const nomorUrl = sp.get("no") ?? ""
+  const periodeUrl = sp.get("periode") ?? ""
+  const nomor = modeQuery === "aktif" ? nomorUrl : ""
+  const periode = modeQuery === "aktif" ? periodeUrl : ""
 
   const { status, data, galat } = useInfoPelanggan(nomor, periode)
+
+  useEffect(() => {
+    if (sudahInisialisasi.current) return
+    sudahInisialisasi.current = true
+
+    const navigasi = performance.getEntriesByType("navigation")[0] as
+      PerformanceNavigationTiming | undefined
+    const pathDokumen = navigasi
+      ? new URL(navigasi.name, window.location.origin).pathname
+      : ""
+    if (navigasi?.type === "reload" && pathDokumen === pathname) {
+      router.replace(pathname, { scroll: false })
+      setModeQuery("reset")
+      return
+    }
+
+    setModeQuery("aktif")
+  }, [pathname, router])
 
   function cari(n: string, p: string) {
     const q = new URLSearchParams({ no: n })
     if (p) q.set("periode", p)
+    setModeQuery("aktif")
     router.replace(`${pathname}?${q}`)
   }
 
@@ -114,23 +139,26 @@ export function InfoPelangganView() {
 
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6">
         {status === "idle" && (
-          <p className="py-16 text-center text-sm text-muted-foreground">
-            Masukkan No. Langganan di atas untuk melihat stand meter, foto
-            lapangan, dan riwayat pemakaian.
-          </p>
+          <PanelDasbor label="Info pelanggan">
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              Masukkan No. Langganan di atas untuk melihat stand meter, foto
+              lapangan, dan riwayat pemakaian.
+            </p>
+          </PanelDasbor>
         )}
 
         {status === "memuat" && <KerangkaMemuat />}
 
         {status === "galat" && (
-          <div
-            role="alert"
-            className="mx-auto w-full max-w-2xl rounded-lg border border-border bg-destructive/10 px-5 py-4 text-center"
-          >
-            <p className="text-sm font-medium text-destructive">{galat}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Periksa nomor langganan dan periodenya, lalu cari lagi.
-            </p>
+          <div className="mx-auto w-full max-w-2xl">
+            <PanelDasbor label="Info pelanggan">
+              <div role="alert" className="py-5 text-center">
+                <p className="text-sm font-medium text-destructive">{galat}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Periksa nomor langganan dan periodenya, lalu cari lagi.
+                </p>
+              </div>
+            </PanelDasbor>
           </div>
         )}
 

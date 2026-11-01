@@ -10,13 +10,14 @@
 // panjang atau logika domain di file ini.
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
-import { auth } from "@/lib/auth"
-import { LoginCard } from "@/features/auth/components/login-card"
+import { auth } from "@/lib/auth/index"
+import { LoginCard } from "@/features/auth/components/MasukKartu"
 
 export const metadata: Metadata = {
   // Judul lengkap dirangkai template di app/layout.tsx -> "Masuk — PERUMDA Tirtawening"
   title: "Masuk",
-  description: "Masuk ke dashboard operasional PERUMDA Tirtawening Kota Bandung",
+  description:
+    "Masuk ke dashboard operasional PERUMDA Tirtawening Kota Bandung",
 }
 
 // searchParams adalah Promise di Next.js 15+ (async request APIs) — WAJIB

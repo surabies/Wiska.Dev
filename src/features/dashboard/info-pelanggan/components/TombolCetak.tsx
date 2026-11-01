@@ -5,7 +5,7 @@
 // bawaan saat "Simpan sebagai PDF"), lalu memanggil dialog cetak browser.
 import * as React from "react"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 
 const BATAS_TUNGGU_FOTO_MS = 4000
 

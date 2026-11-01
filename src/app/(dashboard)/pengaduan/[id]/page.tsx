@@ -7,12 +7,16 @@
 // semua aksinya interaktif dan lewat /api/v1).
 
 import type { Metadata } from "next"
-import { PageContainer } from "@/components/layout"
-import { DetailTiket } from "@/features/dashboard/components/pengaduan/detail-tiket"
+import { PageContainer } from "@/components/layout/index"
+import { DetailTiket } from "@/features/dashboard/pengaduan/components/detail-tiket/index"
 
 export const metadata: Metadata = { title: "Detail Pengaduan" }
 
-export default async function DetailPengaduanPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DetailPengaduanPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
   const { id } = await params
   return (
     <PageContainer

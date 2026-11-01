@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
-import { auth } from "@/lib/auth"
-import { PageContainer } from "@/components/layout"
-import { PemetaanRuteClient } from "@/features/dashboard/components/pemetaan-rute/pemetaan-rute-client"
-import { adalahSupervisorUp } from "@/features/dashboard/lib/wewenang"
+import { auth } from "@/lib/auth/index"
+import { PageContainer } from "@/components/layout/index"
+import { PemetaanRuteClient } from "@/features/dashboard/pemetaan-rute/components/KlienPemetaanRute"
+import { adalahSupervisorUp } from "@/features/dashboard/lib/Wewenang"
 
 export const metadata: Metadata = { title: "Pemetaan Rute" }
 

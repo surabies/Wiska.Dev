@@ -9,7 +9,7 @@ import { useMemo, useState, type ComponentProps, type ReactNode } from "react"
 import type { VariantProps } from "class-variance-authority"
 import { motion, useReducedMotion } from "motion/react"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 import { badgeVariants } from "@/components/ui/badge"
 
 /* ─── Rim + fill (self-contained; no halo-card import) ─── */
@@ -157,7 +157,7 @@ function BadgeRimPillBlobs({
           animate={{
             left: borderGlow.primaryLeft,
           }}
-          className="-bottom-2 absolute h-10 w-28 blur-xl"
+          className="absolute -bottom-2 h-10 w-28 blur-xl"
           style={{
             background: borderGlow.primaryBg,
           }}
@@ -171,7 +171,7 @@ function BadgeRimPillBlobs({
           animate={{
             left: borderGlow.secondaryLeft,
           }}
-          className="-bottom-1.5 absolute h-8 w-20 blur-lg"
+          className="absolute -bottom-1.5 h-8 w-20 blur-lg"
           style={{
             background: borderGlow.secondaryBg,
           }}
@@ -185,7 +185,7 @@ function BadgeRimPillBlobs({
           animate={{
             left: borderGlow.tertiaryLeft,
           }}
-          className="-bottom-1 absolute h-6 w-16 blur-md"
+          className="absolute -bottom-1 h-6 w-16 blur-md"
           style={{
             background: borderGlow.tertiaryBg,
           }}
@@ -252,7 +252,8 @@ function chromedShapeClasses(
 }
 
 export interface HaloBadgeProps
-  extends Omit<ComponentProps<typeof motion.span>, "children">,
+  extends
+    Omit<ComponentProps<typeof motion.span>, "children">,
     VariantProps<typeof badgeVariants> {
   children?: ReactNode
   /** Leading “live” dot — opacity pulse only (respects reduced motion). */
@@ -337,7 +338,7 @@ function HaloBadgeChrome({
         Concentric radii: outer `rounded-full` + `p-px` (1px) with inner `rounded-full`
         reads as a pill ring; both use full rounding so caps stay semicircular.
       */}
-      <span className="relative z-[1] inline-flex items-center justify-center rounded-full p-px text-[0] leading-none">
+      <span className="relative z-[1] inline-flex items-center justify-center rounded-full p-px leading-none text-[0]">
         <BadgeRimPillBlobs
           borderGlow={borderGlow}
           reduceMotion={reduceMotion}
@@ -414,7 +415,7 @@ export function HaloBadge({
       <span
         className={cn(
           "inline-flex items-center leading-none",
-          tabularNums && "font-variant-numeric tabular-nums tracking-tight",
+          tabularNums && "font-variant-numeric tracking-tight tabular-nums",
           live && "min-w-[1ch]"
         )}
       >

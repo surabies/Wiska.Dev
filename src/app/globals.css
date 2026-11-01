@@ -167,7 +167,7 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    Tema terang — palet Geist (Vercel)
 ───────────────────────────────────────────────────────────────────────────── */
-:root, 
+:root,
 .lembar-cetak {
   /* Skala abu-abu GEIST: netral murni (tanpa hue), dari --ds-gray-* di
      vercel.com/geist. Nama lokal --gray-50..900 dipertahankan.
@@ -230,7 +230,9 @@
   --brand: var(--gray-900);
   --brand-hover: #383838;
   /* Merek sebagai TEKS (tautan, tab aktif, ikon aksen) */
-   --brand-ink: oklch(0.5761 0.2508 258.23); /* ds-blue-700 — tautan, tab aktif */
+  --brand-ink: oklch(
+    0.5761 0.2508 258.23
+  ); /* ds-blue-700 — tautan, tab aktif */
 
   --border: var(--gray-200); /*        garis LUAR panel */
   --border-subtle: var(--gray-100); /* garis DI DALAM panel */
@@ -282,7 +284,11 @@
   --slate: #8f8f8f;
   --table-head: color-mix(in oklch, var(--slate) 7%, var(--card));
   --table-stripe: color-mix(in oklch, var(--slate) 3%, var(--card));
-  --table-accent: color-mix(in oklch, var(--chart-1) 9%, var(--card)); /* baris terpilih: biru tipis */
+  --table-accent: color-mix(
+    in oklch,
+    var(--chart-1) 9%,
+    var(--card)
+  ); /* baris terpilih: biru tipis */
   /* Garis kisi tabel (gaya Neon): lebih tegas dari --border supaya sel
      terbaca sebagai kotak-kotak rapi. Hover baris ≈ #f0f0f0. */
   --table-line: color-mix(in oklab, var(--foreground) 10%, var(--card));
@@ -466,7 +472,6 @@
   --info: oklch(0.717 0.1648 250.794);
   --info-foreground: #0b1c2b;
   --info-muted: #12212e;
-
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -541,7 +546,7 @@
     }
   }
 
-    ::selection {
+  ::selection {
     background: color-mix(in oklch, var(--chart-1) 25%, transparent);
   }
 
@@ -649,19 +654,22 @@
   --glass-bg: color-mix(in oklab, var(--popover) 76%, transparent);
   --glass-edge: color-mix(in oklab, var(--foreground) 12%, transparent);
   --glass-sheen: rgb(255 255 255 / 0.7);
-  --glass-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 12px 32px -8px rgb(0 0 0 / 0.16);
+  --glass-shadow:
+    0 1px 2px rgb(0 0 0 / 0.04), 0 12px 32px -8px rgb(0 0 0 / 0.16);
 }
 
 .dark {
   --glass-bg: color-mix(in oklab, var(--popover) 70%, transparent);
   --glass-edge: color-mix(in oklab, var(--foreground) 12%, transparent);
   --glass-sheen: rgb(255 255 255 / 0.06);
-  --glass-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 16px 40px -8px rgb(0 0 0 / 0.6);
+  --glass-shadow:
+    0 1px 2px rgb(0 0 0 / 0.35), 0 16px 40px -8px rgb(0 0 0 / 0.6);
 }
 
 /* Tanpa dukungan blur, atau pengguna meminta transparansi dikurangi:
    latar menjadi solid, tampilan tetap rapi. */
-@supports (not (backdrop-filter: blur(1px))) and (not (-webkit-backdrop-filter: blur(1px))) {
+@supports (not (backdrop-filter: blur(1px))) and
+  (not (-webkit-backdrop-filter: blur(1px))) {
   :root,
   .dark {
     --glass-bg: var(--popover);
@@ -695,7 +703,9 @@
   backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
   border: 1px solid var(--glass-edge);
   /* inset = highlight tipis di tepi atas; sisanya bayangan jatuh. */
-  box-shadow: inset 0 1px 0 var(--glass-sheen), var(--glass-shadow);
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen),
+    var(--glass-shadow);
   /* Item yang disorot (hover/keyboard) memakai --accent. Dibuat translusen
      hanya di dalam permukaan ini, jadi sorotannya ikut "kaca".
      10% supaya sorotan terlihat jelas, bukan samar. */
@@ -770,6 +780,48 @@
 :is([data-slot="table-row"], .grid-neon tbody tr)[data-state="selected"],
 .grid-neon [role="row"][aria-selected="true"] > [role="gridcell"] {
   background-color: var(--table-accent);
+}
+
+/* Warna hover baris Tabel Verifikasi — SATU tempat. Dipakai kelas
+   `hover:bg-(color:--hover-baris)` di TabelVerifikasi.tsx dan aturan baris
+   koreksi di bawah. Arah Geist: hover = abu netral (gray-100), biru hanya untuk
+   baris terpilih (--table-accent). Ingin hover biru? Ganti nilainya ke
+   var(--table-accent). */
+.tabel-verifikasi {
+  --hover-baris: var(--table-hover);
+}
+
+/* Koreksi sebelum V1 mengganti warna tahap; semua sel termasuk checkbox ikut. */
+.tabel-verifikasi tbody tr[data-koreksi="true"] > td {
+  background-color: color-mix(in oklch, var(--chart-4) 8%, var(--card));
+}
+
+.tabel-verifikasi tbody tr[data-koreksi="true"] > td:first-child::before {
+  background-color: var(--chart-4);
+}
+
+.tabel-verifikasi
+  tbody
+  tr[data-koreksi="true"]:is([aria-selected="true"], [data-dipilih="true"])
+  > td {
+  background-color: var(--table-accent);
+}
+
+/* Hover baris terkoreksi = hover baris biasa. Aturan koreksi di atas ditulis
+   tanpa layer, jadi utilitas Tailwind (`group-hover:bg-*`) pada sel tidak akan
+   pernah menang; hover harus diputuskan di sini. Baris terpilih dikecualikan
+   supaya seleksi tidak berubah saat di-hover (sama seperti baris biasa). Garis
+   aksen di ujung kiri (::before sel pertama) sengaja TIDAK ikut berubah: ungu
+   tetap tampil saat hover sebagai penanda baris koreksi, sama seperti garis
+   tahap V1–V3. */
+.tabel-verifikasi
+  tbody
+  tr[data-koreksi="true"]:not(
+    [aria-selected="true"],
+    [data-dipilih="true"]
+  ):hover
+  > td {
+  background-color: var(--hover-baris);
 }
 
 /* ============================================================================

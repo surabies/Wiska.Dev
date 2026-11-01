@@ -1,6 +1,6 @@
 // proxy.ts — proteksi route di edge runtime (Next.js 16 "proxy", dulu
 // "middleware"). Sengaja memakai authConfig EDGE-SAFE dari
-// @/lib/auth/auth.config (tanpa Prisma/argon2) — proxy hanya perlu cek
+// @/lib/auth/Auth.config (tanpa Prisma/argon2) — proxy hanya perlu cek
 // "ada session valid atau tidak" lewat callbacks.authorized, tidak perlu
 // query database. JANGAN import dari "@workspace/auth" (barrel Node) di sini:
 // itu menyeret Prisma & @node-rs/argon2 ke edge dan akan gagal build.
@@ -13,7 +13,7 @@
 // typeof proxy tetap "function", tapi Next.js tetap melempar
 // ProxyMissingExportError). Assignment biasa dari member access aman.
 import NextAuth, { type NextAuthResult } from "next-auth"
-import { authConfig } from "@/lib/auth/auth.config"
+import { authConfig } from "@/lib/auth/Auth.config"
 
 const nextAuth = NextAuth(authConfig)
 // Anotasi eksplisit: tanpa ini tipe inferensi `proxy` cuma bisa dinamai

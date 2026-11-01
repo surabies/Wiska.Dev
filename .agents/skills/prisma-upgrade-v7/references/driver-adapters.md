@@ -247,7 +247,7 @@ const prisma = new PrismaClient({ adapter })
 ## Singleton Pattern
 
 ```typescript
-// lib/prisma.ts
+// lib/Prisma.ts
 import { PrismaClient } from '../generated/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 

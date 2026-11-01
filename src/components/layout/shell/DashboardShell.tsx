@@ -4,7 +4,7 @@
 // Dokumen sendiri tidak pernah ter-scroll. Navbar TIDAK dirender di sini (ada di layout).
 import type { ReactNode } from "react"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 import { SidebarNav } from "../navigation/SidebarNav"
 
 export const MAIN_CONTENT_ID = "konten-utama"
@@ -26,7 +26,7 @@ export function DashboardShell({
         "h-dvh overflow-hidden bg-muted pt-(--navbar-h)",
         // Tinggi navbar. Mobile = bar utama (h-14) + NavbarMobileBar (h-14) = 7rem.
         "[--navbar-h:3.5rem] max-lg:[--navbar-h:7rem]",
-        "[--sidebar-w:15rem]",
+        "[--sidebar-w:15rem]"
       )}
     >
       {/* Lompat ke konten: muncul hanya saat menerima fokus keyboard */}
@@ -37,7 +37,7 @@ export function DashboardShell({
           "focus-visible:fixed focus-visible:top-2 focus-visible:left-2 focus-visible:z-50",
           "focus-visible:rounded-md focus-visible:bg-background focus-visible:px-3 focus-visible:py-2",
           "focus-visible:text-sm focus-visible:font-medium focus-visible:shadow-md",
-          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         )}
       >
         Lewati ke konten utama
@@ -59,7 +59,7 @@ export function DashboardShell({
       <div
         className={cn(
           "flex h-full min-h-0 flex-col lg:pr-2 lg:pb-2",
-          tanpaSidebar ? "lg:pl-2" : "lg:pl-(--sidebar-w)",
+          tanpaSidebar ? "lg:pl-2" : "lg:pl-(--sidebar-w)"
         )}
       >
         {/* Card konten: satu-satunya area yang ter-scroll. */}

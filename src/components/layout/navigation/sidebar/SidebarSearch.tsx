@@ -9,10 +9,10 @@ import { createPortal } from "react-dom"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Search01Icon } from "@hugeicons/core-free-icons"
 import { SearchDialog } from "@/components/layout/search/SearchDialog"
-import { FOCUS_RING } from "./types/styles"
-import { useIsClient } from "./types/useIsClient"
-import { useIsMac } from "./types/useIsMac"
-import { cn } from "@/lib/utils"
+import { FOCUS_RING } from "./types/Styles"
+import { useIsClient } from "./types/UseIsClient"
+import { useIsMac } from "./types/UseIsMac"
+import { cn } from "@/lib/Utilitas"
 
 export function SidebarSearch() {
   // Tahap 1: state buka/tutup + ref tombol (untuk cek sidebar ini terlihat atau tidak)
@@ -49,7 +49,7 @@ export function SidebarSearch() {
         onClick={() => setOpen(true)}
         className={cn(
           "flex h-control w-full items-center gap-2 rounded-lg border border-sidebar-border bg-card px-2.5 text-left text-sm text-sidebar-foreground/70 transition-colors hover:bg-sidebar-hover",
-          FOCUS_RING,
+          FOCUS_RING
         )}
       >
         <HugeiconsIcon
@@ -73,7 +73,7 @@ export function SidebarSearch() {
           <div className="relative z-100">
             <SearchDialog open={open} onClose={close} />
           </div>,
-          document.body,
+          document.body
         )}
     </>
   )

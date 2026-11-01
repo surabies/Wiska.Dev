@@ -7,27 +7,27 @@
 // sebagai nilai awal input (TIDAK auto-submit: pemanggilan API tetap satu
 // klik sadar dari pemakai, dan tetap dari browser mereka agar rate limit
 // per-IP bermakna).
-import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowUpRight } from "@/components/ui/hugeicons-compat";
-import { CekTagihanForm } from "@/features/public/components/cek-tagihan-form";
+import type { Metadata } from "next"
+import Link from "next/link"
+import { ArrowUpRight } from "@/components/ui/hugeicons-compat"
+import { CekTagihanForm } from "@/features/public/components/CekTagihanFormulir"
 import {
   HalamanPublik,
   AsideBlok,
-} from "@/features/public/components/halaman-publik";
+} from "@/features/public/components/HalamanPublik"
 
 export const metadata: Metadata = {
   title: "Cek tagihan",
   description: "Cek tagihan air PERUMDA Tirtawening Kota Bandung secara online",
-};
+}
 
 export default async function CekTagihanPage({
   searchParams,
 }: {
-  searchParams: Promise<{ nomor?: string }>;
+  searchParams: Promise<{ nomor?: string }>
 }) {
-  const { nomor } = await searchParams;
-  const nomorAwal = /^\d{11}$/.test(nomor ?? "") ? nomor : undefined;
+  const { nomor } = await searchParams
+  const nomorAwal = /^\d{11}$/.test(nomor ?? "") ? nomor : undefined
 
   return (
     <HalamanPublik
@@ -80,5 +80,5 @@ export default async function CekTagihanPage({
     >
       <CekTagihanForm nomorAwal={nomorAwal} />
     </HalamanPublik>
-  );
+  )
 }

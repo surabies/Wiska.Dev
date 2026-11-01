@@ -1,7 +1,6 @@
-
 import type { Metadata } from "next"
-import { PageContainer } from "@/components/layout"
-import { PapanPengaduan } from "@/features/dashboard/components/pengaduan/papan-pengaduan"
+import { PageContainer } from "@/components/layout/index"
+import { PapanPengaduan } from "@/features/dashboard/pengaduan/components/papan-pengaduan/index"
 
 export const metadata: Metadata = { title: "Pengaduan" }
 
@@ -15,9 +14,7 @@ export default async function PengaduanPage({
   return (
     <PageContainer
       className="flex min-h-0 flex-1 flex-col"
-      breadcrumbs={[
-        { label: "Pengaduan", href: "/pengaduan" },
-      ]}
+      breadcrumbs={[{ label: "Pengaduan", href: "/pengaduan" }]}
     >
       <PapanPengaduan initialQ={typeof q === "string" ? q : ""} />
     </PageContainer>

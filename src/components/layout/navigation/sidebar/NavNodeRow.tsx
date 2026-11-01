@@ -3,13 +3,13 @@
 
 import Link from "next/link"
 import type { IconSvgElement } from "@hugeicons/react"
-import { cn } from "@/lib/utils"
-import { isNavFolder, type NavNode } from "@/config/navigation"
-import { getItemIcon } from "./types/icons"
+import { cn } from "@/lib/Utilitas"
+import { isNavFolder, type NavNode } from "@/config/Navigasi"
+import { getItemIcon } from "./types/Icons"
 import { NavRowContent } from "./NavRow"
-import { SECTION_LABEL, navRowClass } from "./types/styles"
-import type { ActiveInfo } from "./types/types"
-import { isPending, nodeKey } from "./types/utils"
+import { SECTION_LABEL, navRowClass } from "./types/Styles"
+import type { ActiveInfo } from "./types/Tipe"
+import { isPending, nodeKey } from "./types/Utilitas"
 
 type Props = {
   node: NavNode
@@ -22,7 +22,7 @@ export function NavNodeRow({ node, active, fallbackIcon }: Props) {
   if (isNavFolder(node)) {
     return (
       <li className="flex flex-col">
-        <span className={cn(SECTION_LABEL, "pb-1.5 pt-4")}>{node.title}</span>
+        <span className={cn(SECTION_LABEL, "pt-4 pb-1.5")}>{node.title}</span>
         <ul className="flex flex-col gap-0.5">
           {node.children.map((child, i) => (
             <NavNodeRow
@@ -50,7 +50,7 @@ export function NavNodeRow({ node, active, fallbackIcon }: Props) {
           icon={getItemIcon(node.title, fallbackIcon)}
           trailing={
             isPending(node) && (
-              <span className="shrink-0 rounded-full border border-sidebar-border px-1.5 py-0.5 text-[10px] font-medium leading-none text-sidebar-foreground/70">
+              <span className="shrink-0 rounded-full border border-sidebar-border px-1.5 py-0.5 text-[10px] leading-none font-medium text-sidebar-foreground/70">
                 Segera
               </span>
             )

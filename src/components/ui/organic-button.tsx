@@ -1,9 +1,9 @@
 import { forwardRef, type AnchorHTMLAttributes, type ReactNode } from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-import { ArrowUpRight } from "lucide-react"
+import { ArrowUpRight } from "@/components/ui/hugeicons-compat"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 
 /** Shared fill for all organic SVG paths — driven by `--organic-surface` on the button root. */
 const fillOrganic = "fill-[var(--organic-surface)]"
@@ -41,7 +41,8 @@ const organicButtonVariants = cva("flex w-fit flex-col", {
 })
 
 interface OrganicShapeButtonProps
-  extends AnchorHTMLAttributes<HTMLAnchorElement>,
+  extends
+    AnchorHTMLAttributes<HTMLAnchorElement>,
     VariantProps<typeof organicButtonVariants> {
   asChild?: boolean
   label: string
@@ -74,7 +75,7 @@ export const OrganicButton = forwardRef<
       label,
       className,
       icon = (
-        <ArrowUpRight className="organic-icon stroke-current transition-transform duration-100 group-hover/organic:rotate-45 group-hover/organic:scale-110" />
+        <ArrowUpRight className="organic-icon stroke-current transition-transform duration-100 group-hover/organic:scale-110 group-hover/organic:rotate-45" />
       ),
       size = "md",
       variantColor = "primary",
@@ -111,7 +112,7 @@ export const OrganicButton = forwardRef<
       >
         <Comp
           className={cn(
-            "group/organic inline-flex h-full min-h-0 w-full min-w-0 max-w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.96] active:transition-transform disabled:cursor-not-allowed",
+            "group/organic inline-flex h-full min-h-0 w-full max-w-full min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.96] active:transition-transform disabled:cursor-not-allowed",
             minW,
             className
           )}
@@ -127,11 +128,11 @@ export const OrganicButton = forwardRef<
 
               <div
                 className={cn(
-                  "flex h-full min-h-0 min-w-0 flex-1 items-center justify-start overflow-visible whitespace-nowrap bg-[var(--organic-surface)] pr-2 text-[var(--organic-fg)]"
+                  "flex h-full min-h-0 min-w-0 flex-1 items-center justify-start overflow-visible bg-[var(--organic-surface)] pr-2 whitespace-nowrap text-[var(--organic-fg)]"
                 )}
               >
                 <span className="flex items-center justify-start pl-2 transition-[padding] duration-[var(--organic-duration,400ms)] ease-in-out">
-                  <span className="organic-label shrink-0 font-brand font-semibold leading-none">
+                  <span className="organic-label font-brand shrink-0 leading-none font-semibold">
                     {label}
                   </span>
                 </span>
@@ -144,7 +145,7 @@ export const OrganicButton = forwardRef<
               <AscendingWall />
               <div
                 className={cn(
-                  "flex h-full shrink-0 items-center justify-center overflow-visible whitespace-nowrap bg-[var(--organic-surface)] text-[var(--organic-fg)]"
+                  "flex h-full shrink-0 items-center justify-center overflow-visible bg-[var(--organic-surface)] whitespace-nowrap text-[var(--organic-fg)]"
                 )}
               >
                 <span className="flex items-center px-0 transition-[padding] duration-[var(--organic-duration,400ms)] ease-in-out group-hover/organic:px-2">

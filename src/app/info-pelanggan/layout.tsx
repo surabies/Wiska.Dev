@@ -6,7 +6,7 @@
 import type { ReactNode } from "react"
 import { redirect } from "next/navigation"
 
-import { auth } from "@/lib/auth"
+import { auth } from "@/lib/auth/index"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
 export default async function LayoutPenuh({

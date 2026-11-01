@@ -13,7 +13,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { findActiveNav, type NavItem, type NavGroup } from "@/config/navigation"
+import { findActiveNav, type NavItem, type NavGroup } from "@/config/Navigasi"
 import { MobileSidebar } from "../navigation/MobileSidebar"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Menu01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
@@ -61,13 +61,10 @@ export function NavbarMobileBar() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-                <BreadcrumbLink
-                  href={firstHref}
-                  className="text-muted-foreground"
-                >
-                  {active?.group.title ?? "Tirtawening"}
-                </BreadcrumbLink>
-              </BreadcrumbItem>
+            <BreadcrumbLink href={firstHref} className="text-muted-foreground">
+              {active?.group.title ?? "Tirtawening"}
+            </BreadcrumbLink>
+          </BreadcrumbItem>
           <BreadcrumbSeparator>
             <HugeiconsIcon
               icon={ArrowRight01Icon}

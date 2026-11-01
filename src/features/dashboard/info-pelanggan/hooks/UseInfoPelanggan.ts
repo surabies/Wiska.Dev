@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ApiError } from "../../lib/api-client"
+import { ApiError } from "@/features/dashboard/api/ApiDashboard"
 import { ambilInfoPelanggan } from "../api/ApiInfoPelanggan"
 import type { InfoPelanggan, StatusInfo } from "../types/TipeInfoPelanggan"
 

@@ -3,8 +3,8 @@
 import type { ReactNode } from "react"
 import { redirect } from "next/navigation"
 
-import { auth, signOut } from "@/lib/auth"
-import { DashboardShell, Navbar } from "@/components/layout"
+import { auth, signOut } from "@/lib/auth/index"
+import { DashboardShell, Navbar } from "@/components/layout/index"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
 async function keluar() {

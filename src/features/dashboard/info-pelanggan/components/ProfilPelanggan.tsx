@@ -3,8 +3,9 @@
 // ProfilPelanggan menampilkan identitas dengan tata letak seperti PDF: nama + alamat di kiri,
 // No. Langganan (bisa disalin) + status di kanan, chip ciri teknis di bawah.
 import * as React from "react"
-import { cn } from "@/lib/utils"
-import { LABEL_STATUS_PELANGGAN } from "../../lib/label"
+import { cn } from "@/lib/Utilitas"
+import { PanelDasbor } from "../../shared/PanelDasbor"
+import { LABEL_STATUS_PELANGGAN } from "@/features/dashboard/lib/LabelPelanggan"
 import type { DataPelanggan } from "../types/TipeInfoPelanggan"
 
 const NADA_STATUS: Record<string, string> = {
@@ -57,7 +58,7 @@ export function ProfilPelanggan({
     : null
 
   return (
-    <section aria-label="Identitas pelanggan" className="flex flex-col gap-4">
+    <PanelDasbor label="Profil pelanggan">
       <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-4">
         <div className="min-w-0">
           <h2 className="text-3xl font-semibold tracking-heading-32 text-balance">
@@ -98,6 +99,6 @@ export function ProfilPelanggan({
         {p.ukuranMeter && <Chip label="Ukuran" nilai={p.ukuranMeter} />}
         {p.noHp && p.noHp !== "0" && <Chip label="Telepon" nilai={p.noHp} />}
       </div>
-    </section>
+    </PanelDasbor>
   )
 }

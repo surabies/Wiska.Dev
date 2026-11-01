@@ -4,7 +4,7 @@ import * as React from "react"
 import type { SVGProps } from "react"
 import { ColorPanels } from "@paper-design/shaders-react"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
@@ -29,8 +29,10 @@ export interface HeroColorPanelsCTAProps {
   buttonClassName?: string
 }
 
-export interface HeroColorPanelsRootProps
-  extends Omit<React.ComponentPropsWithoutRef<"section">, "title"> {
+export interface HeroColorPanelsRootProps extends Omit<
+  React.ComponentPropsWithoutRef<"section">,
+  "title"
+> {
   srTitle?: string
   title?: React.ReactNode
   subtitle?: React.ReactNode
@@ -49,28 +51,27 @@ export interface HeroColorPanelsRootProps
   mobileShaderProps?: Partial<ColorPanelsProps>
 }
 
-export interface HeroColorPanelsHeadingProps
-  extends Omit<React.ComponentPropsWithoutRef<"div">, "title"> {
+export interface HeroColorPanelsHeadingProps extends Omit<
+  React.ComponentPropsWithoutRef<"div">,
+  "title"
+> {
   title?: React.ReactNode
   subtitle?: React.ReactNode
   headingClassName?: string
 }
 
-export interface HeroColorPanelsDescriptionProps
-  extends React.ComponentPropsWithoutRef<"div"> {
+export interface HeroColorPanelsDescriptionProps extends React.ComponentPropsWithoutRef<"div"> {
   description?: React.ReactNode
   descriptionClassName?: string
 }
 
-export interface HeroColorPanelsActionsProps
-  extends React.ComponentPropsWithoutRef<"div"> {
+export interface HeroColorPanelsActionsProps extends React.ComponentPropsWithoutRef<"div"> {
   showCta?: boolean
   ctaProps?: Partial<HeroColorPanelsCTAProps>
   renderCta?: (defaultCta: React.ReactNode) => React.ReactNode
 }
 
-export interface HeroColorPanelsBadgesProps
-  extends React.ComponentPropsWithoutRef<"div"> {
+export interface HeroColorPanelsBadgesProps extends React.ComponentPropsWithoutRef<"div"> {
   showBadges?: boolean
   techStack?: HeroColorPanelsTechItem[]
   renderBadge?: (
@@ -80,14 +81,12 @@ export interface HeroColorPanelsBadgesProps
   ) => React.ReactNode
 }
 
-export interface HeroColorPanelsVisualProps
-  extends React.ComponentPropsWithoutRef<"div"> {
+export interface HeroColorPanelsVisualProps extends React.ComponentPropsWithoutRef<"div"> {
   desktopShaderProps?: Partial<ColorPanelsProps>
   desktopClassName?: string
 }
 
-export interface HeroColorPanelsMobileVisualProps
-  extends React.ComponentPropsWithoutRef<"div"> {
+export interface HeroColorPanelsMobileVisualProps extends React.ComponentPropsWithoutRef<"div"> {
   mobileShaderProps?: Partial<ColorPanelsProps>
 }
 
@@ -375,7 +374,7 @@ export function HeroColorPanelsDescription({
       {children ?? (
         <p
           className={cn(
-            "text-foreground/70 md:text-foreground/80 mt-0 mb-0 font-sans text-sm sm:text-base lg:text-lg xl:text-xl",
+            "mt-0 mb-0 font-sans text-sm text-foreground/70 sm:text-base md:text-foreground/80 lg:text-lg xl:text-xl",
             descriptionClassName
           )}
           data-slot="hero-colorpanels-description"
@@ -475,7 +474,7 @@ export function HeroColorPanelsBadges({
           <Badge
             className={cn(
               "group relative px-3.5 py-1.5 font-medium transition-all duration-150",
-              "border-border/50 bg-card text-card-foreground border",
+              "border border-border/50 bg-card text-card-foreground",
               "shadow-[0_1px_3px_rgba(0,0,0,0.08)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3)]",
               "hover:-translate-y-px hover:shadow-[0_2px_8px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
             )}
@@ -565,7 +564,7 @@ export function HeroColorPanelsMobileVisual({
       data-slot="hero-colorpanels-mobile"
       {...props}
     >
-      <div className="from-background via-background/90 absolute inset-x-0 top-0 z-10 h-44 bg-gradient-to-b to-transparent" />
+      <div className="absolute inset-x-0 top-0 z-10 h-44 bg-gradient-to-b from-background via-background/90 to-transparent" />
       <MemoizedColorPanels {...resolvedMobileShaderProps} />
     </div>
   )

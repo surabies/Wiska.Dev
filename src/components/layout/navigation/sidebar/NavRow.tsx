@@ -6,7 +6,7 @@ import * as React from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { IconSvgElement } from "@hugeicons/react"
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 
 export function NavRowContent({
   icon,

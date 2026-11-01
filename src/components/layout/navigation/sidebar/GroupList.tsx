@@ -1,10 +1,10 @@
 // components/layout/navigation/sidebar/GroupList.tsx
 // Tampilan root: daftar grup/direktorat. Satu baris per grup, panah di kanan.
 
-import { navGroups } from "@/config/navigation"
-import { getGroupIcon } from "./types/icons"
+import { navGroups } from "@/config/Navigasi"
+import { getGroupIcon } from "./types/Icons"
 import { NavRowContent, RowChevron } from "./NavRow"
-import { navRowClass } from "./types/styles"
+import { navRowClass } from "./types/Styles"
 
 type Props = {
   activeGroupId?: string
@@ -21,7 +21,10 @@ export function GroupList({ activeGroupId, onOpen }: Props) {
             onClick={() => onOpen(group.id)}
             className={navRowClass(group.id === activeGroupId)}
           >
-            <NavRowContent icon={getGroupIcon(group.id)} trailing={<RowChevron />}>
+            <NavRowContent
+              icon={getGroupIcon(group.id)}
+              trailing={<RowChevron />}
+            >
               {group.title}
             </NavRowContent>
           </button>

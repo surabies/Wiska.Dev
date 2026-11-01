@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
-import { PageContainer } from "@/components/layout"
-import { auth } from "@/lib/auth"
-import { ManualAddClient } from "@/features/dashboard/components/manual-add/manual-add-client"
+import { PageContainer } from "@/components/layout/index"
+import { auth } from "@/lib/auth/index"
+import { ManualAddClient } from "@/features/dashboard/tambah-manual/components/KlienTambahManual"
 
 export const metadata: Metadata = {
   title: "Manual Add",

@@ -20,7 +20,7 @@ import {
   type BorderBeamSize,
 } from "border-beam"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 import {
   Card,
   CardAction,
@@ -107,7 +107,7 @@ export const BorderBeamCard = forwardRef<HTMLDivElement, BorderBeamCardProps>(
         <BorderBeam
           borderRadius={explicitBeamRadius}
           className={cn(
-            "overflow-visible! block w-full",
+            "block w-full overflow-visible!",
             explicitBeamRadius == null
               ? borderBeamCardInnerCurveClass
               : undefined,

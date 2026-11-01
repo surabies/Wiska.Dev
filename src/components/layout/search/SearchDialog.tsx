@@ -5,8 +5,8 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { cn } from "@/lib/utils"
-import { searchDocs } from "@/lib/search-data"
+import { cn } from "@/lib/Utilitas"
+import { searchDocs } from "@/lib/DataPencarian"
 import { Highlight } from "./Highlight"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Search01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
@@ -107,9 +107,7 @@ export function SearchDialog({
         "fixed inset-0 z-50 flex items-start justify-center px-3 pt-[8vh] sm:px-4 sm:pt-[10vh]",
         "bg-black/20 backdrop-blur-sm",
         "transition-[opacity,visibility] duration-200 ease-out motion-reduce:transition-none",
-        open
-          ? "visible opacity-100"
-          : "pointer-events-none invisible opacity-0",
+        open ? "visible opacity-100" : "pointer-events-none invisible opacity-0"
       )}
     >
       <div
@@ -119,7 +117,7 @@ export function SearchDialog({
         className={cn(
           "flex max-h-[80dvh] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-background shadow-2xl ring-1 ring-black/5",
           "transition-transform duration-200 ease-out motion-reduce:transition-none",
-          open ? "scale-100" : "scale-[0.98]",
+          open ? "scale-100" : "scale-[0.98]"
         )}
       >
         {/* ===== Baris input ===== */}
@@ -184,7 +182,7 @@ export function SearchDialog({
                         "flex w-full items-center gap-4 rounded-lg px-4 py-3 text-left transition-colors",
                         isActive
                           ? "bg-sky-500 text-white [&_mark]:text-white"
-                          : "bg-muted/50",
+                          : "bg-muted/50"
                       )}
                     >
                       <span
@@ -192,7 +190,7 @@ export function SearchDialog({
                           "flex size-8 shrink-0 items-center justify-center rounded-md border text-sm",
                           isActive
                             ? "border-white/30 bg-white/10 text-white"
-                            : "bg-background text-muted-foreground",
+                            : "bg-background text-muted-foreground"
                         )}
                       >
                         #

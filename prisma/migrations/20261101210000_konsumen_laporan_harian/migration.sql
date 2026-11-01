@@ -1,0 +1,1 @@
+ALTER TYPE "JenisInputLaporanHarian" ADD VALUE 'KONSUMEN' AFTER 'PETUGAS';

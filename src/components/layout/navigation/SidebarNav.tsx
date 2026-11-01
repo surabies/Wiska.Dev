@@ -17,18 +17,24 @@
 
 "use client"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 import { GroupDetail } from "./sidebar/GroupDetail"
 import { GroupList } from "./sidebar/GroupList"
 import { RowSeparator } from "./sidebar/NavRow"
 import { PrimaryNav } from "./sidebar/PrimaryNav"
 import { SidebarSearch } from "./sidebar/SidebarSearch"
 import { Slide } from "./sidebar/Slide"
-import { useSidebarDrilldown } from "./sidebar/types/useSidebarDrilldown"
+import { useSidebarDrilldown } from "./sidebar/types/UseSidebarDrilldown"
 
 export function SidebarNav({ className }: { className?: string }) {
-  const { active, activeGroupId, currentGroup, direction, openGroup, backToRoot } =
-    useSidebarDrilldown()
+  const {
+    active,
+    activeGroupId,
+    currentGroup,
+    direction,
+    openGroup,
+    backToRoot,
+  } = useSidebarDrilldown()
 
   return (
     <div className={cn("-mt-6 flex flex-col gap-3", className)}>
@@ -37,7 +43,11 @@ export function SidebarNav({ className }: { className?: string }) {
       <nav aria-label="Menu utama" className="overflow-hidden">
         {currentGroup ? (
           <Slide key={currentGroup.id} direction={direction}>
-            <GroupDetail group={currentGroup} active={active} onBack={backToRoot} />
+            <GroupDetail
+              group={currentGroup}
+              active={active}
+              onBack={backToRoot}
+            />
           </Slide>
         ) : (
           <Slide key="root" direction={direction}>

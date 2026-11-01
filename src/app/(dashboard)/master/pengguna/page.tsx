@@ -1,8 +1,7 @@
 import type { Metadata } from "next"
-import { auth } from "@/lib/auth"
-import { PageContainer } from "@/components/layout"
-import { PenggunaClient } from "@/features/dashboard/components/pengguna/pengguna-client"
-
+import { auth } from "@/lib/auth/index"
+import { PageContainer } from "@/components/layout/index"
+import { PenggunaClient } from "@/features/dashboard/pengguna/components/KlienPengguna"
 
 export const metadata: Metadata = { title: "Pengguna & akses" }
 
@@ -19,7 +18,10 @@ export default async function PenggunaPage() {
         { label: "Pengguna" },
       ]}
     >
-      <PenggunaClient idSaya={session?.user?.id ?? null} roleSaya={session?.user?.role ?? null} />
+      <PenggunaClient
+        idSaya={session?.user?.id ?? null}
+        roleSaya={session?.user?.role ?? null}
+      />
     </PageContainer>
   )
 }

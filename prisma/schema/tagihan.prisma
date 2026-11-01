@@ -69,7 +69,7 @@ model PembacaanMeter {
   pemakaianRiil  Int?
   /// Kenapa `pemakaianM3` berbeda dari `pemakaianRiil`. NULL = tidak
   /// berbeda (pemakaian riil dipakai apa adanya — mayoritas baris).
-  /// Lihat prisma/seed/lib/domain/tagihan.ts untuk aturan & dasar hukumnya.
+  /// Lihat prisma/seed/lib/domain/Tagihan.ts untuk aturan & dasar hukumnya.
   alasanTaksir   AlasanTaksir?
   blokTarif      Int
   pemakaianLalu  Int?
@@ -217,7 +217,7 @@ model RiwayatPembayaran {
 /// Dipetakan dari ukmeter (ProgresCater) dan kd_ukmeter (PBPK).
 /// PBPK memakai kode "A" untuk 1/2 inci -> dimap ke INCH_HALF saat seed.
 /// Alasan pemakaian yang DITAGIHKAN berbeda dari yang TERBACA di meter.
-/// Nilai & aturannya didefinisikan di prisma/seed/lib/domain/tagihan.ts — enum ini
+/// Nilai & aturannya didefinisikan di prisma/seed/lib/domain/Tagihan.ts — enum ini
 /// hanya tempat menyimpannya. Diturunkan dari data 202605 dan dikonfirmasi
 /// ke aturan yang berlaku:
 ///   MINIMUM_5M3         pemakaian di bawah 5 m3 ditagih 5 m3. Dasar:

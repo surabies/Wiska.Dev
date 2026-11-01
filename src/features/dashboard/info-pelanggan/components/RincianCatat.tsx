@@ -1,6 +1,7 @@
 // Kartu rincian pencatatan (kanan baris kedua, seperti PDF): periode, kondisi,
 // petugas, waktu, biaya, dan koordinat. Baris tanpa data tidak ditampilkan.
-import { LABEL_KONDISI_CATAT } from "../../lib/label"
+import { LABEL_KONDISI_CATAT } from "@/features/dashboard/lib/LabelPencatatan"
+import { PanelDasbor } from "../../shared/PanelDasbor"
 import { BarisInfo, DaftarInfo } from "./BarisInfo"
 import { fmtPeriode, fmtRupiah, fmtTeks, fmtWaktu } from "../lib/FormatTampilan"
 import type { DataCatat } from "../types/TipeInfoPelanggan"
@@ -18,11 +19,7 @@ export function RincianCatat({
     : null
 
   return (
-    <section
-      aria-label="Rincian pencatatan"
-      className="flex min-w-0 flex-col gap-1 rounded-lg border border-border bg-card p-4 shadow-panel"
-    >
-      <h2 className="mb-1 text-sm font-semibold">Rincian pencatatan</h2>
+    <PanelDasbor label="Rincian pencatatan" className="min-w-0">
       <DaftarInfo>
         <BarisInfo label="Periode">{fmtPeriode(catat.periode)}</BarisInfo>
         {kondisi && <BarisInfo label="Kondisi">{kondisi}</BarisInfo>}
@@ -40,6 +37,6 @@ export function RincianCatat({
           </BarisInfo>
         )}
       </DaftarInfo>
-    </section>
+    </PanelDasbor>
   )
 }

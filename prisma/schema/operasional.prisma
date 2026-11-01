@@ -62,7 +62,7 @@ model Pengaduan {
   /// Klip video bukti dari PELAPOR (opsional, maks 60 dtk). Dipasangkan
   /// dengan videoPublicId (Cloudinary) — pola sama seperti fotoUrl/
   /// fotoPublicId. Kompresi/optimasi tampilan lewat q_auto,f_auto saat
-  /// pengiriman (lihat urlVideoTeroptimasi di features/public/lib/format.ts).
+  /// pengiriman (lihat urlVideoTeroptimasi di features/public/lib/Format.ts).
   videoUrl                 String?
   videoPublicId            String?
   ditugaskanKeId           String?
@@ -187,7 +187,7 @@ model RiwayatPengaduan {
 }
 
 model LaporanHarianPetugas {
-  id                  String            @id @default(cuid())
+  id                  String                  @id @default(cuid())
   /// nolg TETAP disimpan sebagai String (natural key dari CSV, dipakai
   /// @@unique di bawah) — TAPI sekarang juga ada `pelangganId` (relasi
   /// asli, opsional) di bawah supaya frontend bisa `include: { pelanggan }`
@@ -214,10 +214,11 @@ model LaporanHarianPetugas {
   /// data nyata). Threshold anomali dikonfigurasi via Konfigurasi
   /// (key: AMBANG_ANOMALI_PERSEN).
   persentase          Int?
-  kondisi             KondisiCatat      @default(NORMAL)
-  kategori            KategoriPembacaan @default(ONSITE)
-  /// Asal pembuatan laporan. Manual ADD tetap menunggu verifikasi dan
-  /// tidak dianggap sebagai pembacaan aktual saat dipakai sebagai histori.
+  kondisi             KondisiCatat            @default(NORMAL)
+  kategori            KategoriPembacaan       @default(ONSITE)
+  /// Asal pembuatan laporan. Input konsumen adalah cerminan laporan Mandiri
+  /// di antrean Petugas; Manual ADD tetap menunggu verifikasi dan tidak
+  /// dianggap sebagai pembacaan aktual saat dipakai sebagai histori.
   jenisInput          JenisInputLaporanHarian @default(PETUGAS)
   alasanManual        String?
   /// Metode dan pembacaan sumber yang dipakai untuk menghitung usulan
@@ -231,13 +232,13 @@ model LaporanHarianPetugas {
   pencatatId          String?
   tanggalCatat        DateTime?
   tanggalUpload       DateTime?
-  isVerified          Boolean           @default(false)
+  isVerified          Boolean                 @default(false)
   verifiedAt          DateTime?
   verifiedById        String?
   catatanVerif        String?
   /// Setelah verified & closing -> link ke PembacaanMeter resmi.
-  pembacaanId         String?           @unique
-  createdAt           DateTime          @default(now())
+  pembacaanId         String?                 @unique
+  createdAt           DateTime                @default(now())
   blokTarifVerif      Int?
   /// M³ hasil verifikasi yang dipilih verifikator, terpisah dari hitungan
   /// riil. UI mengusulkan selisih matematis dan menerima koreksi manual
@@ -257,10 +258,11 @@ model LaporanHarianPetugas {
   kondisiRevisi       KondisiCatat?
   /// Angka terakhir pada meter lama saat penggantian (kondisi MB).
   standAngkatLama     Int?
-  /// Angka awal meter baru saat dipasang (kondisi MB).
-  standAwalMeterBaru  Int?
+  /// Stand meter baru saat pembacaan berjalan (kondisi MB).
+  /// Nama kolom database lama dipertahankan untuk kompatibilitas migrasi.
+  standMeterBaru      Int?                    @map("standAwalMeterBaru")
   /// ── Verifikasi berjenjang V1→V2→V3 (spesifikasi:
-  /// features/dashboard/components/verifikasi/tabel.md). V1 Supervisor
+  /// features/dashboard/verifikasi/components/tabel.md). V1 Supervisor
   /// memeriksa & mengoreksi angka, V2 Manager memvalidasi, V3 Senior
   /// Manager approve final — PembacaanMeter resmi baru dibuat saat V3.
   /// Kolom legacy isVerified/verifiedAt/verifiedById TETAP dipakai sebagai
@@ -305,14 +307,14 @@ model LaporanHarianPetugas {
   /// (bill_reqnourutbaru di Aurora) — admin memutuskan penerapannya ke
   /// Pelanggan.noUrutRute saat closing, tidak otomatis.
   usulanNoUrut        Int?
-  meterVerif          Meter?            @relation("LaporanMeterVerif", fields: [meterVerifId], references: [id])
-  pelanggan           Pelanggan?        @relation(fields: [pelangganId], references: [id])
-  pembacaan           PembacaanMeter?   @relation(fields: [pembacaanId], references: [id])
-  pencatat            Pencatat?         @relation(fields: [pencatatId], references: [id])
-  verif1By            User?             @relation("LaporanVerif1", fields: [verif1ById], references: [id])
-  verif2By            User?             @relation("LaporanVerif2", fields: [verif2ById], references: [id])
-  verif3By            User?             @relation("LaporanVerif3", fields: [verif3ById], references: [id])
-  verifiedBy          User?             @relation("LaporanVerifikator", fields: [verifiedById], references: [id])
+  meterVerif          Meter?                  @relation("LaporanMeterVerif", fields: [meterVerifId], references: [id])
+  pelanggan           Pelanggan?              @relation(fields: [pelangganId], references: [id])
+  pembacaan           PembacaanMeter?         @relation(fields: [pembacaanId], references: [id])
+  pencatat            Pencatat?               @relation(fields: [pencatatId], references: [id])
+  verif1By            User?                   @relation("LaporanVerif1", fields: [verif1ById], references: [id])
+  verif2By            User?                   @relation("LaporanVerif2", fields: [verif2ById], references: [id])
+  verif3By            User?                   @relation("LaporanVerif3", fields: [verif3ById], references: [id])
+  verifiedBy          User?                   @relation("LaporanVerifikator", fields: [verifiedById], references: [id])
 
   @@unique([nomorLangganan, periode])
   @@index([nomorLangganan])
@@ -724,7 +726,7 @@ enum StatusPotensi {
 model DaftarCatat {
   id          String            @id @default(cuid())
   /// thbl, mis. 202606 — bentuk Int, konsisten dengan LaporanHarianPetugas/
-  /// MutasiPelanggan/Pemutusan (lihat prisma/seed/lib/domain/periode.ts).
+  /// MutasiPelanggan/Pemutusan (lihat prisma/seed/lib/domain/Periode.ts).
   periode     Int
   pelangganId String
   /// Rute & pencatat SAAT DAFTAR DIBEKUKAN — di-snapshot, bukan diambil
@@ -783,6 +785,8 @@ enum StatusDaftarCatat {
 
 enum JenisInputLaporanHarian {
   PETUGAS
+  /// Laporan Mandiri konsumen yang disinkronkan ke antrean Petugas.
+  KONSUMEN
   MANUAL_SATUAN
   MANUAL_MASSAL
 }
@@ -798,7 +802,7 @@ enum JenisInputLaporanHarian {
 /// + `Tagihan.jumlahRekTunggak` setiap kali dibuka, dan berubah sendiri
 /// begitu pembacaan baru masuk. Menyimpannya sebagai tabel berarti ia bisa
 /// basi dan butuh disinkronkan — pekerjaan tambahan yang tidak membeli apa
-/// pun. Lihat prisma/seed/lib/domain/anomali.ts untuk aturannya.
+/// pun. Lihat prisma/seed/lib/domain/Anomali.ts untuk aturannya.
 ///
 /// Yang TIDAK bisa diturunkan dari mana pun adalah apa yang ditemukan
 /// petugas saat datang. Itu fakta tentang dunia, dan itulah isi tabel ini.
@@ -863,7 +867,7 @@ model KunjunganAnomali {
   @@map("kunjungan_anomali")
 }
 
-/// Sama persis dengan pengelompokan di prisma/seed/lib/domain/anomali.ts —
+/// Sama persis dengan pengelompokan di prisma/seed/lib/domain/Anomali.ts —
 /// dikembarkan di sini karena Prisma tidak bisa menarik enum dari modul TS.
 /// Bila salah satunya berubah, yang lain WAJIB ikut.
 enum KategoriAnomali {

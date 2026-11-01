@@ -7,8 +7,8 @@ import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { mobileMenuLinks } from "@/config/navigation"
+import { cn } from "@/lib/Utilitas"
+import { mobileMenuLinks } from "@/config/Navigasi"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { MoreVerticalIcon, Cancel01Icon } from "@hugeicons/core-free-icons"
 
@@ -74,7 +74,7 @@ export function MobileMenu() {
           "transition-[opacity,visibility] duration-250 ease-out motion-reduce:transition-none",
           open
             ? "visible opacity-100"
-            : "pointer-events-none invisible opacity-0",
+            : "pointer-events-none invisible opacity-0"
         )}
       >
         {/* Tahap 6: baris atas. Ukuran & padding SAMA PERSIS dengan bar utama navbar
@@ -113,7 +113,7 @@ export function MobileMenu() {
               className={cn(
                 "w-fit transition-[opacity,translate] duration-300 ease-out motion-reduce:transition-none",
                 // Terbuka: posisi normal. Tertutup: naik 12px (-translate-y-3) & transparan.
-                open ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0",
+                open ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0"
               )}
               style={{
                 // Saat membuka: tiap link menunggu sedikit lebih lama dari sebelumnya.

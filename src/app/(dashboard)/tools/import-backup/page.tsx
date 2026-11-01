@@ -1,11 +1,8 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
-import { auth } from "@/lib/auth"
-import { PageContainer } from "@/components/layout"
-import { ImporCadanganClient } from "@/features/dashboard/components/import/impor-cadangan-client"
-
-
-
+import { auth } from "@/lib/auth/index"
+import { PageContainer } from "@/components/layout/index"
+import { ImporCadanganClient } from "@/features/dashboard/impor/components/KlienImporCadangan"
 
 export const metadata: Metadata = { title: "Import Backup" }
 

@@ -34,8 +34,8 @@ Koreksi selama pilot mengikuti prosedur manual dan persetujuan supervisor yang d
 3. **Intake petugas:** input stand dan kondisi, waktu, foto wajib yang diambil petugas, serta GPS/akurasi bila tersedia. Kegagalan GPS tidak memblokir submit. Outbox lokal menyimpan pekerjaan offline sampai server mengonfirmasi penerimaan; retry identik tidak menggandakan hasil dan ID sama dengan payload berbeda menjadi konflik yang dapat ditinjau.
 4. **Intake warga:** laporan baca meter anonim dan akun diperbolehkan, menyertakan foto bukti, dan selalu menunggu verifikasi petugas. OTP untuk melihat data sambungan hanya dikirim ke nomor yang sudah terverifikasi pada data resmi; bila tidak cocok/tersedia, warga diarahkan ke verifikasi petugas. Tautan `LanggananWarga` bukan bukti kepemilikan.
 5. **Pengaturan jendela:** halaman admin mengatur tanggal buka/tutup 1–28, nilai disimpan atomik, dan UI publik memperlihatkan jadwal efektif.
-6. **Verifikasi:** supervisor/petugas berwenang memeriksa bukti; laporan mandiri tidak langsung menjadi hasil resmi. Koreksi manual harus memiliki alasan, bukti, aktor, persetujuan supervisor yang berbeda dari petugas pencatat, audit, dan rekonsiliasi.
-7. **Satu hasil resmi:** hasil terverifikasi ditulis ke `PembacaanMeter`; sumber, stand, pemakaian riil/tagih, dan alasan perbedaan tidak dilebur.
+6. **Verifikasi mandiri:** verifikator memeriksa foto dan mengoreksi stand laporan. Hasilnya disinkronkan ke antrean `LaporanHarianPetugas`; bila menimpa tahap verifikasi lama, hanya role V3 ke atas yang boleh melakukannya dan V1/V2/V3 direset untuk pemeriksaan ulang. Periode yang sudah ditutup tidak dapat diubah.
+7. **Satu hasil resmi:** verifikasi Mandiri tidak menerbitkan `PembacaanMeter`; hasil resmi tetap diterbitkan melalui verifikasi laporan Petugas (V3). Sumber, stand, pemakaian riil/tagih, dan alasan perbedaan tidak dilebur.
 8. **Riwayat kiriman warga:** foto dan nilai tiap percobaan tetap tersimpan; kirim ulang tidak menimpa bukti.
 9. **Kontrol akses:** pengujian positif dan negatif untuk role serta akses objek/sambungan.
 10. **Rekonsiliasi closing:** laporan hasil, pengecualian, duplikasi, dan selisih terhadap sumber disediakan/ditinjau sebelum data dipakai.
@@ -67,6 +67,7 @@ Semua kriteria P0 harus lulus di staging dengan dataset sintetis/tersamarkan dan
 - [ ] Tabel verifikasi menampilkan kolom Checkbox, Ring, Status, No. Pel, Nama, Alamat, Rute, Kondisi/Ket Catat, ST Awal, ST Akhir, ST Revisi, ST Resmi, Pakai, Lalu, Dev %, Tagihan (m³), Petugas, dan Tgl Catat (tanggal+waktu). Revisi ST Awal menyimpan audit before/after; ST Revisi dibedakan dari ST Resmi.
 - [ ] Verifikasi satuan dan massal mengizinkan V1/V2/V3 memproses sesuai role tanpa mensyaratkan ring bawah; ikon hanya menampilkan ring aktor terakhir dan riwayat ring lama tetap tersedia.
 - [ ] Hasil V1 tidak resmi; hasil V2 menunggu V3; V3 dapat memproses langsung dan menghasilkan tepat satu `PembacaanMeter` resmi.
+- [ ] Hanya V3 yang menetapkan pemakaian final pada kolom Tagihan (m³). V1/V2 dan verifikasi Mandiri tidak dapat mengisi nilai tersebut; koreksi Mandiri yang menimpa hasil lama kembali ke antrean dan memerlukan penetapan final V3.
 - [ ] Hasil V3 dapat dikembalikan ke review oleh V3 sendiri atau role yang berwenang; koreksi/reopen mencatat alasan dan before/after serta tidak mengubah hasil yang sudah masuk Tagihan.
 - [ ] Tes otorisasi membuktikan V1/V2 tidak dapat membuka tahap sendiri dan STAFF tidak dapat verifikasi (P0). Bagian P1 (FR-16/FR-17): STAFF mengoreksi administratif hanya sebelum Tagihan dan hanya pada hasil yang belum resmi atau sedang di-reopen (DEC-06; syarat tambahan OPEN-09). Izin final closing STAFF belum disepakati (OPEN-01), jadi tes closing mengikuti keputusan itu setelah ditetapkan.
 - Manual Add/Manual Add All bukan acceptance criteria pilot. Sebelum dirilis di luar pilot, verifikasi bahwa Manual Add satuan hanya dapat mengganti laporan yang sudah melewati ring verifikasi dengan alasan/konfirmasi, audit before/after, reset ring, dan blokir periode terkunci/hasil bertagihan; Manual Add All harus menampilkan petugas sebelum rute, langsung menampilkan alamat belum disetorkan tanpa pratinjau, menghitung taksasi otomatis, memproses baris yang dicentang, melaporkan progres batch tersimpan, menyimpan provenance, serta mengirim hasil bertanda Manual ke antrean verifikasi.
@@ -93,18 +94,18 @@ Semua kriteria P0 harus lulus di staging dengan dataset sintetis/tersamarkan dan
 
 ## 6. Batas pilot yang disetujui dan prasyarat
 
-| Parameter | Keputusan |
-|---|---|
-| Unit/wilayah/rute | Wilayah Pelayanan 5, rute CD112 |
-| Periode dan tanggal pilot | 1–7 November 2026 (7 hari) |
-| Jumlah sambungan/petugas/perangkat | Sekitar 20–30 sambungan, 1 petugas, 1 HP Android |
-| Penggunaan output | Shadow/paralel dan rekonsiliasi; bukan dasar tagihan resmi |
-| Akuntabilitas | Wiska Prayoga merangkap owner produk, data/billing, engineering, keamanan/privasi, dan operasi |
-| Supervisor koreksi | Supervisor Operasional/Admin Utama dengan akun terpisah, ditunjuk Wiska sebelum pilot; tidak boleh merupakan petugas pencatat |
-| Foto/GPS/pemberitahuan | Foto wajib dari petugas; foto warga untuk laporan mandiri; GPS/akurasi dicatat saat tersedia dan tidak wajib untuk submit; pemberitahuan sebelum pengumpulan |
-| Retensi | Data foto/GPS/kontak/log operasional berisi data pribadi: 3 bulan sejak pengumpulan; jadwal retensi audit resmi ditetapkan sebelum go-live |
-| Koreksi | Manual, dengan alasan, bukti, aktor, persetujuan supervisor, audit, dan rekonsiliasi; tanpa penyesuaian finansial otomatis |
-| Prasyarat go/no-go pilot | P0 lulus, migration/staging/restore terverifikasi, OTP dan sumber nomor terverifikasi diperiksa, pemberitahuan serta penghapusan data disiapkan, supervisor ditunjuk, dan runbook/support tersedia |
+| Parameter                          | Keputusan                                                                                                                                                                                          |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit/wilayah/rute                  | Wilayah Pelayanan 5, rute CD112                                                                                                                                                                    |
+| Periode dan tanggal pilot          | 1–7 November 2026 (7 hari)                                                                                                                                                                         |
+| Jumlah sambungan/petugas/perangkat | Sekitar 20–30 sambungan, 1 petugas, 1 HP Android                                                                                                                                                   |
+| Penggunaan output                  | Shadow/paralel dan rekonsiliasi; bukan dasar tagihan resmi                                                                                                                                         |
+| Akuntabilitas                      | Wiska Prayoga merangkap owner produk, data/billing, engineering, keamanan/privasi, dan operasi                                                                                                     |
+| Supervisor koreksi                 | Supervisor Operasional/Admin Utama dengan akun terpisah, ditunjuk Wiska sebelum pilot; tidak boleh merupakan petugas pencatat                                                                      |
+| Foto/GPS/pemberitahuan             | Foto wajib dari petugas; foto warga untuk laporan mandiri; GPS/akurasi dicatat saat tersedia dan tidak wajib untuk submit; pemberitahuan sebelum pengumpulan                                       |
+| Retensi                            | Data foto/GPS/kontak/log operasional berisi data pribadi: 3 bulan sejak pengumpulan; jadwal retensi audit resmi ditetapkan sebelum go-live                                                         |
+| Koreksi                            | Manual, dengan alasan, bukti, aktor, persetujuan supervisor, audit, dan rekonsiliasi; tanpa penyesuaian finansial otomatis                                                                         |
+| Prasyarat go/no-go pilot           | P0 lulus, migration/staging/restore terverifikasi, OTP dan sumber nomor terverifikasi diperiksa, pemberitahuan serta penghapusan data disiapkan, supervisor ditunjuk, dan runbook/support tersedia |
 
 ## 7. Definisi hasil pilot berhasil
 

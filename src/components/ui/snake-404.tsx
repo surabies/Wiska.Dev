@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 
 export type Snake404Theme = "light" | "dark" | "auto"
 
@@ -279,7 +279,8 @@ export function createSnake404(
     return tail
   }
 
-  const visibleFood = (i: number, now: number) => food[i] === 1 && born[i]! <= now
+  const visibleFood = (i: number, now: number) =>
+    food[i] === 1 && born[i]! <= now
 
   /** Autopilot: shortest way to the nearest pellet that will not trap it. */
   const autopilot = (freeTail: number, now: number): Snake404Direction => {
@@ -396,7 +397,8 @@ export function createSnake404(
   /** Decide the move for the step now starting. */
   const plan = (now: number) => {
     const last = bx.length - 1
-    growing = fed[last]! && bx.length < Math.max(START_LENGTH, options.maxLength ?? 32)
+    growing =
+      fed[last]! && bx.length < Math.max(START_LENGTH, options.maxLength ?? 32)
     const freeTail = growing ? -1 : tailCell()
     let d = dir
     if (playing) {
@@ -482,7 +484,9 @@ export function createSnake404(
       const y = (i / cols) | 0
       food[i] = 1
       born[i] =
-        now + ((x + y) / span) * REFILL_MS * 2 + (BAYER4[(y & 3) * 4 + (x & 3)]! / 16) * 140
+        now +
+        ((x + y) / span) * REFILL_MS * 2 +
+        (BAYER4[(y & 3) * 4 + (x & 3)]! / 16) * 140
       remaining++
     }
   }
@@ -637,8 +641,12 @@ export function createSnake404(
       const hx = cx(bx[0]! + (moving ? (nextX - bx[0]!) * t : 0))
       const hy = cy(by[0]! + (moving ? (nextY - by[0]!) * t : 0))
       const tailT = moving && !growing ? t : 0
-      const tx = cx(bx[last]! + (bx[Math.max(0, last - 1)]! - bx[last]!) * tailT)
-      const ty = cy(by[last]! + (by[Math.max(0, last - 1)]! - by[last]!) * tailT)
+      const tx = cx(
+        bx[last]! + (bx[Math.max(0, last - 1)]! - bx[last]!) * tailT
+      )
+      const ty = cy(
+        by[last]! + (by[Math.max(0, last - 1)]! - by[last]!) * tailT
+      )
 
       const band = (ax: number, ay: number, bx2: number, by2: number) => {
         ctx.fillRect(
@@ -664,7 +672,12 @@ export function createSnake404(
       const swell = cell - Math.max(1, Math.round(cell * 0.06)) * 2
       for (let k = 1; k <= last; k++) {
         if (!fed[k] || (k === last && !growing)) continue
-        ctx.fillRect(cx(bx[k]!) - swell / 2, cy(by[k]!) - swell / 2, swell, swell)
+        ctx.fillRect(
+          cx(bx[k]!) - swell / 2,
+          cy(by[k]!) - swell / 2,
+          swell,
+          swell
+        )
       }
 
       // Eye, and a mouth that opens when food is next.
@@ -689,7 +702,11 @@ export function createSnake404(
       const ex = hx - fx * swell * 0.06 + lx * swell * 0.22
       const ey = hy - fy * swell * 0.06 + ly * swell * 0.22
       cut(ex - eye / 2, ey - eye / 2, eye, eye)
-      if (moving && inGrid(nextX, nextY) && visibleFood(nextY * cols + nextX, now)) {
+      if (
+        moving &&
+        inGrid(nextX, nextY) &&
+        visibleFood(nextY * cols + nextX, now)
+      ) {
         const w = Math.max(2, Math.round(swell * 0.36))
         const depth = Math.max(1, Math.round(swell * 0.3))
         const mx = hx + fx * (swell / 2 - depth / 2)

@@ -2,7 +2,7 @@
 //
 // Halaman TEMPLATE untuk menu yang modulnya belum dibangun.
 // Satu komponen ini dipakai banyak route: cukup kirim `href` menu-nya, judul
-// dan breadcrumb diambil otomatis dari `config/navigation.ts`.
+// dan breadcrumb diambil otomatis dari `config/Navigasi.ts`.
 //
 // Contoh pemakaian (app/(dashboard)/jaringan/aset/page.tsx):
 //
@@ -17,7 +17,7 @@
 
 import { notFound } from "next/navigation"
 
-import { findNavItem, getNavGroupHref } from "@/config/navigation"
+import { findNavItem, getNavGroupHref } from "@/config/Navigasi"
 import { PageContainer } from "./PageContainer"
 
 // Label kartu ringkasan placeholder. Ubah di sini jika ingin mengganti isi.

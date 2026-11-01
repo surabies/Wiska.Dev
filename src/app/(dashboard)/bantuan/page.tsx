@@ -1,4 +1,4 @@
-import { MenuPage } from "@/components/layout"
+import { MenuPage } from "@/components/layout/index"
 
 export const metadata = { title: "Panduan Pengguna" }
 

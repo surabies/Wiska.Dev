@@ -1,12 +1,19 @@
 "use client"
 
-// FormCari menyediakan bilah pencarian No. Langganan + Periode + tombol. Periode
-// berformat YYYYMM; kosong berarti periode terbaru.
+// FormCari menyediakan bilah pencarian No. Langganan + Periode + tombol.
 // Dipasang di dalam pita judul berwarna (biru di tema terang), jadi teks
 // bantuan di bawah bilah memakai warna teks pita. Semua warna dari token.
 import * as React from "react"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
+import { toast } from "sonner"
+
+function periodeBulanLalu(): string {
+  const tanggal = new Date()
+  tanggal.setDate(1)
+  tanggal.setMonth(tanggal.getMonth() - 1)
+  return `${tanggal.getFullYear()}${String(tanggal.getMonth() + 1).padStart(2, "0")}`
+}
 
 export function FormCari({
   nomor,
@@ -31,21 +38,26 @@ export function FormCari({
     setNomorSebelum(nomor)
     setN(nomor)
   }
-  const [periodeSebelum, setPeriodeSebelum] = React.useState(periode)
-  if (periode !== periodeSebelum) {
-    setPeriodeSebelum(periode)
-    setP(periode)
-  }
+
+  React.useEffect(() => {
+    setP(periode || periodeBulanLalu())
+  }, [periode])
 
   function kirim(e: React.FormEvent) {
     e.preventDefault()
     const nomorBersih = n.trim()
     const periodeBersih = p.trim()
+    if (!periodeBersih) {
+      toast.error("Periode wajib diisi.")
+      return
+    }
+    if (
+      !/^\d{6}$/.test(periodeBersih) ||
+      Number(periodeBersih.slice(4, 6)) < 1 ||
+      Number(periodeBersih.slice(4, 6)) > 12
+    )
+      return setGalat("Periode harus berformat YYYYMM dengan bulan 01–12.")
     if (!nomorBersih) return setGalat("Isi No. Langganan terlebih dahulu.")
-    if (periodeBersih && !/^\d{6}$/.test(periodeBersih))
-      return setGalat(
-        "Periode terdiri dari 6 digit tahun dan bulan, mis. 202607."
-      )
     setGalat(null)
     onCari(nomorBersih, periodeBersih)
   }
@@ -91,8 +103,9 @@ export function FormCari({
             onChange={(e) => setP(e.target.value)}
             inputMode="numeric"
             maxLength={6}
-            placeholder="Periode, 202607"
-            aria-label="Periode"
+            placeholder="Periode (YYYYMM)"
+            aria-label="Periode (tahun dan bulan)"
+            aria-required="true"
             className={kelasInput}
           />
         </div>
@@ -109,7 +122,8 @@ export function FormCari({
             : "text-info-foreground/80 dark:text-muted-foreground"
         )}
       >
-        {galat ?? "Kosongkan periode untuk melihat pencatatan terbaru."}
+        {galat ??
+          "Periode otomatis diisi bulan sebelumnya; ubah jika diperlukan."}
       </p>
     </form>
   )

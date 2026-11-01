@@ -5,7 +5,7 @@ import { NavbarLinks } from "./NavbarLinks"
 import { NavbarPlus } from "./NavbarPlus"
 import { NavbarMobileBar } from "./NavbarMobileBar"
 import { MobileMenu } from "./MobileMenu"
-import { UserMenu } from "./user-menu"
+import { UserMenu } from "./MenuPengguna"
 
 export function Navbar({
   user,

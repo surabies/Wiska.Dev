@@ -45,7 +45,7 @@ import {
   parseIntOrNull,
   periodeToDate,
 } from "../lib/normalize"
-import { usulkanPemakaianTagih, type AlasanTaksir } from "@/lib/domain/tagihan"
+import { usulkanPemakaianTagih, type AlasanTaksir } from "@/lib/domain/Tagihan"
 
 const STEP = "07-pembacaan-tagihan"
 

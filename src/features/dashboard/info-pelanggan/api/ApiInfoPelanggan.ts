@@ -11,7 +11,7 @@
 //
 // Nama filter yang dipakai mengikuti schema endpoint; noHp/ukuran meter tetap
 // memiliki fallback karena bentuk responsnya bisa berbeda antar sumber.
-import { ambilList, ambilSatu } from "../../lib/api-client"
+import { ambilList, ambilSatu } from "@/features/dashboard/api/ApiDashboard"
 import type { InfoPelanggan } from "../types/TipeInfoPelanggan"
 import { susunRiwayatPemakaian } from "../lib/RiwayatPemakaian"
 

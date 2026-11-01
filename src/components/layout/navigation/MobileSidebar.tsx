@@ -5,7 +5,7 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 import { SidebarNav } from "./SidebarNav"
 
 export function MobileSidebar({
@@ -48,9 +48,7 @@ export function MobileSidebar({
       className={cn(
         "fixed inset-x-0 top-28 bottom-0 overflow-y-auto overscroll-contain bg-background px-4 py-6 sm:px-6 lg:hidden",
         "transition-[opacity,visibility] duration-200 ease-out motion-reduce:transition-none",
-        open
-          ? "visible opacity-100"
-          : "pointer-events-none invisible opacity-0",
+        open ? "visible opacity-100" : "pointer-events-none invisible opacity-0"
       )}
     >
       <SidebarNav />

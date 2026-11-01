@@ -26,7 +26,7 @@ export function Highlight({ text, query }: { text: string; query: string }) {
           </mark>
         ) : (
           <span key={i}>{part}</span>
-        ),
+        )
       )}
     </>
   )

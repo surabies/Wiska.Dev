@@ -26,7 +26,7 @@
 // observasi di semua blok. Blok yang tidak bisa dipastikan TIDAK
 // diekstrapolasi — dilaporkan sebagai kekurangan yang wajib diisi dari SK.
 
-import { BATAS_BLOK, hitungHargaAir, type HargaBlok } from "@/lib/domain/tagihan"
+import { BATAS_BLOK, hitungHargaAir, type HargaBlok } from "@/lib/domain/Tagihan"
 
 export interface ObservasiTarif {
   /// Kode asli di CSV, mis. "2A3".

@@ -1,8 +1,9 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
-import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeProvider } from "@/components/PenyediaTema"
+import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
-import { LandingShell } from "@/components/landing/landing-shell"
+import { LandingShell } from "@/components/landing/KerangkaBeranda"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,7 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+      <body className="flex min-h-full flex-col">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           disableTransitionOnChange
         >
           <LandingShell>{children}</LandingShell>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

@@ -1,15 +1,15 @@
 // components/layout/navigation/sidebar/GroupDetail.tsx
 // Tampilan detail: baris "‹ Nama Grup" untuk kembali, lalu menu grup itu.
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons"
-import type { NavGroup } from "@/config/navigation"
-import { getGroupIcon } from "./types/icons"
+import type { NavGroup } from "@/config/Navigasi"
+import { getGroupIcon } from "./types/Icons"
 import { NavNodeRow } from "./NavNodeRow"
 import { NavRowContent, RowSeparator } from "./NavRow"
-import { navRowClass } from "./types/styles"
-import type { ActiveInfo } from "./types/types"
-import { nodeKey } from "./types/utils"
+import { navRowClass } from "./types/Styles"
+import type { ActiveInfo } from "./types/Tipe"
+import { nodeKey } from "./types/Utilitas"
 
 type Props = {
   group: NavGroup

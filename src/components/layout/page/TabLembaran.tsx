@@ -7,7 +7,7 @@
 import * as React from "react"
 import type { ReactNode } from "react"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/Utilitas"
 
 export interface ItemTab<K extends string> {
   kunci: K
@@ -55,7 +55,11 @@ export function TabLembaran<K extends string>({
 
   return (
     <div className={cn("flex flex-col", className)}>
-      <div role="tablist" aria-label={label} className="relative z-10 flex shrink-0 items-end gap-1 px-4">
+      <div
+        role="tablist"
+        aria-label={label}
+        className="relative z-10 flex shrink-0 items-end gap-1 px-4"
+      >
         {tab.map((t, i) => {
           const dipilih = t.kunci === aktif
           return (
@@ -81,7 +85,10 @@ export function TabLembaran<K extends string>({
                 <HugeiconsIcon
                   icon={t.icon}
                   strokeWidth={2}
-                  className={cn("size-4 transition-opacity duration-300", !dipilih && "opacity-70")}
+                  className={cn(
+                    "size-4 transition-opacity duration-300",
+                    !dipilih && "opacity-70"
+                  )}
                   aria-hidden
                 />
               )}
@@ -98,7 +105,7 @@ export function TabLembaran<K extends string>({
           role="tabpanel"
           aria-labelledby={`${id}-tab-${aktif}`}
           className={cn(
-            "flex h-full min-h-0 flex-col animate-in fade-in-0 duration-300 ease-out motion-reduce:animate-none",
+            "flex h-full min-h-0 animate-in flex-col duration-300 ease-out fade-in-0 motion-reduce:animate-none",
             arah === 1 ? "slide-in-from-right-4" : "slide-in-from-left-4",
             panelClassName
           )}
