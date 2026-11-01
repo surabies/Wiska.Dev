@@ -11,7 +11,7 @@
 // tetap punya identitas yang terbaca di UI, lihat prisma/docs/README.md.
 import { Hono } from "hono"
 import { z } from "zod"
-import { KondisiCatat, KategoriPembacaan } from "@db"
+import { JenisInputLaporanHarian, KondisiCatat, KategoriPembacaan } from "@db"
 import { prisma } from "@db"
 import { validate } from "../../lib/Validasi"
 import { requireRole, ROLE_GROUPS } from "../../middleware/RBAC"
@@ -82,6 +82,7 @@ const listQuerySchema = paginationQuerySchema.extend({
   periode: z.coerce.number().int().min(190001).max(999912).optional(),
   isVerified: z.coerce.boolean().optional(),
   statusVerif: z.enum(STATUS_VERIF).optional(),
+  jenisInput: z.enum(JenisInputLaporanHarian).optional(),
   pencatatId: z.string().optional(),
   pelangganId: z.string().optional(),
   /// Rute baca meter pelanggannya. Verifikasi dikerjakan PER RUTE — satu
@@ -403,6 +404,7 @@ laporanHarianRouter.get(
       pencatatId: query.pencatatId,
       pelangganId: query.pelangganId,
       kondisi: query.kondisi,
+      jenisInput: query.jenisInput,
       // Lewat relasi pelanggan — rute bukan kolom laporan. Baris yang
       // pelanggannya belum ter-resolve (pelangganId null) memang ikut
       // tersaring keluar: baris tanpa pelanggan tidak punya rute.

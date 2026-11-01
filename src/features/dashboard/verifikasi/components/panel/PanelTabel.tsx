@@ -162,6 +162,7 @@ export function PanelTabel({
       params.tanggalSampai = filter.tanggalSampai || undefined
       params.hanyaAnomali = filter.hanyaAnomali ? "true" : undefined
       params.kondisi = filter.kondisi || undefined
+      params.jenisInput = filter.jenisInput || undefined
       Object.assign(params, filter.kriteriaLanjutan)
     }
     const jalur =
@@ -357,6 +358,7 @@ export function PanelTabel({
   const tanpaSaringan =
     filter.q === "" &&
     filter.statusVerif === "" &&
+    filter.jenisInput === "" &&
     filter.pencatatId === "" &&
     filter.ruteId === "" &&
     filter.tanggalDari === "" &&

@@ -27,6 +27,8 @@ import {
   Columns3CogIcon,
   Clock01Icon,
   Drag01Icon,
+  PencilEdit01Icon,
+  UserCircleIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Button } from "@/components/ui/button"
@@ -968,20 +970,58 @@ export function TabelVerifikasi({
                             {angka(standAwalAktif)}
                           </td>
                         )
-                      case "standAkhir":
+                      case "standAkhir": {
+                        const sumberInput =
+                          row.jenisInput === "KONSUMEN"
+                            ? {
+                                ikon: UserCircleIcon,
+                                label: "Laporan Mandiri konsumen",
+                                warna: "text-sky-600 dark:text-sky-400",
+                              }
+                            : row.jenisInput === "MANUAL_SATUAN" ||
+                                row.jenisInput === "MANUAL_MASSAL"
+                              ? {
+                                  ikon: PencilEdit01Icon,
+                                  label: "Laporan Manual Add",
+                                  warna: "text-amber-600 dark:text-amber-400",
+                                }
+                              : null
                         return (
                           <td
                             key={kolom}
-                            className="text-right tabular-nums"
+                            className="relative text-right tabular-nums"
                             title={
                               standAkhirDikoreksi
                                 ? `Dikoreksi verifikator; stand catat awal ${angka(row.standAkhir)}.`
                                 : undefined
                             }
                           >
+                            {sumberInput && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span
+                                    className={`absolute top-1/2 left-3 -translate-y-1/2 ${sumberInput.warna}`}
+                                    aria-label={sumberInput.label}
+                                    role="img"
+                                    tabIndex={0}
+                                  >
+                                    <HugeiconsIcon
+                                      icon={sumberInput.ikon}
+                                      strokeWidth={2}
+                                      className="size-4"
+                                      aria-hidden
+                                    />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {sumberInput.label}
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
                             {angka(standAkhir)}
                           </td>
                         )
+                      }
                       case "standRevisi":
                         return (
                           <td key={kolom} className="text-right tabular-nums">
@@ -1074,21 +1114,6 @@ export function TabelVerifikasi({
                               ? (LABEL_KONDISI_CATAT[row.kondisi] ??
                                 row.kondisi)
                               : "—"}
-                            {row.jenisInput && row.jenisInput !== "PETUGAS" && (
-                              <span
-                                className="ml-1 rounded bg-muted px-1 py-0.5 text-[10px] text-muted-foreground"
-                                title={
-                                  row.alasanManual ??
-                                  (row.jenisInput === "KONSUMEN"
-                                    ? "Stand berasal dari laporan Mandiri konsumen"
-                                    : "Laporan ditambahkan secara manual")
-                                }
-                              >
-                                {row.jenisInput === "KONSUMEN"
-                                  ? "Mandiri"
-                                  : "Manual"}
-                              </span>
-                            )}
                           </td>
                         )
                       case "petugas":

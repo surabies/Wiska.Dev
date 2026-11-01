@@ -16,6 +16,7 @@ import {
   Alert02Icon,
   Cancel01Icon,
   CalendarDaysIcon,
+  Database01Icon,
   Route01Icon,
   Search01Icon,
   Task01Icon,
@@ -69,6 +70,7 @@ export interface FilterVerifikasi {
   tanggalSampai: string
   hanyaAnomali: boolean
   kondisi: string
+  jenisInput: string
   kriteriaLanjutan: KriteriaPencarian
   pageSize: number
 }
@@ -83,6 +85,7 @@ export const FILTER_AWAL: FilterVerifikasi = {
   tanggalSampai: "",
   hanyaAnomali: false,
   kondisi: "",
+  jenisInput: "",
   kriteriaLanjutan: {},
   pageSize: 100,
 }
@@ -241,7 +244,8 @@ export function ToolbarVerifikasi({
     (filter.ruteId ? 1 : 0) +
     (!modeBelumDibaca && filter.statusVerif ? 1 : 0) +
     (!modeBelumDibaca && filter.hanyaAnomali ? 1 : 0) +
-    (!modeBelumDibaca && filter.kondisi ? 1 : 0)
+    (!modeBelumDibaca && filter.kondisi ? 1 : 0) +
+    (!modeBelumDibaca && filter.jenisInput ? 1 : 0)
   const adaFilter =
     jumlahLanjutan > 0 ||
     kriteriaTerapan > 0 ||
@@ -351,6 +355,31 @@ export function ToolbarVerifikasi({
                   : "invisible -translate-x-2 opacity-0"
               )}
             >
+              {!modeBelumDibaca && (
+                <FilterPilihan
+                  filter={{
+                    param: "jenisInput",
+                    label: "Asal laporan",
+                    opsi: [
+                      { value: "PETUGAS", label: "Petugas" },
+                      { value: "KONSUMEN", label: "Mandiri" },
+                      { value: "MANUAL_SATUAN", label: "Manual Add satuan" },
+                      { value: "MANUAL_MASSAL", label: "Manual Add All" },
+                    ],
+                  }}
+                  nilai={filter.jenisInput}
+                  onUbah={(v) => set("jenisInput", v)}
+                  ikon={
+                    <HugeiconsIcon
+                      icon={Database01Icon}
+                      strokeWidth={2}
+                      className="size-3.5"
+                      aria-hidden
+                    />
+                  }
+                  ringkas
+                />
+              )}
               {!modeBelumDibaca && (
                 <FilterPilihan
                   filter={{
