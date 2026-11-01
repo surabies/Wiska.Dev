@@ -36,7 +36,7 @@ export function KotakCari({
         placeholder={placeholder}
         className={cn(
           KELAS_INPUT_TOOLBAR,
-          "w-full pl-8 focus-visible:ring-inset"
+          "w-full pl-8 focus-visible:border-transparent focus-visible:ring-inset"
         )}
         aria-label="Cari"
       />
