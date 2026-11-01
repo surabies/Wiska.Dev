@@ -22,6 +22,8 @@
 
 **Penyempurnaan angka dashboard:** kartu Tagihan, angka utama grafik, rata-rata, dan sumbu grafik menampilkan digit lengkap dengan pemisah ribuan. Kelompok ribuan terakhir dibuat lebih kecil agar angka panjang tetap terbaca tanpa singkatan. Nilai data dan tooltip tetap memakai angka utuh.
 
+**Grafik progres dashboard:** daftar progres per petugas diganti grafik data masuk per hari dan akumulasi periode berdasarkan tanggal catat WIB. Periode aktif dibatasi sampai hari berjalan; riwayat periode menampilkan tanggal periode lengkap. Laporan tanpa tanggal catat diberi keterangan dan tidak disamarkan sebagai data bertanggal.
+
 **Catatan rekonsiliasi 1 November 2026:** bagian bertanda snapshot 31 Oktober mencerminkan kondisi sebelum keputusan DEC-03 (V2/V3 boleh tanpa ring bawah). Bila bertentangan dengan aturan verifikasi (v0.5) atau Indeks, yang terakhir berlaku. Pernyataan "sudah/lulus" di dokumen ini adalah catatan sesi sebelumnya (aturan penulisan status: DEC-07); rekonsiliasi tidak menjalankan tes, migration, atau E2E dan tidak memverifikasinya terhadap kode.
 
 Kontrak peran, audit endpoint V1/V2/V3, closing, serta spesifikasi tabel verifikasi ada di [Aturan Verifikasi Berjenjang dan Koreksi](./VERIFIKASI.md); kebijakan akses per role ada di [Matriks RBAC](./RBAC.md). Aturan per kode untuk taksasi, nilai minus, dan review ada di [Aturan Domain Kondisi Catat Meter](./ATURAN-KONDISI.md).

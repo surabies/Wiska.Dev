@@ -11,7 +11,7 @@ import {
 } from "@/features/dashboard/ringkasan/server/KueriRingkasan"
 import {
   ambilCapaian,
-  ambilProgresPetugas,
+  ambilProgresHarian,
   ambilStatPeriode,
   ambilTagihanAcuan,
   ambilTrenAnomali,
@@ -31,7 +31,7 @@ import {
 import { PerluTindakan } from "@/features/dashboard/ringkasan/components/PerluTindakan"
 import { TrenPenjualan } from "@/features/dashboard/ringkasan/components/TrenPenjualan"
 import { TrenAnomali } from "@/features/dashboard/ringkasan/components/TrenAnomali"
-import { ProgresPetugas } from "@/features/dashboard/ringkasan/components/ProgresPetugas"
+import { GrafikProgresHarian } from "@/features/dashboard/ringkasan/components/GrafikProgresHarian"
 import { formatPeriode, formatRupiah } from "@/features/public/lib/Format"
 import { AngkaPenuh } from "@/features/dashboard/ringkasan/components/AngkaPenuh"
 
@@ -72,7 +72,7 @@ export async function RingkasanView({
   const [
     capaian,
     trenAnomali,
-    petugas,
+    progresHarian,
     trenTerbit,
     statIni,
     statLalu,
@@ -81,13 +81,13 @@ export async function RingkasanView({
     ? await Promise.all([
         ambilCapaian(kerja),
         ambilTrenAnomali(kerja),
-        ambilProgresPetugas(kerja),
+        ambilProgresHarian(kerja),
         ambilTren(kerja),
         ambilStatPeriode(kerja),
         ambilStatPeriode(geserPeriode(kerja, -1)),
         ambilTagihanAcuan(kerja),
       ])
-    : [null, [], [], [], null, null, null]
+    : [null, [], { titik: [], tanpaTanggal: 0 }, [], null, null, null]
 
   const tren = trenTerbit.map((titik) =>
     titik.periode === kerja && statIni?.status === "berjalan"
@@ -216,7 +216,7 @@ export async function RingkasanView({
           <TrenAnomali data={trenAnomali} />
         </div>
 
-        <ProgresPetugas data={petugas} />
+        {kerja && <GrafikProgresHarian data={progresHarian} periode={kerja} />}
 
         <PerluTindakan
           pengaduan={tindakan.pengaduan}

@@ -15,13 +15,15 @@ export interface TitikTren {
   pemakaianM3: number | null
 }
 
-export interface BarisPetugas {
-  id: string
-  nama: string
-  total: number
-  dicatat: number
-  tidakTercatat: number
-  persen: number
+export interface TitikProgresHarian {
+  tanggal: string
+  jumlah: number
+  kumulatif: number
+}
+
+export interface DataProgresHarian {
+  titik: TitikProgresHarian[]
+  tanpaTanggal: number
 }
 
 export interface StatPeriode {

@@ -5,8 +5,9 @@ import "server-only"
 // tetap dipakai apa adanya).
 import { prisma } from "@db"
 import { dateToPeriode } from "@/lib/domain/Periode"
+import { bentukProgresHarian } from "../lib/BentukProgresHarian"
 import type {
-  BarisPetugas,
+  DataProgresHarian,
   StatPeriode,
   TitikAnomali,
 } from "../types/TipeRingkasan"
@@ -164,97 +165,42 @@ export async function ambilTrenAnomali(
   return [...peta.values()]
 }
 
-/**
- * Progres baca per petugas, yang paling banyak membaca di atas.
- *
- * - total   = beban kerja petugas di DaftarCatat (tanpa yang DICABUT)
- * - dicatat = laporan harian yang sudah masuk dari petugas itu. BUKAN dari
- *   DaftarCatat.status === "DICATAT": status itu baru berubah saat laporan
- *   diverifikasi, sehingga hampir semua petugas tampak 0% padahal sudah
- *   membaca ribuan meter.
- */
-export async function ambilProgresPetugas(
+export async function ambilProgresHarian(
   periode: number
-): Promise<BarisPetugas[]> {
-  const [beban, laporan] = await Promise.all([
-    prisma.daftarCatat.groupBy({
-      by: ["pencatatId", "status"],
-      where: { periode, status: { not: "DICABUT" } },
-      _count: true,
-    }),
-    prisma.laporanHarianPetugas.groupBy({
-      by: ["pencatatId"],
-      where: { periode },
-      _count: true,
+): Promise<DataProgresHarian> {
+  const [perTanggal, tanpaTanggal] = await Promise.all([
+    prisma.$queryRaw<Array<{ tanggal: string; jumlah: bigint }>>`
+      SELECT to_char(("tanggalCatat" AT TIME ZONE 'Asia/Jakarta')::date, 'YYYY-MM-DD') AS tanggal,
+             COUNT(*) AS jumlah
+        FROM laporan_harian_petugas
+       WHERE periode = ${periode} AND "tanggalCatat" IS NOT NULL
+       GROUP BY 1
+       ORDER BY 1`,
+    prisma.laporanHarianPetugas.count({
+      where: { periode, tanggalCatat: null },
     }),
   ])
-  if (beban.length === 0) return []
 
-  const ids = [
-    ...new Set(
-      [
-        ...beban.map((b) => b.pencatatId),
-        ...laporan.map((l) => l.pencatatId),
-      ].filter((x): x is string => x != null)
+  const tanggalSekarangWib = new Date(Date.now() + 7 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10)
+  const tanggalTerakhir = perTanggal.at(-1)?.tanggal
+  const tanggalBatas =
+    tanggalTerakhir && tanggalTerakhir > tanggalSekarangWib
+      ? tanggalTerakhir
+      : tanggalSekarangWib
+
+  return {
+    titik: bentukProgresHarian(
+      periode,
+      tanggalBatas,
+      perTanggal.map((baris) => ({
+        tanggal: baris.tanggal,
+        jumlah: Number(baris.jumlah),
+      }))
     ),
-  ]
-  const pencatat = await prisma.pencatat.findMany({
-    where: { id: { in: ids } },
-    select: { id: true, namaLapangan: true },
-  })
-  const nama = new Map(pencatat.map((p) => [p.id, p.namaLapangan]))
-
-  const baru = (pencatatId: string | null): BarisPetugas => ({
-    id: pencatatId ?? "-",
-    nama: pencatatId
-      ? (nama.get(pencatatId) ?? "Tidak dikenal")
-      : "Belum ada petugas",
-    total: 0,
-    dicatat: 0,
-    tidakTercatat: 0,
-    persen: 0,
-  })
-
-  // Kelompokkan per petugas (null = baris tanpa petugas).
-  const peta = new Map<string, BarisPetugas>()
-  const ambil = (pencatatId: string | null) => {
-    const id = pencatatId ?? "-"
-    let r = peta.get(id)
-    if (!r) {
-      r = baru(pencatatId)
-      peta.set(id, r)
-    }
-    return r
+    tanpaTanggal,
   }
-
-  for (const b of beban) {
-    const r = ambil(b.pencatatId)
-    r.total += b._count
-    if (b.status === "TIDAK_TERCATAT") r.tidakTercatat += b._count
-  }
-  for (const l of laporan) {
-    ambil(l.pencatatId).dicatat += l._count
-  }
-
-  return (
-    [...peta.values()]
-      .map((r) => {
-        // Laporan bisa datang dari petugas yang bukan pemilik daftar (rute
-        // dipindah) → jangan sampai melewati 100% atau total lebih kecil dari
-        // yang dicatat.
-        const total = Math.max(r.total, r.dicatat)
-        return {
-          ...r,
-          total,
-          persen: total > 0 ? (r.dicatat / total) * 100 : 0,
-        }
-      })
-      // Yang paling banyak membaca di atas; seri → beban kerja lebih besar dulu.
-      .sort(
-        (a, b) =>
-          b.persen - a.persen || b.dicatat - a.dicatat || b.total - a.total
-      )
-  )
 }
 
 /**
