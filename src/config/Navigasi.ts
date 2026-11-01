@@ -205,6 +205,18 @@ export const navGroups: NavGroup[] = [
         keywords: ["manual", "bulk", "add all", "input", "laporan"],
       },
       {
+        title: "Sambungan Baru",
+        href: "/pelanggan/sambungan-baru",
+        description: "Halaman dalam tahap pengembangan (pending).",
+        keywords: ["pelanggan", "sambungan", "pasang baru"],
+      },
+      {
+        title: "Penutupan Pelanggan",
+        href: "/pelanggan/penutupan",
+        description: "Halaman dalam tahap pengembangan (pending).",
+        keywords: ["pelanggan", "penutupan", "buka kembali"],
+      },
+      {
         title: "Hitung Rata-Rata",
         href: "/meter/hitung-rata-rata",
         description: "Hitung rata-rata stand meter 3 bulan.",
@@ -296,25 +308,25 @@ export const navGroups: NavGroup[] = [
     items: [
       {
         title: "Laporan DRD",
-        href: "/laporan",
+        href: "/laporan/lap-drd",
         description: "Laporan tagihan DRD (Daftar Tagihan).",
         keywords: ["laporan", "drd", "tagihan"],
       },
       {
         title: "Lap. Mutasi Pel",
-        href: "/pelanggan/mutasi",
+        href: "/laporan/lap-mutasi-pel",
         description: "Laporan mutasi pelanggan.",
         keywords: ["laporan", "mutasi", "pelanggan"],
       },
       {
         title: "Lap. Mutasi PB-PK",
-        href: "/pelanggan/mutasi",
+        href: "/laporan/llap-mutasi-pbpk",
         description: "Laporan mutasi pembayaran dan pemasangan baru.",
         keywords: ["laporan", "mutasi", "pembayaran"],
       },
       {
         title: "Lap. Periode Cater",
-        href: "/laporan",
+        href: "/laporan/lap-periode",
         description: "Laporan periode pencatatan cater.",
         keywords: ["laporan", "periode", "cater"],
       },
@@ -332,7 +344,7 @@ export const navGroups: NavGroup[] = [
       },
       {
         title: "Lap Evaluasi",
-        href: "/laporan",
+        href: "/laporan/evaluasi",
         description: "Laporan evaluasi sistem.",
         keywords: ["laporan", "evaluasi"],
       },
@@ -344,43 +356,43 @@ export const navGroups: NavGroup[] = [
       },
       {
         title: "Lap. Selisih Hari",
-        href: "/laporan",
+        href: "/laporan/selisih-hari",
         description: "Laporan selisih hari pembacaan.",
         keywords: ["laporan", "selisih", "hari"],
       },
       {
         title: "Lap Data St. Awal & Akhir",
-        href: "/laporan",
+        href: "/laporan/stand-awal-akhir",
         description: "Laporan data stand awal dan akhir.",
         keywords: ["laporan", "stand", "awal", "akhir"],
       },
       {
         title: "Lap Data St. 0 (Nol)",
-        href: "/laporan",
+        href: "/laporan/stand-nol",
         description: "Laporan data stand 0 (meter nol).",
         keywords: ["laporan", "stand", "nol"],
       },
       {
         title: "Lap History",
-        href: "/laporan",
+        href: "/laporan/riwayat",
         description: "Laporan riwayat perubahan.",
         keywords: ["laporan", "history", "riwayat"],
       },
       {
         title: "Lap Perubahan Pel",
-        href: "/pelanggan/mutasi",
+        href: "/laporan/perubahan-pelanggan",
         description: "Laporan perubahan data pelanggan.",
         keywords: ["laporan", "perubahan", "pelanggan"],
       },
       {
         title: "Lap. Data dan Foto",
-        href: "/laporan",
+        href: "/laporan/data-foto",
         description: "Laporan data dan foto meter.",
         keywords: ["laporan", "data", "foto"],
       },
       {
         title: "Lap. Monitoring Kubikasi Koreksi",
-        href: "/laporan",
+        href: "/laporan/monitoring-kubikasi-koreksi",
         description: "Laporan monitoring kubikasi dan koreksi.",
         keywords: ["laporan", "monitoring", "kubikasi"],
       },
@@ -534,6 +546,24 @@ export const navGroups: NavGroup[] = [
         description:
           "Atur tanggal buka dan tutup pelaporan meter mandiri setiap bulan.",
         keywords: ["lapor mandiri", "jadwal", "tanggal", "konfigurasi"],
+      },
+      {
+        title: "Notifikasi",
+        href: "/notifikasi",
+        description: "Halaman dalam tahap pengembangan (pending).",
+        keywords: ["notifikasi", "pemberitahuan"],
+      },
+    ],
+  },
+  {
+    id: "bantuan",
+    title: "Bantuan",
+    items: [
+      {
+        title: "Panduan Pengguna",
+        href: "/bantuan",
+        description: "Panduan penggunaan aplikasi.",
+        keywords: ["bantuan", "panduan", "petunjuk"],
       },
     ],
   },
