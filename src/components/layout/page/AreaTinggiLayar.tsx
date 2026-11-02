@@ -16,6 +16,16 @@ export function AreaTinggiLayar({
   className?: string
   children: ReactNode
 }) {
+  const ref = useAreaTinggiLayar()
+
+  return (
+    <div ref={ref} className={cn("min-h-90", className)}>
+      {children}
+    </div>
+  )
+}
+
+export function useAreaTinggiLayar() {
   const ref = React.useRef<HTMLDivElement>(null)
 
   React.useLayoutEffect(() => {
@@ -48,9 +58,5 @@ export function AreaTinggiLayar({
     }
   }, [])
 
-  return (
-    <div ref={ref} className={cn("min-h-90", className)}>
-      {children}
-    </div>
-  )
+  return ref
 }

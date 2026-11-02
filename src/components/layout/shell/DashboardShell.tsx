@@ -1,13 +1,13 @@
-// components/layout/shell/DashboardShell.tsx
-// Tata letak ala Neon: navbar (fixed) dan sidebar (fixed) berbagi satu permukaan,
-// konten dibungkus card yang mengisi sisa layar dan ter-scroll di dalamnya.
-// Dokumen sendiri tidak pernah ter-scroll. Navbar TIDAK dirender di sini (ada di layout).
+"use client"
+
+// Shell umum dashboard; route laporan memakai route group tersendiri.
 import type { ReactNode } from "react"
 
 import { cn } from "@/lib/Utilitas"
 import { SidebarNav } from "../navigation/SidebarNav"
+import { MAIN_CONTENT_ID } from "./KonstantaDashboardShell"
 
-export const MAIN_CONTENT_ID = "konten-utama"
+export { MAIN_CONTENT_ID } from "./KonstantaDashboardShell"
 
 type DashboardShellProps = {
   children: ReactNode
@@ -62,7 +62,6 @@ export function DashboardShell({
           tanpaSidebar ? "lg:pl-2" : "lg:pl-(--sidebar-w)"
         )}
       >
-        {/* Card konten: satu-satunya area yang ter-scroll. */}
         <main
           id={MAIN_CONTENT_ID}
           tabIndex={-1}

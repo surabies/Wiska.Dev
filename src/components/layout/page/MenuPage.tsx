@@ -23,7 +23,13 @@ import { PageContainer } from "./PageContainer"
 // Label kartu ringkasan placeholder. Ubah di sini jika ingin mengganti isi.
 const SUMMARY_LABELS = ["Total", "Hari ini", "Menunggu tindakan"] as const
 
-export function MenuPage({ href }: { href: string }) {
+export function MenuPage({
+  href,
+  className,
+}: {
+  href: string
+  className?: string
+}) {
   const found = findNavItem(href)
   if (!found) notFound() // notFound() bertipe `never`, jadi `found` aman di bawah
 
@@ -41,6 +47,7 @@ export function MenuPage({ href }: { href: string }) {
         // Level terakhir: halaman aktif (tanpa href).
         { label: item.title },
       ]}
+      className={className}
     >
       {/* Banner status pengembangan */}
       <div className="mb-6 border border-dashed border-sky-300/60 bg-sky-400/10 p-4 text-sm/6 text-sky-900 sm:mb-8 sm:p-5 dark:border-sky-300/30 dark:text-sky-200">

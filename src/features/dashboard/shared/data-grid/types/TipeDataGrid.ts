@@ -64,6 +64,12 @@ export interface DataGridProps {
   refreshKey?: number
   /** Aksi tambahan yang diletakkan bersama kontrol toolbar grid. */
   toolbarActions?: ReactNode
+  /** Kontrol tambahan di depan pencarian pada toolbar grid. */
+  toolbarStart?: ReactNode
+  /** Konten visual tambahan di atas area tabel. */
+  contentBeforeGrid?: ReactNode
+  /** Pendekkan bingkai grid mengikuti jumlah baris, maksimal setinggi slotnya. */
+  sesuaikanTinggiDenganBaris?: boolean
 }
 
 export type BarisFilterLanjutan = {

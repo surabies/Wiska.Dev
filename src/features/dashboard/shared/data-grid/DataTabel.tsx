@@ -234,6 +234,9 @@ export function DataGrid({
   idTerpilih,
   refreshKey,
   toolbarActions,
+  toolbarStart,
+  contentBeforeGrid,
+  sesuaikanTinggiDenganBaris = false,
   toolbarModal = false,
   checkbox = true,
   onSelectionChanged,
@@ -265,6 +268,10 @@ export function DataGrid({
   const [galatEkspor, setGalatEkspor] = React.useState<string | null>(null)
   const [mengekspor, setMengekspor] = React.useState(false)
   const [jumlahTerpilih, setJumlahTerpilih] = React.useState(0)
+  const [tinggiTersedia, setTinggiTersedia] = React.useState(0)
+  const sectionRef = React.useRef<HTMLElement>(null)
+  const toolbarRef = React.useRef<HTMLDivElement>(null)
+  const contentBeforeGridRef = React.useRef<HTMLDivElement>(null)
 
   // Callback halaman lewat ref supaya identitas handler grid tetap stabil.
   const onSelectionChangedRef = React.useRef(onSelectionChanged)
@@ -314,6 +321,37 @@ export function DataGrid({
     ? (daftarKartu.galat ?? galatEkspor)
     : (galat ?? galatEkspor)
   const totalTampil = mobil ? daftarKartu.total : total
+  const sesuaikanGridDesktop = sesuaikanTinggiDenganBaris && !mobil
+  const tinggiGrid = sesuaikanGridDesktop
+    ? Math.min(tinggiTersedia, Math.max(84, 40 + (totalTampil ?? 0) * 44))
+    : undefined
+
+  React.useEffect(() => {
+    if (!sesuaikanGridDesktop) return
+
+    const section = sectionRef.current
+    const toolbar = toolbarRef.current
+    if (!section || !toolbar) return
+
+    const ukur = () => {
+      const tinggiKonten = contentBeforeGridRef.current?.offsetHeight ?? 0
+      setTinggiTersedia(
+        Math.max(
+          0,
+          section.clientHeight - toolbar.offsetHeight - tinggiKonten - 16
+        )
+      )
+    }
+
+    const observer = new ResizeObserver(ukur)
+    observer.observe(section)
+    observer.observe(toolbar)
+    if (contentBeforeGridRef.current)
+      observer.observe(contentBeforeGridRef.current)
+    ukur()
+
+    return () => observer.disconnect()
+  }, [sesuaikanGridDesktop])
 
   // --- datasource AG Grid (layar lega) --------------------------------------
   // Datasource membaca state lewat ref supaya identitasnya stabil — ganti
@@ -469,13 +507,15 @@ export function DataGrid({
     // section) dan resolve ke 0 — AG Grid dapat tinggi 0px, baris tidak pernah
     // dirender. Toolbar `shrink-0`, grid wrapper `flex-1 min-h-0` mengisi sisanya.
     <section
+      ref={sectionRef}
       aria-label={judul}
-      className="flex h-full flex-col gap-2 overflow-hidden"
+      className="flex h-full w-full max-w-full min-w-0 flex-col gap-2 overflow-hidden"
     >
       <div
+        ref={toolbarRef}
         role="group"
         aria-label="Penyaring dan aksi tabel"
-        className="flex shrink-0 flex-wrap items-center gap-1"
+        className="flex min-w-0 shrink-0 flex-wrap items-center gap-1"
       >
         {searchParam && (
           <KotakCari
@@ -484,6 +524,8 @@ export function DataGrid({
             placeholder={searchPlaceholder}
           />
         )}
+
+        {toolbarStart}
 
         {advancedFilters.length > 0 && (
           <TombolFilterLanjutan
@@ -619,7 +661,19 @@ export function DataGrid({
         </ToggleGroup>
       </div>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-border/70 bg-card">
+      {contentBeforeGrid && (
+        <div ref={contentBeforeGridRef} className="shrink-0">
+          {contentBeforeGrid}
+        </div>
+      )}
+
+      <div
+        className={cn(
+          "flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-border/70 bg-card",
+          tinggiGrid === undefined ? "flex-1" : "shrink-0"
+        )}
+        style={tinggiGrid === undefined ? undefined : { height: tinggiGrid }}
+      >
         {toolbarModal && filterBuka && (
           <ModalFilter
             onBuka={setFilterBuka}
@@ -670,6 +724,7 @@ export function DataGrid({
           <div
             className={cn(
               KELAS_AREA_GRID,
+              "w-full max-w-full min-w-0 overflow-hidden",
               onRowClicked && "[&_.ag-row]:cursor-pointer",
               tinggiClassName
             )}
