@@ -77,7 +77,8 @@ export function ModalMandiri({
         <>
           <Button
             variant="destructive"
-            className="h-9 w-full"
+            size="lg"
+            className="w-full"
             disabled={mengirim || alasan.trim().length === 0}
             onClick={() => jalankan("reject")}
           >
@@ -85,7 +86,8 @@ export function ModalMandiri({
           </Button>
           <Button
             variant="ghost"
-            className="h-9 w-full"
+            size="lg"
+            className="w-full"
             disabled={mengirim}
             onClick={() => setModeTolak(false)}
           >
@@ -95,7 +97,8 @@ export function ModalMandiri({
       ) : (
         <>
           <Button
-            className="h-9 w-full"
+            size="lg"
+            className="w-full"
             disabled={mengirim || !standSiap}
             onClick={() => jalankan("verify")}
           >
@@ -104,7 +107,8 @@ export function ModalMandiri({
           </Button>
           <Button
             variant="outline"
-            className="h-9 w-full"
+            size="lg"
+            className="w-full"
             disabled={mengirim}
             onClick={() => setModeTolak(true)}
           >

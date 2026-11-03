@@ -34,7 +34,7 @@ export const TEMA_GRID_TD_BEKU =
 
 /** Kelas item ToggleGroup toolbar (ikon padat, ringkasan, atur kolom, dll.) */
 export const TEMA_TOGGLE_ITEM =
-  "size-8 min-w-8 p-0 rounded-md bg-card border border-white dark:border-border text-foreground hover:bg-accent data-[state=on]:bg-accent data-[state=on]:text-foreground shadow-xs transition-colors"
+  "w-8 min-w-8 p-0 rounded-lg bg-card text-foreground hover:bg-accent data-[state=on]:bg-accent data-[state=on]:text-foreground transition-colors"
 
 /** Kelas tombol tab aktif (Laporan masuk / Belum dibaca) */
 export const TEMA_TAB_AKTIF =

@@ -642,9 +642,9 @@ export function DataGrid({
           value={[]}
           onValueChange={() => {}}
           variant="outline"
-          size="sm"
+          size="default"
           spacing={0}
-          itemClassName="size-8! p-0!"
+          itemClassName="size-8 p-0 justify-center"
           className={cn("shrink-0", totalTampil === null && "ml-auto")}
         >
           <PemilihKolom

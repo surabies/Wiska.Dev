@@ -41,7 +41,7 @@ export function KontrolTampilan({
     <ToggleGroup
       type="multiple"
       variant="outline"
-      size="sm"
+      size="default"
       value={nilai}
       onValueChange={(v) => {
         onRingkasan(v.includes("ringkasan"))

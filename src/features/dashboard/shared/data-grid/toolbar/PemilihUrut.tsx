@@ -30,7 +30,7 @@ export function PemilihUrut({
     >
       <SelectTrigger
         aria-label="Urutkan"
-        size="sm"
+        size="default"
         className={cn(KELAS_KONTROL, "max-w-48")}
       >
         <HugeiconsIcon

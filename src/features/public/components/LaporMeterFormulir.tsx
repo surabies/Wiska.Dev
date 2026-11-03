@@ -283,7 +283,7 @@ export function LaporMeterForm() {
       <div className="space-y-1">
         <Label htmlFor="periode-uji">Periode laporan (uji)</Label>
         <Select value={pilihanPeriode} onValueChange={ubahPeriode}>
-          <SelectTrigger id="periode-uji" className="h-10 rounded-xl">
+          <SelectTrigger id="periode-uji" size="xl" className="rounded-xl">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -451,7 +451,8 @@ export function LaporMeterForm() {
               onChange={(e) => setStandInput(e.target.value.replace(/\D/g, ""))}
               inputMode="numeric"
               placeholder="Contoh: 3955"
-              className="h-10 rounded-xl font-mono"
+              size="xl"
+              className="rounded-xl font-mono"
             />
             <p className="text-xs text-muted-foreground">
               Isi sesuai angka hitam yang tertera di meter air, tanpa titik atau
@@ -478,7 +479,8 @@ export function LaporMeterForm() {
                 placeholder="Nama lengkap"
                 value={namaPelapor}
                 onChange={(e) => setNamaPelapor(e.target.value)}
-                className="h-10 rounded-xl"
+                size="xl"
+                className="rounded-xl"
               />
               <p className="text-xs text-muted-foreground">
                 Boleh berbeda dari nama pelanggan, mis. anggota keluarga.
@@ -494,7 +496,8 @@ export function LaporMeterForm() {
                   )
                 }
                 inputMode="tel"
-                className="h-10 rounded-xl"
+                size="xl"
+                className="rounded-xl"
               />
               <p className="text-xs text-muted-foreground">
                 Nomor HP/WhatsApp aktif untuk dihubungi petugas bila diperlukan.

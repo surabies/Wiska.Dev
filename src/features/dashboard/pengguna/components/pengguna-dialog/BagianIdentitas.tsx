@@ -22,6 +22,7 @@ export function BagianIdentitas({
       <Medan id="pg-nama" label="Nama lengkap">
         <Input
           id="pg-nama"
+          size="lg"
           autoComplete="off"
           value={isi.nama}
           onChange={(e) => set("nama", e.target.value)}
@@ -35,6 +36,7 @@ export function BagianIdentitas({
         <Input
           id="pg-email"
           type="email"
+          size="lg"
           autoComplete="off"
           value={isi.email}
           onChange={(e) => set("email", e.target.value)}
@@ -47,6 +49,7 @@ export function BagianIdentitas({
         <Medan id="pg-username" label="Username">
           <Input
             id="pg-username"
+            size="lg"
             autoComplete="off"
             value={isi.username}
             onChange={(e) => set("username", e.target.value)}
@@ -65,6 +68,7 @@ export function BagianIdentitas({
             <Input
               id="pg-sandi"
               type="password"
+              size="lg"
               autoComplete="new-password"
               value={isi.sandi}
               onChange={(e) => set("sandi", e.target.value)}

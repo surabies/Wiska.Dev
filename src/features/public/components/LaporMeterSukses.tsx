@@ -135,7 +135,7 @@ export function LaporMeterSukses({
             langsung mencari otomatis (nomorAwal di CekLaporanMeterForm) —
             pola sama dengan ?nomor= di /pengaduan. */}
         <div className="min-w-0 flex-1">
-          <TombolUtama asChild className="h-11 w-full font-semibold">
+          <TombolUtama asChild size="xl" className="w-full font-semibold">
             <Link href={`/lapor-meter?tab=cek&nomor=${hasil.nomorLangganan}`}>
               Cek status laporan saya
               <ArrowRight className="size-4" />
@@ -145,7 +145,7 @@ export function LaporMeterSukses({
 
         {/* Bungkus juga tombol kedua dengan div flex-1 agar tingginya konsisten */}
         <div className="min-w-0 flex-1">
-          <Button onClick={onReset} variant="outline" className="h-11 w-full">
+          <Button onClick={onReset} variant="outline" size="xl" className="w-full">
             Lapor meter lain
           </Button>
         </div>

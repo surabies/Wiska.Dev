@@ -29,9 +29,9 @@ export function BilahPeriode({
         onValueChange={(v) => onGanti(Number(v))}
       >
         <SelectTrigger
-          size="sm"
+          size="default"
           aria-label="Periode"
-          className="h-8 min-w-44 gap-2"
+          className="min-w-44 gap-2"
         >
           <HugeiconsIcon
             icon={Calendar03Icon}

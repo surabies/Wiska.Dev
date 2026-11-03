@@ -317,11 +317,11 @@ export function ModalKoreksi({
               Tampilan saja — Simpan belum tersambung ke server.
             </span>
           )}
-          <Button variant="outline" className="h-9" onClick={onTutup}>
+          <Button variant="outline" size="lg" onClick={onTutup}>
             Batal
           </Button>
           <Button
-            className="h-9"
+            size="lg"
             disabled={!onSimpan || menyimpan}
             onClick={() => void simpan()}
           >

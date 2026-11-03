@@ -90,6 +90,7 @@ export function CredentialsForm({ callbackUrl }: { callbackUrl: string }) {
             id="identifier"
             name="identifier"
             type="text"
+            size="xl"
             autoComplete="username"
             autoCapitalize="none"
             spellCheck={false}
@@ -114,6 +115,7 @@ export function CredentialsForm({ callbackUrl }: { callbackUrl: string }) {
             id="password"
             name="password"
             type="password"
+            size="xl"
             autoComplete="current-password"
             aria-invalid={!!errors.password}
             disabled={pending}
@@ -121,7 +123,7 @@ export function CredentialsForm({ callbackUrl }: { callbackUrl: string }) {
           {errors.password && <FieldError>{errors.password}</FieldError>}
         </Field>
 
-        <Button type="submit" className="h-10 w-full" disabled={pending}>
+        <Button type="submit" size="xl" className="w-full" disabled={pending}>
           {pending && <Spinner className="size-4" />}
           {pending ? "Memeriksa…" : "Masuk"}
         </Button>

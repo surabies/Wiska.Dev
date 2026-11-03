@@ -64,6 +64,7 @@ export function DialogAturPosisi({
             <Input
               id="posisi-baru"
               type="number"
+              size="lg"
               inputMode="numeric"
               min={1}
               max={jumlah}
@@ -97,11 +98,12 @@ export function DialogAturPosisi({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onTutup}>
+            <Button type="button" variant="outline" size="lg" onClick={onTutup}>
               Batal
             </Button>
             <Button
               type="submit"
+              size="lg"
               disabled={!valid || posisiBaru === posisiSaatIni}
             >
               Terapkan posisi

@@ -35,7 +35,7 @@ export function BilahDrd({
         <SelectTrigger
           size="lg"
           aria-label="Periode tagihan"
-          className="h-control min-h-9 min-w-48 gap-2"
+          className="min-w-48 gap-2"
         >
           <HugeiconsIcon
             icon={Calendar03Icon}

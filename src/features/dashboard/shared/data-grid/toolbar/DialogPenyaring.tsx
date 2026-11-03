@@ -116,7 +116,7 @@ export function ModalFilter({
                 value={draft[f.param] || SEMUA}
                 onValueChange={(v) => ubah(f.param, v === SEMUA ? "" : v)}
               >
-                <SelectTrigger id={`filter-${f.param}`} className="h-9 w-full">
+                <SelectTrigger size="lg" id={`filter-${f.param}`} className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -138,8 +138,8 @@ export function ModalFilter({
               </Label>
               <div className="flex items-center gap-2">
                 <Input
+                  size="lg"
                   type="date"
-                  className="h-9"
                   value={draft[filterTanggal.paramDari] ?? ""}
                   onChange={(e) =>
                     ubah(filterTanggal.paramDari, e.target.value)
@@ -150,8 +150,8 @@ export function ModalFilter({
                   s/d
                 </span>
                 <Input
+                  size="lg"
                   type="date"
-                  className="h-9"
                   value={draft[filterTanggal.paramSampai] ?? ""}
                   onChange={(e) =>
                     ubah(filterTanggal.paramSampai, e.target.value)
@@ -164,10 +164,10 @@ export function ModalFilter({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" className="h-9" onClick={aturUlang}>
+          <Button variant="outline" size="lg" onClick={aturUlang}>
             Atur ulang
           </Button>
-          <Button className="h-9 min-w-36" onClick={terapkan}>
+          <Button size="lg" className="min-w-36" onClick={terapkan}>
             Terapkan{jumlah > 0 ? ` (${jumlah})` : ""}
           </Button>
         </DialogFooter>

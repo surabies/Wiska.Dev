@@ -71,8 +71,9 @@ export function FilterPeriode({
       </div>
       <Select value={nilai} onValueChange={ganti} disabled={pending}>
         <SelectTrigger
+          size="lg"
           aria-label="Pilih periode"
-          className="h-9 min-w-36 gap-3 rounded-none border-0 bg-muted/60 px-3 text-sm font-medium shadow-none hover:bg-muted focus-visible:ring-0"
+          className="min-w-36 gap-3 rounded-none border-0 bg-muted/60 px-3 text-sm font-medium shadow-none hover:bg-muted focus-visible:ring-0"
         >
           <SelectValue placeholder="Pilih periode" />
         </SelectTrigger>

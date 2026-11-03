@@ -105,7 +105,7 @@ export function FilterPilihan({
   const pemicu = (
     <SelectTrigger
       aria-label={filter.label}
-      size="sm"
+      size="default"
       className={cn(
         KELAS_KONTROL,
         "max-w-48 data-[state=open]:border-ring/60",

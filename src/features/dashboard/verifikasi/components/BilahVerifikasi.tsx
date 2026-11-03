@@ -561,7 +561,7 @@ export function ToolbarVerifikasi({
             onValueChange={(v) => set("pageSize", Number(v))}
           >
             <SelectTrigger
-              size="sm"
+              size="default"
               aria-label="Baris per halaman"
               className={KELAS_KONTROL}
             >

@@ -96,10 +96,10 @@ export function PenggunaDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onTutup} disabled={form.mengirim}>
+          <Button variant="outline" size="lg" onClick={onTutup} disabled={form.mengirim}>
             Batal
           </Button>
-          <Button type="submit" form={ID_FORM} disabled={!form.bisaSimpan}>
+          <Button type="submit" size="lg" form={ID_FORM} disabled={!form.bisaSimpan}>
             {form.mengirim && <Loader2 className="animate-spin" />}
             {form.ubah ? "Simpan perubahan" : "Buat akun"}
           </Button>

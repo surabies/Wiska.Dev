@@ -49,13 +49,14 @@ export function InputNomorLangganan({
           placeholder="Contoh: 00401700010"
           maxLength={11}
           disabled={pending}
-          className="h-10 rounded-xl font-mono"
+          size="xl"
+          className="rounded-xl font-mono"
         />
         <Button
           type="button"
           variant="outline"
-          size="icon"
-          className="h-10 w-10 shrink-0 rounded-xl"
+          size="icon-xl"
+          className="shrink-0 rounded-xl"
           onClick={() => onCari(nomor)}
           disabled={nomor.length !== 11 || pending}
           aria-label="Cari nomor pelanggan"

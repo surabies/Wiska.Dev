@@ -87,12 +87,14 @@ export function LacakTiketForm({ nomorAwal }: { nomorAwal?: string } = {}) {
                 onChange={(e) => setNomor(e.target.value)}
                 disabled={pending}
                 required
+                size="lg"
                 className="font-mono tracking-wider uppercase"
               />
               <Button
                 type="submit"
                 variant="outline"
-                className="h-9 shrink-0"
+                size="lg"
+                className="shrink-0"
                 disabled={pending}
               >
                 {pending ? <Spinner className="size-4" /> : <Search />}

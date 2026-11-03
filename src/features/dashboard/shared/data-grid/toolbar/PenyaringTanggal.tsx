@@ -76,14 +76,14 @@ export function PenyaringTanggal({
     <Button
       type="button"
       variant="outline"
-      size={ringkas ? "icon" : "sm"}
+      size={ringkas ? "icon" : "default"}
       aria-label={
         aktif ? `${label}: ${ringkasRentang(tglDari, tglSampai)}` : label
       }
       className={cn(
         KELAS_KONTROL,
         aktif && KELAS_KONTROL_AKTIF,
-        ringkas && "size-8 justify-center p-0"
+        ringkas && "relative size-8 justify-center p-0"
       )}
     >
       <HugeiconsIcon

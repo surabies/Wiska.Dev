@@ -195,14 +195,14 @@ export function ModalBacaManual({
         <>
           <Button
             variant="outline"
-            className="h-9"
+            size="lg"
             onClick={onTutup}
             disabled={menyimpan}
           >
             Batal
           </Button>
           <Button
-            className="h-9"
+            size="lg"
             onClick={() => void simpan()}
             disabled={
               memuat ||

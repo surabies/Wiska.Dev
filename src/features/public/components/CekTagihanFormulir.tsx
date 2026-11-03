@@ -72,12 +72,14 @@ export function CekTagihanForm({ nomorAwal }: { nomorAwal?: string }) {
             placeholder="00401700010"
             maxLength={11}
             disabled={pending}
-            className="h-11 flex-1 font-mono"
+            size="xl"
+            className="flex-1 font-mono"
           />
           <TombolUtama
             onClick={cari}
             disabled={pending || nomorLangganan.length !== 11}
-            className="h-11 px-5"
+            size="xl"
+            className="px-5"
           >
             {pending ? <Spinner className="size-4" /> : <Search />}
             {pending ? "Mencari…" : "Cek tagihan"}

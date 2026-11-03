@@ -52,7 +52,7 @@ export function ResetPasswordCard({
                 valid. Silakan minta tautan baru.
               </AlertDescription>
             </Alert>
-            <Button asChild className="h-10 w-full">
+            <Button asChild size="xl" className="w-full">
               <Link href="/forgot-password">Minta tautan baru</Link>
             </Button>
           </>

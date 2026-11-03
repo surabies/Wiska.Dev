@@ -174,6 +174,7 @@ export function TerapkanStatusPemutusan({
         </div>
         <Button
           variant="outline"
+          size="default"
           disabled={!periode || sibuk}
           onClick={() => void jalankan(false)}
         >
@@ -326,7 +327,7 @@ export function TerapkanStatusPemutusan({
             <div className="mt-4">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button disabled={sibuk}>
+                  <Button size="lg" disabled={sibuk}>
                     {sibuk ? (
                       <Loader2 className="size-4 animate-spin" aria-hidden />
                     ) : null}

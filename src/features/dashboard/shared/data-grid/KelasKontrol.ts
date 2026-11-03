@@ -31,9 +31,9 @@ export const KELAS_KONTROL =
 /// Kotak isian toolbar (kotak cari). Dasarnya sama persis dengan KELAS_KONTROL.
 export const KELAS_INPUT_TOOLBAR = KELAS_DASAR_KONTROL + " px-2.5 font-normal"
 
-/// Penanda penyaring yang sedang menyaring — netral, bukan warna merek.
+/// Penanda penyaring yang sedang menyaring — netral, tidak menimpa warna hover.
 export const KELAS_KONTROL_AKTIF =
-  "border-foreground/25 bg-accent dark:bg-accent"
+  "border-foreground/30 font-medium text-foreground"
 
 /// Kontrol di dalam panel filter lanjutan (latar panel = --background).
 export const KELAS_KONTROL_PANEL = "bg-card dark:bg-card"

@@ -39,7 +39,7 @@ export function ResetPasswordForm({
           <CheckCircle2 />
           <AlertDescription>{state.pesan}</AlertDescription>
         </Alert>
-        <Button asChild className="h-10 w-full">
+        <Button asChild size="xl" className="w-full">
           <Link href="/login">Masuk sekarang</Link>
         </Button>
       </div>
@@ -67,6 +67,7 @@ export function ResetPasswordForm({
             id="password"
             name="password"
             type="password"
+            size="xl"
             // "new-password" memberi tahu password manager untuk menawarkan
             // password kuat, bukan mengisi ulang yang lama.
             autoComplete="new-password"
@@ -87,6 +88,7 @@ export function ResetPasswordForm({
             id="konfirmasi"
             name="konfirmasi"
             type="password"
+            size="xl"
             autoComplete="new-password"
             aria-invalid={!!state.errors?.konfirmasi}
             disabled={pending}
@@ -96,7 +98,7 @@ export function ResetPasswordForm({
           )}
         </Field>
 
-        <Button type="submit" className="h-10 w-full" disabled={pending}>
+        <Button type="submit" size="xl" className="w-full" disabled={pending}>
           {pending && <Spinner className="size-4" />}
           {pending ? "Menyimpan…" : "Simpan password baru"}
         </Button>

@@ -26,7 +26,7 @@ export function TombolFilterLanjutan({
     <Button
       type="button"
       variant="outline"
-      size={ringkas ? "icon" : "sm"}
+      size={ringkas ? "icon" : "default"}
       aria-label={ringkas ? "Filter lainnya" : undefined}
       aria-expanded={terbuka}
       aria-controls={idPanel}

@@ -109,7 +109,7 @@ export function FormCari({
             className={kelasInput}
           />
         </div>
-        <Button type="submit" className="h-9 px-5" disabled={memuat}>
+        <Button type="submit" size="lg" className="px-5" disabled={memuat}>
           {memuat ? "Mencari…" : "Cari pelanggan"}
         </Button>
       </div>

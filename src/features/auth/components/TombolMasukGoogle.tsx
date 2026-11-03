@@ -44,7 +44,8 @@ export function GoogleSignInButton({ callbackUrl }: { callbackUrl: string }) {
     <Button
       type="button"
       variant="outline"
-      className="h-10 w-full"
+      size="xl"
+      className="w-full"
       disabled={pending}
       onClick={() => {
         setPending(true)

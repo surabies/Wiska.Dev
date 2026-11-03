@@ -30,7 +30,7 @@ import { TabFoto, type ItemTabFoto } from "./foto/TabFoto"
 
 /// Satu kelas untuk SEMUA kontrol isian modal (Input, Select, Textarea-nya
 /// punya tinggi sendiri) — lebar penuh, tinggi sama, tidak ada yang panjang-pendek.
-export const KELAS_KONTROL_MODAL = "h-9 w-full text-sm"
+export const KELAS_KONTROL_MODAL = "w-full"
 
 export interface OpsiPilihan {
   value: string
@@ -56,7 +56,7 @@ export function PilihSatu({
 }) {
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className={KELAS_KONTROL_MODAL} aria-label={ariaLabel}>
+      <SelectTrigger size="lg" className={KELAS_KONTROL_MODAL} aria-label={ariaLabel}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent position="popper">

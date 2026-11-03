@@ -81,7 +81,7 @@ export function MobileNav({
         </div>
 
         <div className="mt-auto border-t border-border px-5 py-4">
-          <Button asChild className="h-10 w-full">
+          <Button asChild size="xl" className="w-full">
             <Link href={ctaHref} onClick={() => setOpen(false)}>
               {ctaLabel}
             </Link>

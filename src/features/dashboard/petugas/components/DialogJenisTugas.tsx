@@ -106,10 +106,11 @@ export function DialogJenisTugas({
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={onTutup} disabled={menyimpan}>
+          <Button variant="outline" size="lg" onClick={onTutup} disabled={menyimpan}>
             Batal
           </Button>
           <Button
+            size="lg"
             onClick={() => void simpan()}
             disabled={!berubah || menyimpan}
           >

@@ -61,6 +61,7 @@ export function BagianResetSandi({ penggunaId }: { penggunaId: string }) {
           <Button
             type="button"
             variant="outline"
+            size="lg"
             onClick={() => setTerbuka(true)}
           >
             <KeyRound aria-hidden /> Reset kata sandi
@@ -73,6 +74,7 @@ export function BagianResetSandi({ penggunaId }: { penggunaId: string }) {
             <Input
               id="pg-reset"
               type="password"
+              size="lg"
               autoComplete="new-password"
               value={sandiBaru}
               onChange={(e) => setSandiBaru(e.target.value)}
@@ -81,6 +83,7 @@ export function BagianResetSandi({ penggunaId }: { penggunaId: string }) {
             />
             <Button
               type="button"
+              size="lg"
               onClick={terapkan}
               disabled={sandiBaru.trim().length < 8 || mereset}
             >
@@ -89,6 +92,7 @@ export function BagianResetSandi({ penggunaId }: { penggunaId: string }) {
             <Button
               type="button"
               variant="ghost"
+              size="lg"
               onClick={tutup}
               disabled={mereset}
             >

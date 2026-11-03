@@ -156,6 +156,7 @@ export function PanelFilterLanjutan({
                 </Select>
               ) : (
                 <Input
+                  size="sm"
                   value={row.value}
                   onChange={(event) =>
                     onUbah(row.id, { value: event.currentTarget.value })
@@ -165,7 +166,7 @@ export function PanelFilterLanjutan({
                   }
                   aria-label={`Nilai ${field.label}`}
                   className={cn(
-                    "col-span-2 col-start-2 h-7 min-w-0 sm:col-span-1",
+                    "col-span-2 col-start-2 min-w-0 sm:col-span-1",
                     KELAS_KONTROL_PANEL
                   )}
                 />

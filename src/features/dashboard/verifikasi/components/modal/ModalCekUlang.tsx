@@ -133,7 +133,8 @@ export function ModalCekUlang({
           )}
           <Button
             variant="destructive"
-            className="h-9 w-full"
+            size="lg"
+            className="w-full"
             disabled={
               !detail ||
               detail.isVerified ||
@@ -149,7 +150,8 @@ export function ModalCekUlang({
           </Button>
           <Button
             variant="ghost"
-            className="h-9 w-full"
+            size="lg"
+            className="w-full"
             disabled={mengirim}
             onClick={onTutup}
           >

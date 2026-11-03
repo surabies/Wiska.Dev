@@ -99,6 +99,7 @@ export function DaftarForm({ callbackUrl }: { callbackUrl: string }) {
           <Input
             id="nama"
             name="nama"
+            size="xl"
             autoComplete="name"
             aria-invalid={!!errors.nama}
             disabled={pending}
@@ -112,6 +113,7 @@ export function DaftarForm({ callbackUrl }: { callbackUrl: string }) {
             id="email"
             name="email"
             type="email"
+            size="xl"
             autoComplete="email"
             autoCapitalize="none"
             spellCheck={false}
@@ -127,6 +129,7 @@ export function DaftarForm({ callbackUrl }: { callbackUrl: string }) {
             id="password"
             name="password"
             type="password"
+            size="xl"
             autoComplete="new-password"
             aria-invalid={!!errors.password}
             disabled={pending}
@@ -146,6 +149,7 @@ export function DaftarForm({ callbackUrl }: { callbackUrl: string }) {
             id="konfirmasi"
             name="konfirmasi"
             type="password"
+            size="xl"
             autoComplete="new-password"
             aria-invalid={!!errors.konfirmasi}
             disabled={pending}
@@ -153,7 +157,7 @@ export function DaftarForm({ callbackUrl }: { callbackUrl: string }) {
           {errors.konfirmasi && <FieldError>{errors.konfirmasi}</FieldError>}
         </Field>
 
-        <Button type="submit" className="h-10 w-full" disabled={pending}>
+        <Button type="submit" size="xl" className="w-full" disabled={pending}>
           {pending && <Spinner className="size-4" />}
           {pending ? "Mendaftar…" : "Daftar akun"}
         </Button>

@@ -76,11 +76,12 @@ export function DialogKonfirmasi({
         <DialogFooter>
           {/* Batal lebih dulu di DOM → ia yang mendapat fokus awal, jadi Enter
               yang tidak sengaja tidak langsung menghapus. */}
-          <Button variant="outline" onClick={onTutup} disabled={memproses}>
+          <Button variant="outline" size="lg" onClick={onTutup} disabled={memproses}>
             Batal
           </Button>
           <Button
             variant={opsi.nada === "bahaya" ? "destructive" : "default"}
+            size="lg"
             onClick={() => void jalankan()}
             disabled={memproses}
           >

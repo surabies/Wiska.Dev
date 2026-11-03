@@ -37,7 +37,7 @@ export function BagianAkses({
             onValueChange={(v) => set("role", v)}
             disabled={diriSendiri}
           >
-            <SelectTrigger id="pg-role" className={`w-full ${KELAS_SELECT}`}>
+            <SelectTrigger size="lg" id="pg-role" className={`w-full ${KELAS_SELECT}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -56,7 +56,7 @@ export function BagianAkses({
             onValueChange={(v) => set("status", v)}
             disabled={diriSendiri}
           >
-            <SelectTrigger id="pg-status" className={`w-full ${KELAS_SELECT}`}>
+            <SelectTrigger size="lg" id="pg-status" className={`w-full ${KELAS_SELECT}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -81,7 +81,7 @@ export function BagianAkses({
 
       <Medan id="pg-divisi" label="Divisi">
         <Select value={isi.divisiId} onValueChange={(v) => set("divisiId", v)}>
-          <SelectTrigger id="pg-divisi" className={`w-full ${KELAS_SELECT}`}>
+          <SelectTrigger size="lg" id="pg-divisi" className={`w-full ${KELAS_SELECT}`}>
             <SelectValue placeholder="Tanpa divisi" />
           </SelectTrigger>
           <SelectContent>

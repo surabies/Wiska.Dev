@@ -407,7 +407,7 @@ export function ModalPencarian({
           )}
           <Button
             variant="outline"
-            className="h-9"
+            size="lg"
             onClick={() => {
               setKeadaan(keadaanAwal({}))
               setGalat(null)
@@ -415,7 +415,7 @@ export function ModalPencarian({
           >
             Atur ulang
           </Button>
-          <Button className="h-9 min-w-36" onClick={cari}>
+          <Button size="lg" className="min-w-36" onClick={cari}>
             Cari Data
           </Button>
         </>

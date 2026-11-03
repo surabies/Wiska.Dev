@@ -59,6 +59,7 @@ export function ForgotPasswordForm() {
             id="email"
             name="email"
             type="email"
+            size="xl"
             autoComplete="email"
             autoCapitalize="none"
             spellCheck={false}
@@ -69,7 +70,7 @@ export function ForgotPasswordForm() {
           {state.errors?.email && <FieldError>{state.errors.email}</FieldError>}
         </Field>
 
-        <Button type="submit" className="h-10 w-full" disabled={pending}>
+        <Button type="submit" size="xl" className="w-full" disabled={pending}>
           {pending && <Spinner className="size-4" />}
           {pending ? "Mengirim…" : "Kirim tautan reset"}
         </Button>

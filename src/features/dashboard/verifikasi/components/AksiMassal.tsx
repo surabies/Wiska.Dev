@@ -128,9 +128,8 @@ export function AksiMassal({
                 <TooltipTrigger asChild>
                   <span>
                     <Button
-                      size="sm"
+                      size="default"
                       variant={r === 3 ? "default" : "outline"}
-                      className="h-8 text-xs"
                       disabled={!bolehRing(r)}
                       onClick={() => setKonfirmasi(r)}
                     >
@@ -155,17 +154,15 @@ export function AksiMassal({
             ))}
 
             <Button
-              size="sm"
+              size="default"
               variant="outline"
-              className="h-8 text-xs"
               onClick={onEkspor}
             >
               <Download className="size-3.5" aria-hidden /> Ekspor terpilih
             </Button>
             <Button
-              size="sm"
+              size="default"
               variant="ghost"
-              className="h-8 text-xs"
               onClick={onBersihkan}
             >
               <X className="size-3.5" aria-hidden /> Batal pilih

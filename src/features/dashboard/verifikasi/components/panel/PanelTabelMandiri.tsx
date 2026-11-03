@@ -389,7 +389,7 @@ export function PanelTabelMandiri({
             }
           >
             <SelectTrigger
-              size="sm"
+              size="default"
               aria-label="Baris per halaman"
               className={KELAS_KONTROL}
             >
