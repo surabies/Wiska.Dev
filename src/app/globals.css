@@ -734,7 +734,7 @@
   font-size: var(--text-xs);
 }
 
-:is([data-slot="table-head"], .grid-neon th),
+:is([data-slot="table-head"], .grid-neon th, .tabel-verifikasi th),
 .grid-neon [role="columnheader"] {
   background-color: var(--table-head);
   color: var(--foreground);
@@ -789,6 +789,10 @@
    var(--table-accent). */
 .tabel-verifikasi {
   --hover-baris: var(--table-hover);
+}
+
+.tabel-verifikasi th {
+  box-shadow: none;
 }
 
 /* Koreksi sebelum V1 mengganti warna tahap; semua sel termasuk checkbox ikut. */

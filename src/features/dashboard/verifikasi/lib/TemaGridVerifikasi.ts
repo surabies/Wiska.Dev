@@ -14,15 +14,15 @@ export const TEMA_GRID_TABEL =
 
 /** Kelas baris header tabel (<thead> <tr>) */
 export const TEMA_GRID_HEADER_ROW =
-  "bg-slate-100 text-slate-900 dark:bg-muted/80 dark:text-foreground supports-backdrop-filter:bg-slate-100/90 dark:supports-backdrop-filter:bg-muted/90 backdrop-blur border-b border-border shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+  "bg-table-head text-foreground border-b border-border select-none"
 
 /** Kelas sel header biasa (<th>) */
 export const TEMA_GRID_TH =
-  "border-r border-b border-border/80 px-3 text-left text-xs font-semibold text-foreground tracking-wide select-none whitespace-nowrap bg-slate-100 dark:bg-muted/80"
+  "border-r border-b border-border px-3 text-left text-xs font-semibold text-foreground tracking-wide select-none whitespace-nowrap bg-table-head"
 
 /** Kelas sel header beku / sticky checkbox (<th>) */
 export const TEMA_GRID_TH_BEKU =
-  "sticky left-0 z-30 bg-slate-100 dark:bg-muted text-foreground border-r border-b border-border/80 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] backdrop-blur"
+  "sticky left-0 z-30 bg-table-head text-foreground border-r border-b border-border select-none"
 
 /** Kelas sel data baris biasa (<td>) */
 export const TEMA_GRID_TD =
@@ -30,7 +30,7 @@ export const TEMA_GRID_TD =
 
 /** Kelas sel data beku / sticky checkbox (<td>) */
 export const TEMA_GRID_TD_BEKU =
-  "sticky left-0 z-10 border-r border-b border-border/60 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.04)]"
+  "sticky left-0 z-10 border-r border-b border-border/60"
 
 /** Kelas item ToggleGroup toolbar (ikon padat, ringkasan, atur kolom, dll.) */
 export const TEMA_TOGGLE_ITEM =
@@ -46,7 +46,7 @@ export const TEMA_TAB_TIDAK_AKTIF =
 
 /** Latar baris per tahap verifikasi */
 export const WARNA_BARIS_TAHAP: Record<Tahap, string> = {
-  MENUNGGU: "bg-card hover:bg-slate-50 dark:hover:bg-muted/40",
+  MENUNGGU: "bg-card hover:bg-muted/40",
   V1: "bg-amber-500/[0.06] hover:bg-amber-500/[0.12] dark:bg-amber-500/[0.10]",
   V2: "bg-blue-500/[0.06] hover:bg-blue-500/[0.12] dark:bg-blue-500/[0.10]",
   TERVERIFIKASI:
@@ -95,5 +95,5 @@ export function tentukanLatarSelBeku({
   if (aktif || dipilih) {
     return "bg-table-accent text-foreground"
   }
-  return "bg-card hover:bg-slate-50 dark:hover:bg-muted/40"
+  return "bg-card hover:bg-muted/40"
 }
