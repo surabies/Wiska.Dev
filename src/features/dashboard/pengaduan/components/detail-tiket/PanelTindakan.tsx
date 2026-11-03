@@ -130,26 +130,52 @@ export function PanelTindakan({
           Tambah catatan
         </Button>
 
-        {transisi.map((s) => (
-          <Button
-            key={s}
-            size="sm"
-            variant={s === "DITOLAK" ? "destructive" : "secondary"}
-            disabled={mengirim}
-            onClick={() =>
-              kirim(() =>
-                kirimJson(`/pengaduan/${detail.id}/status`, "PATCH", {
-                  status: s,
-                  catatan: catatanBersih || undefined,
-                  isPublik: true,
-                })
-              )
-            }
-          >
-            {LABEL_AKSI_STATUS_PENGADUAN[s]}
-          </Button>
-        ))}
+        {transisi.map((s) => {
+          const butuhCatatan =
+            s === "DITOLAK" ||
+            s === "MENUNGGU_PELANGGAN" ||
+            s === "DIBUKA_KEMBALI"
+          const tidakBoleh = mengirim || (butuhCatatan && !catatanBersih)
+
+          return (
+            <Button
+              key={s}
+              size="sm"
+              variant={s === "DITOLAK" ? "destructive" : "secondary"}
+              disabled={tidakBoleh}
+              title={
+                butuhCatatan && !catatanBersih
+                  ? `Status ${s} wajib menyertakan catatan alasan di atas`
+                  : undefined
+              }
+              onClick={() =>
+                kirim(() =>
+                  kirimJson(`/pengaduan/${detail.id}/status`, "PATCH", {
+                    status: s,
+                    catatan: catatanBersih || undefined,
+                    isPublik: true,
+                  })
+                )
+              }
+            >
+              {LABEL_AKSI_STATUS_PENGADUAN[s]}
+            </Button>
+          )
+        })}
       </div>
+
+      {transisi.some(
+        (s) =>
+          s === "DITOLAK" ||
+          s === "MENUNGGU_PELANGGAN" ||
+          s === "DIBUKA_KEMBALI"
+      ) &&
+        !catatanBersih && (
+          <p className="text-xs text-amber-600 dark:text-amber-400">
+            * Catatan wajib diisi sebelum mengubah status ke Ditolak atau
+            Menunggu Pelanggan.
+          </p>
+        )}
 
       {transisi.length === 0 && !bisaSelesai && (
         <p className="text-xs text-muted-foreground">

@@ -4,6 +4,7 @@ import { NavbarBrand } from "./NavbarBrand"
 import { NavbarLinks } from "./NavbarLinks"
 import { NavbarPlus } from "./NavbarPlus"
 import { NavbarMobileBar } from "./NavbarMobileBar"
+import { NavbarTicker } from "./NavbarTicker"
 import { MobileMenu } from "./MobileMenu"
 import { UserMenu } from "./MenuPengguna"
 
@@ -24,9 +25,12 @@ export function Navbar({
     // Tingginya harus sama dengan --navbar-h di DashboardShell.
     <header className="fixed inset-x-0 top-0 z-10 bg-muted">
       {/* ===== Bar utama (tampil di semua ukuran layar) ===== */}
-      <div className="flex h-14 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <div className="flex h-14 items-center justify-between gap-4 px-3">
         {/* Kiri: logo + dropdown versi */}
         <NavbarBrand />
+
+        {/* Tengah: Running text reminder / motivasi (khusus rute verifikasi) */}
+        <NavbarTicker />
 
         {/* Kanan: isinya berbeda untuk mobile dan desktop */}
         <div className="flex items-center gap-1 lg:gap-6">

@@ -69,7 +69,7 @@ export const STATUS_SELESAI: readonly StatusPengaduan[] = [
 /// MENUJU_LOKASI, sehingga statistik "terbuka"/"melanggar SLA" diam-diam
 /// lebih kecil dari kenyataan. Pemeriksaan kelengkapan di bawah membuat
 /// typecheck gagal bila enum bertambah tanpa file ini diperbarui.
-export const STATUS_TERBUKA: readonly StatusPengaduan[] = [
+export const STATUS_TERBUKA: StatusPengaduan[] = [
   "BARU",
   "TERVERIFIKASI",
   "DITUGASKAN",

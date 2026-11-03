@@ -341,20 +341,16 @@ export async function verifikasiV3LaporanHarian(
     (koreksi.standAwalRevisi as number | null | undefined) ??
     laporan.standAwalRevisi ??
     laporan.standAwal
-  const standAkhir =
-    (koreksi.standAkhirRevisi as number | null | undefined) ??
-    laporan.standAkhirRevisi ??
-    laporan.standAkhir
-  const kondisiEfektif =
-    (koreksi.kondisiRevisi as KondisiCatat | undefined) ??
-    laporan.kondisiRevisi ??
-    laporan.kondisi
   const standAngkatLama =
     (koreksi.standAngkatLama as number | null | undefined) ??
     laporan.standAngkatLama
   const standMeterBaru =
     (koreksi.standMeterBaru as number | null | undefined) ??
     laporan.standMeterBaru
+  const kondisiEfektif =
+    (koreksi.kondisiRevisi as KondisiCatat | undefined) ??
+    laporan.kondisiRevisi ??
+    laporan.kondisi
   const dataStandAngkat = validasiStandAngkat(
     kondisiEfektif,
     standAngkatLama,
@@ -362,6 +358,12 @@ export async function verifikasiV3LaporanHarian(
   )
   if (kondisiEfektif === "MB")
     await validasiMeterBaru(laporan.pelangganId, meterVerifId)
+  const standAkhir =
+    kondisiEfektif === "MB" && (dataStandAngkat?.standMeterBaru ?? standMeterBaru) != null
+      ? (dataStandAngkat?.standMeterBaru ?? standMeterBaru)!
+      : ((koreksi.standAkhirRevisi as number | null | undefined) ??
+        laporan.standAkhirRevisi ??
+        laporan.standAkhir)
   const pemakaianTagihVerif =
     (koreksi.pemakaianTagihVerif as number | null | undefined) ??
     laporan.pemakaianTagihVerif
@@ -699,7 +701,10 @@ export async function verifikasiLangsungLaporanHarian(
 
   const kondisi = laporan.kondisiRevisi ?? laporan.kondisi
   const standAwal = laporan.standAwalRevisi ?? laporan.standAwal
-  const standAkhir = laporan.standAkhirRevisi ?? laporan.standAkhir
+  const standAkhir =
+    kondisi === "MB" && laporan.standMeterBaru != null
+      ? laporan.standMeterBaru
+      : (laporan.standAkhirRevisi ?? laporan.standAkhir)
   let pemakaianRiil: number
   let standLalu = standAwal
   if (kondisi === "MB") {

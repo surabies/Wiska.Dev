@@ -13,8 +13,13 @@
 import * as React from "react"
 import { Task01Icon, ViewOffIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { cn } from "@/lib/Utilitas"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  TEMA_TAB_AKTIF,
+  TEMA_TAB_TIDAK_AKTIF,
+} from "../../lib/TemaGridVerifikasi"
 import {
   ambilList,
   kirimJson,
@@ -357,7 +362,7 @@ export function PanelTabel({
   // pesan ini tabel kosong terbaca seperti aplikasi berhenti.
   const tanpaSaringan =
     filter.q === "" &&
-    filter.statusVerif === "" &&
+    (filter.statusVerif === "" || filter.statusVerif === "MENUNGGU") &&
     filter.jenisInput === "" &&
     filter.pencatatId === "" &&
     filter.ruteId === "" &&
@@ -376,33 +381,39 @@ export function PanelTabel({
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1.5">
         {(
           [
             ["laporan", "Laporan masuk", Task01Icon],
             ["belum", "Belum dibaca", ViewOffIcon],
           ] as const
-        ).map(([id, label, Ikon]) => (
-          <Button
-            key={id}
-            size="sm"
-            variant={tab === id ? "secondary" : "ghost"}
-            className="h-8 text-xs"
-            onClick={() => {
-              setTab(id)
-              setTerpilih(new Set())
-              onTabBerubah?.(id)
-            }}
-          >
-            <HugeiconsIcon
-              icon={Ikon}
-              strokeWidth={2}
-              className="size-3.5"
-              aria-hidden
-            />{" "}
-            {label}
-          </Button>
-        ))}
+        ).map(([id, label, Ikon]) => {
+          const aktif = tab === id
+          return (
+            <Button
+              key={id}
+              size="sm"
+              variant="ghost"
+              className={cn(
+                "h-8 text-xs transition-all",
+                aktif ? TEMA_TAB_AKTIF : TEMA_TAB_TIDAK_AKTIF
+              )}
+              onClick={() => {
+                setTab(id)
+                setTerpilih(new Set())
+                onTabBerubah?.(id)
+              }}
+            >
+              <HugeiconsIcon
+                icon={Ikon}
+                strokeWidth={2}
+                className="size-3.5"
+                aria-hidden
+              />{" "}
+              {label}
+            </Button>
+          )
+        })}
         {tab === "belum" && (
           <span className="ml-2 text-[11px] text-muted-foreground">
             Sambungan di daftar catat yang belum ada setorannya — bahan menagih
@@ -516,7 +527,7 @@ export function PanelTabel({
         />
       </div>
 
-      {tab === "laporan" && (
+      {tab === "laporan" && (terpilih.size > 0 || sedangJalan) && (
         <div className="shrink-0">
           <AksiMassal
             jumlah={terpilih.size}

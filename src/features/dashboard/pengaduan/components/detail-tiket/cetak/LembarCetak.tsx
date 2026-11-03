@@ -1,13 +1,16 @@
 "use client"
 
 // features/dashboard/pengaduan/components/detail-tiket/cetak/LembarCetak.tsx
-// — dokumen A4 untuk arsip / bahan dokumentasi petugas. Dirender lewat portal
-// ke <body> HANYA saat mencetak (lihat use-cetak.ts & gaya-cetak.ts).
+// — Dokumen A4 resmi standar enterprise untuk Berita Acara & Lembar Disposisi
+// Penanganan Pengaduan Air (Perumda Air Minum Tirtawening).
 //
-// Sengaja memakai warna tetap (hitam/abu di atas putih), BUKAN token tema:
-// kalau petugas memakai tema gelap, teks berwarna --foreground (terang) akan
-// tercetak tak terbaca. Lembar ini juga memuat catatan INTERNAL (diberi tanda)
-// — dokumen untuk arsip petugas, bukan untuk dibagikan ke pelapor.
+// Karakteristik:
+// - Kop surat resmi dengan logo perusahaan, kontak call center, dan nomor registrasi tiket.
+// - Kartu ringkasan eksekutif KPI (Status, Prioritas SLA, Target Selesai, Petugas Lapangan).
+// - Matriks data pelanggan, titik koordinat, dan uraian duduk perkara terstruktur.
+// - Dokumentasi visual terkontrol (foto sebelum & sesudah) dengan tinggi proporsional.
+// - Tabel riwayat audit tindak lanjut berdesain elegan, kontras tinggi, dan bebas tumpahan halaman.
+// - Lembar pengesahan resmi 3 kolom (Pelapor, Petugas Pelaksana, Supervisor).
 import { createPortal } from "react-dom"
 import {
   LABEL_JENIS_PENGADUAN,
@@ -24,24 +27,22 @@ import { GAYA_CETAK } from "./GayaCetak"
 
 const waktu = (v: string | null) => (v ? `${formatWaktu(v)} WIB` : "—")
 
-function Seksi({
-  judul,
-  children,
-}: {
-  judul: string
-  children: React.ReactNode
-}) {
+function SeksiJudul({ judul, nomor }: { judul: string; nomor?: string }) {
   return (
-    <section className="mt-5 break-inside-avoid-page">
-      <h2 className="mb-2 border-b border-neutral-400 pb-1 text-[11pt] font-semibold">
+    <div className="mb-2 mt-3.5 flex items-center gap-2 border-b-1.5 border-slate-700 pb-1">
+      {nomor && (
+        <span className="flex size-4.5 items-center justify-center rounded-xs bg-slate-800 text-[7pt] font-bold text-white">
+          {nomor}
+        </span>
+      )}
+      <h2 className="text-[9.5pt] font-bold tracking-tight text-slate-900 uppercase">
         {judul}
       </h2>
-      {children}
-    </section>
+    </div>
   )
 }
 
-function Data({
+function ItemData({
   label,
   children,
   lebar,
@@ -52,8 +53,12 @@ function Data({
 }) {
   return (
     <div className={lebar ? "col-span-2" : undefined}>
-      <dt className="text-[8.5pt] text-neutral-600">{label}</dt>
-      <dd className="wrap-break-word">{children}</dd>
+      <dt className="text-[7.5pt] font-semibold uppercase tracking-wider text-slate-500">
+        {label}
+      </dt>
+      <dd className="text-[8.5pt] font-medium text-slate-900 break-words">
+        {children}
+      </dd>
     </div>
   )
 }
@@ -69,232 +74,377 @@ export function LembarCetak({
   const wilayah = [detail.kelurahan?.nama, detail.kecamatan?.nama]
     .filter(Boolean)
     .join(", ")
-  const adaLampiran =
-    detail.fotoUrl || detail.videoUrl || detail.fotoPenyelesaianUrl
+  const adaLampiran = Boolean(detail.fotoUrl || detail.fotoPenyelesaianUrl)
 
   return createPortal(
     <>
       <style>{GAYA_CETAK}</style>
       <div id="lembar-cetak-root">
-        <div
-          id="lembar-cetak"
-          className="bg-white text-[10pt] leading-snug text-black"
-        >
-          {/* Kop */}
-          <div className="flex items-start justify-between gap-6 border-b-2 border-black pb-3">
-            <div>
-              <p className="text-[9pt] text-neutral-600">Tirtawening</p>
-              <h1 className="text-[15pt] font-semibold">
-                Laporan Penanganan Pengaduan
-              </h1>
+        <div id="lembar-cetak" className="w-full bg-white text-slate-900">
+          {/* ========================================================= */}
+          {/* 1. KOP SURAT RESMI PERUSAHAAN                             */}
+          {/* ========================================================= */}
+          <header className="cetak-blok border-b-2 border-sky-800 pb-2.5">
+            <div className="flex items-start justify-between gap-4">
+              {/* Identitas Korporat */}
+              <div className="flex items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/logo.png"
+                  alt="Logo Tirtawening"
+                  className="h-11 w-auto object-contain"
+                />
+                <div>
+                  <h1 className="text-[11.5pt] font-black tracking-wider text-slate-950 uppercase">
+                    Perumda Air Minum Tirtawening
+                  </h1>
+                  <p className="text-[8pt] font-bold text-sky-800 tracking-wide uppercase">
+                    Direktorat Operasional & Pelayanan Teknik
+                  </p>
+                  <p className="text-[7pt] text-slate-600">
+                    Unit Penanganan Gangguan Jaringan & Pelayanan Pelanggan Air
+                    Bersih
+                  </p>
+                  <p className="text-[6.5pt] text-slate-500">
+                    Jl. Badaksinga No. 10, Bandung · Call Center: (022) 2509030 ·
+                    www.tirtawening.co.id
+                  </p>
+                </div>
+              </div>
+
+              {/* Box Nomor Tiket & Registrasi */}
+              <div className="min-w-[48mm] rounded-sm border border-slate-300 bg-slate-50/80 p-2 text-right shadow-2xs">
+                <span className="block text-[6.5pt] font-bold uppercase tracking-widest text-slate-500">
+                  Lembar Disposisi Aduan
+                </span>
+                <span className="block font-mono text-[11.5pt] font-extrabold text-slate-900">
+                  {detail.nomorTiket}
+                </span>
+                <span className="block text-[7pt] text-slate-600">
+                  Dicetak: {waktu(tanggalCetak)}
+                </span>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="font-mono text-[12pt] font-semibold">
-                {detail.nomorTiket}
-              </p>
-              <p className="text-[8.5pt] text-neutral-600">
-                Dicetak {waktu(tanggalCetak)}
-              </p>
+            {/* Garis aksen tipis ganda */}
+            <div className="mt-2 h-0.5 w-full bg-slate-300" />
+          </header>
+
+          {/* ========================================================= */}
+          {/* 2. RINGKASAN EKSEKUTIF KPI (4 KARTU)                     */}
+          {/* ========================================================= */}
+          <div className="cetak-blok mt-3 grid grid-cols-4 gap-2">
+            <div className="rounded-sm border border-slate-300 bg-slate-50 p-2">
+              <span className="block text-[7pt] font-bold uppercase text-slate-500">
+                Status Tiket
+              </span>
+              <span className="block text-[8.5pt] font-bold text-slate-900">
+                {status.label}
+              </span>
+            </div>
+            <div className="rounded-sm border border-slate-300 bg-slate-50 p-2">
+              <span className="block text-[7pt] font-bold uppercase text-slate-500">
+                Prioritas SLA
+              </span>
+              <span className="block text-[8.5pt] font-bold text-slate-900">
+                {LABEL_PRIORITAS_PENGADUAN[detail.prioritas] ?? detail.prioritas}
+              </span>
+            </div>
+            <div className="rounded-sm border border-slate-300 bg-slate-50 p-2">
+              <span className="block text-[7pt] font-bold uppercase text-slate-500">
+                Target Selesai
+              </span>
+              <span className="block text-[8.5pt] font-bold text-slate-900">
+                {waktu(detail.sla.targetSelesaiAt)}
+              </span>
+              {detail.sla.melanggar && (
+                <span className="block text-[7pt] font-semibold text-rose-700">
+                  Terlambat ({formatSisaWaktu(detail.sla.sisaMenit)})
+                </span>
+              )}
+            </div>
+            <div className="rounded-sm border border-slate-300 bg-slate-50 p-2">
+              <span className="block text-[7pt] font-bold uppercase text-slate-500">
+                Petugas Lapangan
+              </span>
+              <span className="block text-[8.5pt] font-bold text-slate-900">
+                {detail.ditugaskanKe?.name ?? "Belum Ditugaskan"}
+              </span>
             </div>
           </div>
 
-          {/* Ringkasan */}
-          <Seksi judul="Ringkasan tiket">
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-2">
-              <Data label="Judul" lebar>
-                {detail.judul}
-              </Data>
-              <Data label="Jenis">
-                {LABEL_JENIS_PENGADUAN[detail.jenis] ?? detail.jenis}
-              </Data>
-              <Data label="Prioritas">
-                {LABEL_PRIORITAS_PENGADUAN[detail.prioritas]}
-              </Data>
-              <Data label="Status">{status.label}</Data>
-              <Data label="Ditugaskan ke">
-                {detail.ditugaskanKe?.name ?? "Belum ditugaskan"}
-              </Data>
-              <Data label="Masuk">{waktu(detail.createdAt)}</Data>
-              <Data label="Diverifikasi">{waktu(detail.verifikasiAt)}</Data>
-              <Data label="Mulai ditangani">
-                {waktu(detail.ditanganiMulai)}
-              </Data>
-              <Data label="Selesai">{waktu(detail.selesaiAt)}</Data>
-              <Data label="Target penyelesaian">
-                {waktu(detail.sla.targetSelesaiAt)}
-                {detail.sla.melanggar &&
-                  ` — ${formatSisaWaktu(detail.sla.sisaMenit)}`}
-              </Data>
-              {detail.jumlahDibukaKembali > 0 && (
-                <Data label="Dibuka kembali">
-                  {detail.jumlahDibukaKembali}×
-                </Data>
-              )}
-              {detail.jedaTotalMenit > 0 && (
-                <Data label="Total waktu dijeda">
-                  {detail.jedaTotalMenit} menit
-                </Data>
-              )}
-            </dl>
-          </Seksi>
+          {/* ========================================================= */}
+          {/* 3. SEKSI I: DATA PELANGGAN & LOKASI KEJADIAN             */}
+          {/* ========================================================= */}
+          <div className="cetak-blok">
+            <SeksiJudul nomor="I" judul="Informasi Pelapor & Lokasi Kejadian" />
+            <div className="rounded-sm border border-slate-200 bg-slate-50/50 p-2.5">
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-2">
+                <ItemData label="Nama Pelapor">{detail.pelapor}</ItemData>
+                <ItemData label="No. Kontak / Telepon">
+                  {detail.kontakPelapor ?? "—"}
+                </ItemData>
+                <ItemData label="No. Langganan PDAM">
+                  {detail.pelanggan
+                    ? `${detail.pelanggan.nomorLangganan} (${detail.pelanggan.nama})`
+                    : detail.nomorLangganan
+                      ? `${detail.nomorLangganan} (Belum Terverifikasi)`
+                      : "—"}
+                </ItemData>
+                <ItemData label="Wilayah Kelurahan / Kecamatan">
+                  {wilayah || "—"}
+                </ItemData>
+                <ItemData label="Alamat Lengkap Lokasi Gangguan" lebar>
+                  {detail.alamatKejadian ?? "—"}
+                </ItemData>
+              </dl>
+            </div>
+          </div>
 
-          {/* Pelapor & lokasi */}
-          <Seksi judul="Pelapor & lokasi kejadian">
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-2">
-              <Data label="Pelapor">{detail.pelapor}</Data>
-              <Data label="Kontak">{detail.kontakPelapor ?? "—"}</Data>
-              <Data label="Pelanggan">
-                {detail.pelanggan
-                  ? `${detail.pelanggan.nomorLangganan} · ${detail.pelanggan.nama}`
-                  : detail.nomorLangganan
-                    ? `${detail.nomorLangganan} (belum dicocokkan)`
-                    : "—"}
-              </Data>
-              <Data label="Wilayah">{wilayah || "—"}</Data>
-              <Data label="Alamat kejadian" lebar>
-                {detail.alamatKejadian ?? "—"}
-              </Data>
-            </dl>
-          </Seksi>
+          {/* ========================================================= */}
+          {/* 4. SEKSI II: DUDUK PERKARA & RINCIAN GANGGUAN             */}
+          {/* ========================================================= */}
+          <div className="cetak-blok">
+            <SeksiJudul nomor="II" judul="Uraian Perkara & Kronologi Gangguan" />
+            <div className="rounded-sm border border-slate-200 bg-slate-50/50 p-2.5">
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-2">
+                <ItemData label="Perihal / Pokok Aduan">{detail.judul}</ItemData>
+                <ItemData label="Kategori Aduan">
+                  {LABEL_JENIS_PENGADUAN[detail.jenis] ?? detail.jenis}
+                </ItemData>
+                <ItemData label="Waktu Masuk Aduan">
+                  {waktu(detail.createdAt)}
+                </ItemData>
+                <ItemData label="Waktu Verifikasi">
+                  {waktu(detail.verifikasiAt)}
+                </ItemData>
+                <ItemData label="Mulai Ditangani Petugas">
+                  {waktu(detail.ditanganiMulai)}
+                </ItemData>
+                <ItemData label="Waktu Selesai Pengerjaan">
+                  {waktu(detail.selesaiAt)}
+                </ItemData>
+              </dl>
 
-          <Seksi judul="Deskripsi pengaduan">
-            <p className="whitespace-pre-wrap">{detail.deskripsi}</p>
-          </Seksi>
-
-          {detail.eskalasiKe && (
-            <Seksi judul="Eskalasi">
-              <p>
-                Dieskalasi ke {detail.eskalasiKe.name ?? "—"} (
-                {detail.eskalasiKe.role}) pada {waktu(detail.eskalasiAt)}.
-              </p>
-              {detail.alasanEskalasi && (
-                <p className="mt-1 whitespace-pre-wrap">
-                  {detail.alasanEskalasi}
+              {/* Kotak Deskripsi */}
+              <div className="mt-2.5 rounded-sm border-l-2 border-slate-700 bg-white p-2">
+                <span className="block text-[7pt] font-bold uppercase tracking-wider text-slate-500">
+                  Deskripsi Laporan Warga:
+                </span>
+                <p className="mt-1 text-[8.5pt] leading-relaxed text-slate-800 whitespace-pre-wrap">
+                  {detail.deskripsi}
                 </p>
-              )}
-            </Seksi>
-          )}
+              </div>
 
-          {(detail.catatanPenyelesaian || detail.ratingKepuasan !== null) && (
-            <Seksi judul="Penyelesaian & penilaian">
+              {/* Data Eskalasi jika ada */}
+              {detail.eskalasiKe && (
+                <div className="mt-2 rounded-sm border border-rose-200 bg-rose-50/60 p-2 text-[8pt] text-rose-950">
+                  <span className="font-bold">Eskalasi Manajemen:</span>{" "}
+                  Dieskalasikan ke {detail.eskalasiKe.name ?? "—"} (
+                  {detail.eskalasiKe.role}) pada {waktu(detail.eskalasiAt)}.
+                  {detail.alasanEskalasi && (
+                    <p className="mt-0.5 text-[7.5pt] italic text-rose-900">
+                      Alasan: “{detail.alasanEskalasi}”
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Catatan Penyelesaian jika ada */}
               {detail.catatanPenyelesaian && (
-                <p className="whitespace-pre-wrap">
+                <div className="mt-2 rounded-sm border border-emerald-200 bg-emerald-50/60 p-2 text-[8pt] text-emerald-950">
+                  <span className="font-bold">Hasil Penanganan Lapangan:</span>{" "}
                   {detail.catatanPenyelesaian}
-                </p>
+                  {detail.ratingKepuasan !== null && (
+                    <span className="ml-2 font-semibold">
+                      (Penilaian Pelanggan: {detail.ratingKepuasan}/5
+                      {detail.komentarKepuasan
+                        ? ` — “${detail.komentarKepuasan}”`
+                        : ""}
+                      )
+                    </span>
+                  )}
+                </div>
               )}
-              {detail.ratingKepuasan !== null && (
-                <p className="mt-1">
-                  Penilaian pelapor: {detail.ratingKepuasan}/5
-                  {detail.komentarKepuasan && ` — “${detail.komentarKepuasan}”`}
-                </p>
-              )}
-            </Seksi>
-          )}
+            </div>
+          </div>
 
+          {/* ========================================================= */}
+          {/* 5. SEKSI III: DOKUMENTASI VISUAL LAPANGAN                */}
+          {/* ========================================================= */}
           {adaLampiran && (
-            <Seksi judul="Lampiran">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="cetak-blok">
+              <SeksiJudul nomor="III" judul="Dokumentasi Visual Lapangan" />
+              <div className="grid grid-cols-2 gap-3 rounded-sm border border-slate-200 bg-slate-50/40 p-2">
                 {detail.fotoUrl && (
-                  <figure className="break-inside-avoid">
+                  <div className="flex flex-col items-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={detail.fotoUrl}
-                      alt=""
-                      className="max-h-[70mm] w-full border border-neutral-400 object-contain"
+                      alt="Foto Pelapor"
+                      className="max-h-[38mm] w-full rounded-xs border border-slate-300 object-contain bg-white"
                     />
-                    <figcaption className="mt-1 text-[8.5pt] text-neutral-600">
-                      Foto dari pelapor
-                    </figcaption>
-                  </figure>
+                    <span className="mt-1 text-[7.5pt] font-semibold text-slate-700">
+                      Kondisi Awal (Dokumentasi Pelapor)
+                    </span>
+                  </div>
                 )}
                 {detail.fotoPenyelesaianUrl && (
-                  <figure className="break-inside-avoid">
+                  <div className="flex flex-col items-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={detail.fotoPenyelesaianUrl}
-                      alt=""
-                      className="max-h-[70mm] w-full border border-neutral-400 object-contain"
+                      alt="Foto Bukti Penyelesaian"
+                      className="max-h-[38mm] w-full rounded-xs border border-slate-300 object-contain bg-white"
                     />
-                    <figcaption className="mt-1 text-[8.5pt] text-neutral-600">
-                      Foto bukti penyelesaian
-                    </figcaption>
-                  </figure>
+                    <span className="mt-1 text-[7.5pt] font-semibold text-slate-700">
+                      Hasil Akhir (Dokumentasi Petugas)
+                    </span>
+                  </div>
                 )}
               </div>
-              {detail.videoUrl && (
-                <p className="mt-2 text-[8.5pt] break-all text-neutral-600">
-                  Video dari pelapor: {detail.videoUrl}
-                </p>
-              )}
-            </Seksi>
+            </div>
           )}
 
-          {/* Riwayat */}
-          <Seksi judul="Riwayat tindak lanjut">
+          {/* ========================================================= */}
+          {/* 6. SEKSI IV: MATRIKS RIWAYAT & TINDAK LANJUT              */}
+          {/* ========================================================= */}
+          <div className="cetak-blok">
+            <SeksiJudul
+              nomor={adaLampiran ? "IV" : "III"}
+              judul="Matriks Riwayat & Log Tindak Lanjut"
+            />
             {detail.riwayat.length === 0 ? (
-              <p className="text-neutral-600">Belum ada tindak lanjut.</p>
+              <p className="text-[8pt] italic text-slate-500">
+                Belum ada riwayat tindak lanjut tercatat.
+              </p>
             ) : (
-              <table className="w-full border-collapse text-[9pt]">
+              <table className="cetak-tabel border border-slate-300 text-[7.5pt]">
                 <thead>
-                  <tr className="border-b border-neutral-500 text-left text-neutral-600">
-                    <th className="w-[27mm] py-1 pr-2 font-medium">Waktu</th>
-                    <th className="w-[34mm] py-1 pr-2 font-medium">Aksi</th>
-                    <th className="w-[30mm] py-1 pr-2 font-medium">Oleh</th>
-                    <th className="py-1 font-medium">Catatan</th>
+                  <tr className="border-b border-slate-400 bg-slate-800 text-left text-white">
+                    <th className="w-[8mm] py-1 pl-1.5 font-bold text-center">
+                      No
+                    </th>
+                    <th className="w-[28mm] py-1 px-1 font-bold">Waktu</th>
+                    <th className="w-[32mm] py-1 px-1 font-bold">
+                      Aksi / Transisi
+                    </th>
+                    <th className="w-[30mm] py-1 px-1 font-bold">
+                      Pelaksana (Role)
+                    </th>
+                    <th className="w-[14mm] py-1 px-1 font-bold">Akses</th>
+                    <th className="py-1 px-1.5 font-bold">Catatan Uraian</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {detail.riwayat.map((e) => (
+                  {detail.riwayat.map((e, idx) => (
                     <tr
                       key={e.id}
-                      className="break-inside-avoid border-b border-neutral-300 align-top"
+                      className={
+                        idx % 2 === 0
+                          ? "border-b border-slate-200 bg-white"
+                          : "border-b border-slate-200 bg-slate-50/80"
+                      }
                     >
-                      <td className="py-1.5 pr-2">{waktu(e.createdAt)}</td>
-                      <td className="py-1.5 pr-2">
-                        {LABEL_AKSI[e.aksi] ?? e.aksi}
+                      <td className="py-1 pl-1.5 text-center text-slate-500">
+                        {idx + 1}
+                      </td>
+                      <td className="py-1 px-1 text-slate-700">
+                        {waktu(e.createdAt)}
+                      </td>
+                      <td className="py-1 px-1 font-medium text-slate-900">
+                        <span>{LABEL_AKSI[e.aksi] ?? e.aksi}</span>
                         {e.statusKe && (
-                          <span className="block text-neutral-600">
+                          <span className="block font-semibold text-slate-700">
                             → {statusPengaduanStaf(e.statusKe).label}
                           </span>
                         )}
                       </td>
-                      <td className="py-1.5 pr-2">
-                        {e.olehNama}
+                      <td className="py-1 px-1 text-slate-800">
+                        <span className="font-medium">{e.olehNama}</span>
                         {e.oleh?.role && (
-                          <span className="block text-neutral-600">
+                          <span className="block text-[7pt] text-slate-500">
                             {e.oleh.role}
                           </span>
                         )}
                       </td>
-                      <td className="py-1.5">
-                        {!e.isPublik && (
-                          <span className="mr-1 border border-neutral-500 px-1 text-[8pt] font-medium">
-                            Internal
-                          </span>
-                        )}
+                      <td className="py-1 px-1">
+                        <span
+                          className={`rounded-xs px-1 py-0.2 text-[6.5pt] font-bold ${
+                            e.isPublik
+                              ? "bg-sky-100 text-sky-800 border border-sky-300"
+                              : "bg-amber-100 text-amber-900 border border-amber-300"
+                          }`}
+                        >
+                          {e.isPublik ? "Publik" : "Internal"}
+                        </span>
+                      </td>
+                      <td className="py-1 px-1.5 text-slate-800">
                         <span className="whitespace-pre-wrap">
                           {e.catatan ?? "—"}
                         </span>
-                        {e.fotoUrl && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={e.fotoUrl}
-                            alt=""
-                            className="mt-1 max-h-[35mm] border border-neutral-400"
-                          />
-                        )}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             )}
-          </Seksi>
+          </div>
 
-          <p className="mt-6 border-t border-neutral-400 pt-2 text-[8pt] text-neutral-600">
-            Dokumen internal petugas — memuat catatan yang ditandai “Internal”.
-            Jangan dibagikan kepada pelapor.
-          </p>
+          {/* ========================================================= */}
+          {/* 7. SEKSI V: LEMBAR PENGESAHAN & SERAH TERIMA               */}
+          {/* ========================================================= */}
+          <div className="cetak-blok mt-4 pt-2">
+            <div className="grid grid-cols-3 gap-4 text-center">
+              {/* Kolom Pelapor */}
+              <div className="rounded-xs border border-slate-300 p-2 bg-slate-50/40">
+                <span className="block text-[7.5pt] font-bold uppercase text-slate-700">
+                  Pelapor / Pelanggan
+                </span>
+                <span className="block text-[7pt] text-slate-500">
+                  (Yang Menyatakan)
+                </span>
+                <div className="my-7 border-b border-dashed border-slate-400" />
+                <span className="block text-[8pt] font-semibold text-slate-900">
+                  {detail.pelapor}
+                </span>
+              </div>
+
+              {/* Kolom Petugas Lapangan */}
+              <div className="rounded-xs border border-slate-300 p-2 bg-slate-50/40">
+                <span className="block text-[7.5pt] font-bold uppercase text-slate-700">
+                  Petugas Pelaksana
+                </span>
+                <span className="block text-[7pt] text-slate-500">
+                  (Tim Distribusi / Perbaikan)
+                </span>
+                <div className="my-7 border-b border-dashed border-slate-400" />
+                <span className="block text-[8pt] font-semibold text-slate-900">
+                  {detail.ditugaskanKe?.name ?? "(..........................................)"}
+                </span>
+              </div>
+
+              {/* Kolom Supervisor */}
+              <div className="rounded-xs border border-slate-300 p-2 bg-slate-50/40">
+                <span className="block text-[7.5pt] font-bold uppercase text-slate-700">
+                  Supervisor Operasional
+                </span>
+                <span className="block text-[7pt] text-slate-500">
+                  (Mengetahui / Menyetujui)
+                </span>
+                <div className="my-7 border-b border-dashed border-slate-400" />
+                <span className="block text-[8pt] font-semibold text-slate-900">
+                  (..........................................)
+                </span>
+              </div>
+            </div>
+
+            {/* Catatan Hukum Footer */}
+            <p className="mt-3 border-t border-slate-200 pt-1.5 text-[6.5pt] text-slate-500 italic text-center">
+              Dokumen resmi Sistem Informasi Manajemen Pengaduan Air Perumda Air
+              Minum Tirtawening. Segala catatan yang ditandai [Internal] adalah
+              arsip dinas dan tidak dibagikan kepada publik.
+            </p>
+          </div>
         </div>
       </div>
     </>,

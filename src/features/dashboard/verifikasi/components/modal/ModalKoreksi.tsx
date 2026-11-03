@@ -279,7 +279,7 @@ export function ModalKoreksi({
         standAwalRevisi: kelainan === "REV_PENCATAT" ? awalNum : null,
         standAkhirRevisi:
           kelainan === "MB"
-            ? standAngkatNum
+            ? standMeterBaruNum
             : akhirNum === data.standAkhir
               ? null
               : akhirNum,

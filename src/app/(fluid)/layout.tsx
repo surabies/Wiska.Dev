@@ -37,7 +37,9 @@ export default async function FluidLayout({
       />
 
       <TooltipProvider delayDuration={100}>
-        <DashboardShell tanpaSidebar>{children}</DashboardShell>
+        <DashboardShell tanpaSidebar tanpaCard>
+          {children}
+        </DashboardShell>
       </TooltipProvider>
     </>
   )

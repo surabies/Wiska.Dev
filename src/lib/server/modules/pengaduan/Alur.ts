@@ -19,60 +19,14 @@
 import type { Prisma, StatusPengaduan, AksiPengaduan } from "@db"
 import { BadRequestError, NotFoundError } from "../../lib/Galat"
 import { hitungTargetSla } from "@/lib/domain/SLA"
+import {
+  TRANSISI,
+  TRANSISI_PETUGAS,
+  bolehTransisi,
+  STATUS_BUTUH_PETUGAS,
+} from "@/lib/domain/AlurPengaduan"
 
-/// Transisi yang sah. Yang TIDAK terdaftar di sini ditolak — daftar putih,
-/// bukan daftar hitam: keadaan baru yang ditambahkan kelak otomatis tertutup
-/// sampai seseorang sadar memikirkan dari mana ia boleh dicapai.
-export const TRANSISI: Record<StatusPengaduan, readonly StatusPengaduan[]> = {
-  // TERVERIFIKASI = triase operator (STAFF boleh, lihat aturan role di
-  // router /status); lompatan langsung BARU -> DITUGASKAN tetap sah supaya
-  // supervisor tidak dipaksa menunggu operator untuk kasus yang sudah jelas.
-  BARU: ["TERVERIFIKASI", "DITUGASKAN", "DIPROSES", "DITOLAK"],
-  TERVERIFIKASI: ["DITUGASKAN", "MENUNGGU_PELANGGAN", "DITOLAK"],
-  // DITUGASKAN -> DITUGASKAN sah: penugasan ulang ke petugas lain.
-  DITUGASKAN: [
-    "DITUGASKAN",
-    "MENUJU_LOKASI",
-    "DIPROSES",
-    "MENUNGGU_PELANGGAN",
-    "DITOLAK",
-  ],
-  // Kembali ke DITUGASKAN sah: petugas batal berangkat / dialihkan.
-  MENUJU_LOKASI: ["DIPROSES", "MENUNGGU_PELANGGAN", "DITUGASKAN"],
-  DIPROSES: ["DITUGASKAN", "MENUNGGU_PELANGGAN", "SELESAI", "DITOLAK"],
-  MENUNGGU_PELANGGAN: ["DIPROSES", "DITUGASKAN", "SELESAI", "DITOLAK"],
-  // SELESAI belum final — pelapor masih boleh mengonfirmasi (DITUTUP) atau
-  // membantah (DIBUKA_KEMBALI). Itu inti pembedaan SELESAI/DITUTUP.
-  SELESAI: ["DITUTUP", "DIBUKA_KEMBALI"],
-  // Aduan yang ditolak karena salah paham/kurang data masih bisa dihidupkan
-  // kembali — kalau tidak, satu penolakan keliru memaksa warga membuat tiket
-  // baru dan riwayatnya terputus.
-  DITOLAK: ["DIBUKA_KEMBALI"],
-  DIBUKA_KEMBALI: ["DITUGASKAN", "DIPROSES", "DITOLAK"],
-  // Terminal, sengaja buntu. Tiket yang sudah dikonfirmasi warga tidak boleh
-  // "hidup lagi" diam-diam; keluhan lanjutan adalah tiket baru.
-  DITUTUP: [],
-}
-
-/// Transisi yang boleh dilakukan role STAFF pada tiket yang DITUGASKAN
-/// KEPADANYA (petugas lapangan mengerjakan tiketnya sendiri). Di luar ini,
-/// STAFF hanya boleh memverifikasi (BARU -> TERVERIFIKASI, peran operator).
-/// SUPERVISOR ke atas tidak dibatasi daftar ini. Ditegakkan di router
-/// /status — didefinisikan di sini supaya satu file memuat seluruh aturan
-/// alur.
-export const TRANSISI_PETUGAS: readonly StatusPengaduan[] = [
-  "MENUJU_LOKASI",
-  "DIPROSES",
-  "MENUNGGU_PELANGGAN",
-  "SELESAI",
-]
-
-export function bolehTransisi(
-  dari: StatusPengaduan,
-  ke: StatusPengaduan
-): boolean {
-  return TRANSISI[dari].includes(ke)
-}
+export { TRANSISI, TRANSISI_PETUGAS, bolehTransisi }
 
 /// Siapa yang melakukan aksi. `id` null = pelapor lewat halaman publik (tidak
 /// punya akun) atau sistem — `nama` tetap wajib supaya linimasa selalu bisa
@@ -134,6 +88,7 @@ export async function transisiPengaduan(
       jedaTotalMenit: true,
       targetSelesaiAt: true,
       jumlahDibukaKembali: true,
+      ditugaskanKeId: true,
     },
   })
   if (!kini) throw new NotFoundError("Pengaduan")
@@ -147,6 +102,17 @@ export async function transisiPengaduan(
         (TRANSISI[dari].length
           ? ` Transisi yang tersedia: ${TRANSISI[dari].join(", ")}.`
           : " Status ini sudah final.")
+    )
+  }
+
+  // Status operasional lapangan wajib memiliki petugas penanggung jawab
+  if (
+    STATUS_BUTUH_PETUGAS.includes(ke) &&
+    !kini.ditugaskanKeId &&
+    !opsi.ditugaskanKeId
+  ) {
+    throw new BadRequestError(
+      `Tiket belum ditugaskan ke petugas lapangan. Status ${ke} membutuhkan petugas penanggung jawab.`
     )
   }
 
@@ -179,8 +145,9 @@ export async function transisiPengaduan(
     // Keluar dari jeda: tenggat digeser maju sebesar lama menunggu, supaya
     // waktu yang dihabiskan menunggu jawaban warga tidak dihitung sebagai
     // keterlambatan kita.
-    const jedaMenit = Math.round(
-      (sekarang.getTime() - kini.jedaMulaiAt.getTime()) / MENIT_MS
+    const jedaMenit = Math.max(
+      0,
+      Math.round((sekarang.getTime() - kini.jedaMulaiAt.getTime()) / MENIT_MS)
     )
     data.jedaMulaiAt = null
     data.jedaTotalMenit = kini.jedaTotalMenit + jedaMenit

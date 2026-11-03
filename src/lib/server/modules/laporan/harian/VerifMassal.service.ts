@@ -300,7 +300,10 @@ export async function verifikasiMassal(opsi: Opsi): Promise<HasilVerifMassal> {
 
       const kondisiEfektif = l.kondisiRevisi ?? l.kondisi
       const standAwal = l.standAwalRevisi ?? l.standAwal
-      const standAkhir = l.standAkhirRevisi ?? l.standAkhir
+      const standAkhir =
+        kondisiEfektif === "MB" && l.standMeterBaru != null
+          ? l.standMeterBaru
+          : (l.standAkhirRevisi ?? l.standAkhir)
       let pemakaianRiil: number
       if (kondisiEfektif === "MB") {
         if (l.standAngkatLama == null || l.standMeterBaru == null) {

@@ -257,9 +257,9 @@ export function VerifikasiMandiri({
   return (
     // TATA LETAK KEMBAR verifikasi-lapangan: panel detail di kiri terbuka di
     // ukuran paling kecil (defaultSize = minSize) supaya tabel langsung mendapat
-    // lebar maksimal. Pemisah bisa ditarik untuk melebarkan.
+    // lebar maksimal. Mengisi ruang layar penuh secara fluid tanpa container/breadcrumb.
     <>
-      <div className="h-[calc(100dvh-var(--navbar-h,3.5rem)-6.5rem)] min-h-96">
+      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col p-3">
         <ResizablePanelGroup
           orientation="horizontal"
           className="h-full min-h-0 items-stretch"
@@ -309,7 +309,7 @@ export function VerifikasiMandiri({
                 </p>
               )}
 
-              <div className="min-h-0 min-w-0 flex-1">
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
                 <PanelTabelMandiri
                   periodes={stats?.periodes ?? []}
                   periode={periode}

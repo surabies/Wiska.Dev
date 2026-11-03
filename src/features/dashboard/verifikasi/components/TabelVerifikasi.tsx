@@ -46,6 +46,17 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { ToggleGroupItem } from "@/components/ui/toggle-group"
+import { cn } from "@/lib/Utilitas"
+import {
+  TEMA_GRID_WADAH,
+  TEMA_GRID_TABEL,
+  TEMA_GRID_HEADER_ROW,
+  TEMA_GRID_TH,
+  TEMA_GRID_TH_BEKU,
+  TEMA_TOGGLE_ITEM,
+  tentukanLatarBaris,
+  tentukanLatarSelBeku,
+} from "../lib/TemaGridVerifikasi"
 import { LABEL_KONDISI_CATAT } from "../../lib/LabelPencatatan"
 import {
   GAYA_TAHAP,
@@ -94,70 +105,219 @@ function Lencana({ kelas, anak }: { kelas: string; anak: React.ReactNode }) {
   )
 }
 
-const TEKS_CHIP: Record<Tahap, string> = {
-  MENUNGGU: "—",
-  V1: "V1",
-  V2: "V2",
-  TERVERIFIKASI: "M",
-  V3: "V3",
-  DITOLAK: "Cek",
-}
+function ProgresBarRingBerjenjang({
+  row,
+  tahap,
+}: {
+  row: BarisVerifikasi
+  tahap: Tahap
+}) {
+  const isDitolak = tahap === "DITOLAK"
+  const v1Selesai = Boolean(row.verif1At)
+  const v2Selesai = Boolean(row.verif2At)
+  const v3Selesai = Boolean(row.verif3At || row.isVerified)
 
-function ChipRing({ tahap }: { tahap: Tahap }) {
-  const gaya = GAYA_TAHAP[tahap]
-  return (
-    <span
-      className={`inline-flex h-6 items-center gap-1.5 rounded-md px-1.5 text-[11px] font-semibold whitespace-nowrap ${gaya.lencana}`}
-      aria-label={`Tahap ${gaya.label}`}
-    >
-      <span className={`size-2 rounded-full ${gaya.titik}`} aria-hidden />
-      {tahap === "DITOLAK" && (
-        <HugeiconsIcon
-          icon={Alert02Icon}
-          strokeWidth={2}
-          className="size-3"
-          aria-hidden
-        />
-      )}
-      {TEKS_CHIP[tahap]}
-    </span>
-  )
-}
+  if (isDitolak) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="inline-flex flex-row items-center justify-center gap-1 cursor-help py-1">
+            <span className="h-4 w-1 rounded-xs bg-rose-500 shadow-xs" />
+            <span className="h-4 w-1 rounded-xs bg-rose-500 shadow-xs" />
+            <span className="h-4 w-1 rounded-xs bg-rose-500 shadow-xs" />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="text-xs">
+          <p className="font-semibold text-rose-500">Perlu Review / Cek Ulang</p>
+        </TooltipContent>
+      </Tooltip>
+    )
+  }
 
-const IKON_TUNGGAL = {
-  MENUNGGU: Clock01Icon,
-  V1: Clock01Icon,
-  V2: Clock01Icon,
-  TERVERIFIKASI: CheckmarkCircle02Icon,
-  V3: CheckmarkCircle02Icon,
-  DITOLAK: CancelCircleIcon,
-} as const
-const LABEL_TUNGGAL: Record<Tahap, string> = {
-  MENUNGGU: "Menunggu verifikasi",
-  V1: "Menunggu verifikasi",
-  V2: "Menunggu verifikasi",
-  TERVERIFIKASI: "Laporan Mandiri terverifikasi; belum menjadi pembacaan resmi",
-  V3: "Sudah terverifikasi",
-  DITOLAK: "Ditolak / cek ulang",
-}
-
-function IkonRingTunggal({ tahap }: { tahap: Tahap }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span
-          className={`inline-grid size-6 place-items-center rounded-md ${GAYA_TAHAP[tahap].lencana}`}
-          aria-label={LABEL_TUNGGAL[tahap]}
-        >
-          <HugeiconsIcon
-            icon={IKON_TUNGGAL[tahap]}
-            strokeWidth={2}
-            className="size-3.5"
-            aria-hidden
+        <div className="inline-flex flex-row items-center justify-center gap-1 cursor-help py-1">
+          <span
+            className={cn(
+              "h-4 w-1 rounded-xs transition-colors",
+              v1Selesai
+                ? "bg-amber-500 shadow-xs"
+                : "bg-muted-foreground/25 dark:bg-muted"
+            )}
           />
-        </span>
+          <span
+            className={cn(
+              "h-4 w-1 rounded-xs transition-colors",
+              v2Selesai
+                ? "bg-blue-500 shadow-xs"
+                : "bg-muted-foreground/25 dark:bg-muted"
+            )}
+          />
+          <span
+            className={cn(
+              "h-4 w-1 rounded-xs transition-colors",
+              v3Selesai
+                ? "bg-emerald-500 shadow-xs"
+                : "bg-muted-foreground/25 dark:bg-muted"
+            )}
+          />
+        </div>
       </TooltipTrigger>
-      <TooltipContent>{LABEL_TUNGGAL[tahap]}</TooltipContent>
+      <TooltipContent side="top" className="text-xs space-y-1">
+        <div className="font-semibold text-foreground border-b border-border/60 pb-1">
+          Progres Verifikasi Petugas
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span
+            className={cn(
+              "size-2 rounded-full",
+              v1Selesai ? "bg-amber-500" : "bg-muted-foreground/30"
+            )}
+          />
+          <span>
+            V1 (Supervisor):{" "}
+            <strong className="font-medium">
+              {row.verif1By?.name
+                ? `Tervalidasi (${row.verif1By.name})`
+                : v1Selesai
+                  ? "Tervalidasi"
+                  : "Belum"}
+            </strong>
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span
+            className={cn(
+              "size-2 rounded-full",
+              v2Selesai ? "bg-blue-500" : "bg-muted-foreground/30"
+            )}
+          />
+          <span>
+            V2 (Manager):{" "}
+            <strong className="font-medium">
+              {row.verif2By?.name
+                ? `Tervalidasi (${row.verif2By.name})`
+                : v2Selesai
+                  ? "Tervalidasi"
+                  : "Belum"}
+            </strong>
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span
+            className={cn(
+              "size-2 rounded-full",
+              v3Selesai ? "bg-emerald-500" : "bg-muted-foreground/30"
+            )}
+          />
+          <span>
+            V3 (Senior Manager):{" "}
+            <strong className="font-medium">
+              {row.verif3By?.name
+                ? `Disetujui (${row.verif3By.name})`
+                : row.verifiedBy?.name
+                  ? `Disetujui (${row.verifiedBy.name})`
+                  : v3Selesai
+                    ? "Disetujui"
+                    : "Belum"}
+            </strong>
+          </span>
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+function ProgresBarRingMandiri({
+  row,
+  tahap,
+}: {
+  row: BarisVerifikasi
+  tahap: Tahap
+}) {
+  const isDitolak = tahap === "DITOLAK"
+  const terverifikasiStaf = Boolean(
+    row.laporanMandiriTerverifikasi ||
+      row.isVerified ||
+      row.status === "DIVERIFIKASI" ||
+      row.status === "DIGUNAKAN"
+  )
+  const resmi = Boolean(
+    row.verif3At || row.status === "DIGUNAKAN" || row.pembacaan != null
+  )
+
+  if (isDitolak) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="inline-flex flex-row items-center justify-center gap-1 cursor-help py-1">
+            <span className="h-4 w-1 rounded-xs bg-rose-500 shadow-xs" />
+            <span className="h-4 w-1 rounded-xs bg-rose-500 shadow-xs" />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="text-xs">
+          <p className="font-semibold text-rose-500">Perlu Review / Ditolak</p>
+        </TooltipContent>
+      </Tooltip>
+    )
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="inline-flex flex-row items-center justify-center gap-1 cursor-help py-1">
+          <span
+            className={cn(
+              "h-4 w-1 rounded-xs transition-colors",
+              terverifikasiStaf
+                ? "bg-blue-500 shadow-xs"
+                : "bg-muted-foreground/25 dark:bg-muted"
+            )}
+          />
+          <span
+            className={cn(
+              "h-4 w-1 rounded-xs transition-colors",
+              resmi
+                ? "bg-emerald-500 shadow-xs"
+                : "bg-muted-foreground/25 dark:bg-muted"
+            )}
+          />
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="text-xs space-y-1">
+        <div className="font-semibold text-foreground border-b border-border/60 pb-1">
+          Progres Verifikasi Pelanggan
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span
+            className={cn(
+              "size-2 rounded-full",
+              terverifikasiStaf ? "bg-blue-500" : "bg-muted-foreground/30"
+            )}
+          />
+          <span>
+            Verifikasi Staf:{" "}
+            <strong className="font-medium">
+              {terverifikasiStaf ? "Terverifikasi" : "Menunggu"}
+            </strong>
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span
+            className={cn(
+              "size-2 rounded-full",
+              resmi ? "bg-emerald-500" : "bg-muted-foreground/30"
+            )}
+          />
+          <span>
+            Pembacaan Resmi:{" "}
+            <strong className="font-medium">
+              {resmi ? "Digunakan untuk Tagihan" : "Belum"}
+            </strong>
+          </span>
+        </div>
+      </TooltipContent>
     </Tooltip>
   )
 }
@@ -170,7 +330,7 @@ const DEFINISI_KOLOM: {
   minWidth: number
   numeric?: boolean
 }[] = [
-  { id: "ring", label: "Ring", title: "Tahap verifikasi", minWidth: 76 },
+  { id: "ring", label: "Ring", title: "Tahap verifikasi (Progress bar)", minWidth: 76 },
   {
     id: "nomor",
     label: "No. Pel",
@@ -278,6 +438,7 @@ export function KontrolKolomVerifikasi({
             <ToggleGroupItem
               value="kolom-verifikasi"
               aria-label="Atur kolom tabel"
+              className={TEMA_TOGGLE_ITEM}
             >
               <HugeiconsIcon
                 icon={Columns3CogIcon}
@@ -419,16 +580,26 @@ function statusLabel(
     if (row.status === "DITOLAK") return "Perlu Review"
     if (row.status === "DIVERIFIKASI" || row.status === "DIGUNAKAN")
       return "Disetujui"
-    return "Pending"
+    if (tahap === "V2") return "Tervalidasi V2"
+    if (tahap === "V1") return "Tervalidasi V1"
+    return "Menunggu"
   }
   if (tahap === "V3") return "Disetujui"
+  if (tahap === "V2") return "Tervalidasi V2"
+  if (tahap === "V1") return "Tervalidasi V1"
   if (tahap === "DITOLAK") return "Perlu Review"
-  return "Pending"
+  return "Menunggu"
 }
 
 function statusKelas(label: string): string {
   if (label === "Disetujui") {
     return "bg-green-500/10 text-green-700 ring-1 ring-inset ring-green-500/25 dark:text-green-400"
+  }
+  if (label === "Tervalidasi V2") {
+    return "bg-blue-500/10 text-blue-700 ring-1 ring-inset ring-blue-500/25 dark:text-blue-400"
+  }
+  if (label === "Tervalidasi V1") {
+    return "bg-amber-500/10 text-amber-700 ring-1 ring-inset ring-amber-500/25 dark:text-amber-400"
   }
   if (label === "Terverifikasi") {
     return "bg-blue-500/10 text-blue-700 ring-1 ring-inset ring-blue-500/25 dark:text-blue-400"
@@ -684,18 +855,15 @@ export function TabelVerifikasi({
     el?.scrollIntoView({ block: "nearest" })
   }, [idTerpilih])
 
-  const thBeku =
-    "bg-muted/95 supports-[backdrop-filter]:bg-muted/85 sticky z-30 backdrop-blur"
+  const thBeku = TEMA_GRID_TH_BEKU
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-border/70">
+    <div className={TEMA_GRID_WADAH}>
       <div
         ref={wadahRef}
         className="scrollbar-tipis relative min-h-0 min-w-0 flex-1 overflow-auto"
       >
-        <table
-          className={`tabel-verifikasi w-max min-w-full table-fixed border-separate border-spacing-0 text-sm ${pad}`}
-        >
+        <table className={`${TEMA_GRID_TABEL} ${pad}`}>
           <colgroup>
             <col style={{ width: L_CEKLIS }} />
             {kolomTampil.map((id) => (
@@ -712,7 +880,7 @@ export function TabelVerifikasi({
           </colgroup>
           <thead className="sticky top-0 z-20">
             <tr
-              className={`bg-muted/95 text-muted-foreground supports-backdrop-filter:bg-muted/85 [&>th]:border-r [&>th]:border-b [&>th]:border-border [&>th]:px-3 [&>th]:text-left [&>th]:text-xs [&>th]:leading-4 [&>th]:font-medium [&>th]:tracking-wide [&>th]:whitespace-nowrap [&>th]:backdrop-blur [&>th:last-child]:border-r-0 ${padHeader}`}
+              className={`${TEMA_GRID_HEADER_ROW} [&>th]:border-r [&>th]:border-b [&>th]:border-border [&>th]:px-3 [&>th]:text-left [&>th]:text-xs [&>th]:leading-4 [&>th]:font-semibold [&>th]:tracking-wide [&>th]:whitespace-nowrap [&>th:last-child]:border-r-0 ${padHeader}`}
             >
               <th
                 className={`${thBeku} left-0`}
@@ -760,7 +928,7 @@ export function TabelVerifikasi({
                     onDragEnd={() => {
                       kolomDiseret.current = null
                     }}
-                    className="relative select-none"
+                    className={`relative select-none ${TEMA_GRID_TH} ${id === "ring" ? "text-center" : ""}`}
                     style={{
                       width:
                         lebarSementara?.kolom === id
@@ -772,7 +940,7 @@ export function TabelVerifikasi({
                   >
                     <button
                       type="button"
-                      className={`flex w-full items-center gap-1 ${kolom.numeric ? "justify-end" : "justify-start"}`}
+                      className={`flex w-full items-center gap-1 ${id === "ring" ? "justify-center" : kolom.numeric ? "justify-end" : "justify-start"}`}
                       onClick={() => ubahSort(id)}
                       title={`Urutkan ${kolom.label} menaik atau menurun`}
                     >
@@ -842,6 +1010,8 @@ export function TabelVerifikasi({
                 row.standAkhirRevisi !== row.standAkhir
               const kondisiDikoreksi =
                 row.kondisiRevisi != null && row.kondisiRevisi !== row.kondisi
+              const kondisiAktif = row.kondisiRevisi ?? row.kondisi
+              const isMB = kondisiAktif === "MB"
               const gantiMeterDikoreksi =
                 row.standAngkatLama != null || row.standMeterBaru != null
               const pemakaianDikoreksi =
@@ -854,7 +1024,10 @@ export function TabelVerifikasi({
                 kondisiDikoreksi ||
                 row.pemakaianTagihVerif != null
               const barisKoreksiAktif =
-                barisDikoreksi && !modeBelumDibaca && tahap === "MENUNGGU"
+                barisDikoreksi &&
+                !modeBelumDibaca &&
+                tahap !== "V3" &&
+                tahap !== "DITOLAK"
 
               const labelStatus = statusLabel(
                 row,
@@ -867,21 +1040,22 @@ export function TabelVerifikasi({
                 ? (pemakaianTagih ?? hasilPemakaian)
                 : null
 
-              // Sel beku butuh latar SENDIRI supaya isi kolom lain tidak
-              // menembus saat digulir.
-              const latarBaris =
-                aktif || dipilih ? "bg-table-accent" : gaya.baris
-              // Warna hover SATU sumber: variabel --hover-baris di globals.css
-              // (juga dipakai aturan baris koreksi). Lapis tint tahap
-              // disembunyikan saat hover supaya sel beku tidak lebih
-              // berwarna daripada sisa baris.
+              // Sel beku dan latar baris diatur terpusat oleh TemaGridVerifikasi
+              const latarBaris = tentukanLatarBaris({
+                aktif,
+                dipilih,
+                tahap,
+                koreksi: barisKoreksiAktif,
+              })
               const latarBeku = [
-                aktif || dipilih ? "bg-table-accent" : "bg-card",
+                tentukanLatarSelBeku({ aktif, dipilih }),
                 !aktif && !dipilih
                   ? "group-hover:bg-(color:--hover-baris) group-hover:after:bg-transparent"
                   : "",
                 "sticky z-10",
-                !barisKoreksiAktif ? gaya.lapis : "",
+                tahap !== "MENUNGGU" || (!barisKoreksiAktif && !aktif && !dipilih)
+                  ? gaya.lapis
+                  : "",
               ].join(" ")
 
               return (
@@ -927,13 +1101,15 @@ export function TabelVerifikasi({
                     switch (kolom) {
                       case "ring":
                         return (
-                          <td key={kolom}>
+                          <td key={kolom} className="text-center">
                             {modeRing === "tunggal" ? (
-                              <IkonRingTunggal
+                              <ProgresBarRingMandiri
+                                row={row}
                                 tahap={modeBelumDibaca ? "MENUNGGU" : tahap}
                               />
                             ) : (
-                              <ChipRing
+                              <ProgresBarRingBerjenjang
+                                row={row}
                                 tahap={modeBelumDibaca ? "MENUNGGU" : tahap}
                               />
                             )}
@@ -996,15 +1172,16 @@ export function TabelVerifikasi({
                                   warna: "text-amber-600 dark:text-amber-400",
                                 }
                               : null
+                        const judulTooltip = isMB
+                          ? `Meter Baru (MB): Stand meter baru ${angka(row.standMeterBaru ?? standAkhir)}${row.standAngkatLama != null ? `, stand angkat ${angka(row.standAngkatLama)}` : ""}.`
+                          : standAkhirDikoreksi
+                            ? `Dikoreksi verifikator; stand catat awal ${angka(row.standAkhir)}.`
+                            : undefined
                         return (
                           <td
                             key={kolom}
                             className="relative text-right tabular-nums"
-                            title={
-                              standAkhirDikoreksi
-                                ? `Dikoreksi verifikator; stand catat awal ${angka(row.standAkhir)}.`
-                                : undefined
-                            }
+                            title={judulTooltip}
                           >
                             {sumberInput && (
                               <Tooltip>
@@ -1025,6 +1202,43 @@ export function TabelVerifikasi({
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   {sumberInput.label}
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {isMB && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span
+                                    className="absolute top-0 left-0 size-2.5 cursor-help"
+                                    aria-label="Meter Baru"
+                                    role="img"
+                                  >
+                                    <svg
+                                      className="size-full text-blue-600 dark:text-blue-400"
+                                      viewBox="0 0 10 10"
+                                      fill="currentColor"
+                                      aria-hidden
+                                    >
+                                      <polygon points="0,0 10,0 0,10" />
+                                    </svg>
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-left text-xs">
+                                  <p className="font-semibold text-blue-500">Kondisi Meter Baru (MB)</p>
+                                  <p>
+                                    Stand Meter Baru:{" "}
+                                    <span className="font-mono font-medium">
+                                      {angka(row.standMeterBaru ?? standAkhir)}
+                                    </span>
+                                  </p>
+                                  {row.standAngkatLama != null && (
+                                    <p>
+                                      Stand Angkat Lama:{" "}
+                                      <span className="font-mono font-medium">
+                                        {angka(row.standAngkatLama)}
+                                      </span>
+                                    </p>
+                                  )}
                                 </TooltipContent>
                               </Tooltip>
                             )}

@@ -13,11 +13,14 @@ type DashboardShellProps = {
   children: ReactNode
   /** Halaman fluid (verifikasi, peta): tanpa sidebar, card selebar layar. */
   tanpaSidebar?: boolean
+  /** Hilangkan kotak pembungkus card putih; konten langsung menyatu dengan warna dasar layout (bg-muted). */
+  tanpaCard?: boolean
 }
 
 export function DashboardShell({
   children,
   tanpaSidebar = false,
+  tanpaCard = false,
 }: DashboardShellProps) {
   return (
     <div
@@ -58,14 +61,20 @@ export function DashboardShell({
           di mobile card selebar layar. */}
       <div
         className={cn(
-          "flex h-full min-h-0 flex-col lg:pr-2 lg:pb-2",
-          tanpaSidebar ? "lg:pl-2" : "lg:pl-(--sidebar-w)"
+          "flex h-full min-h-0 flex-col",
+          !tanpaCard && "lg:pr-2 lg:pb-2",
+          tanpaSidebar ? (!tanpaCard ? "lg:pl-2" : "") : "lg:pl-(--sidebar-w)"
         )}
       >
         <main
           id={MAIN_CONTENT_ID}
           tabIndex={-1}
-          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-background focus:outline-none lg:rounded-xl lg:border lg:border-t-0"
+          className={cn(
+            "flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto focus:outline-none",
+            tanpaCard
+              ? "bg-transparent"
+              : "bg-background lg:rounded-xl lg:border lg:border-t-0"
+          )}
         >
           {children}
         </main>

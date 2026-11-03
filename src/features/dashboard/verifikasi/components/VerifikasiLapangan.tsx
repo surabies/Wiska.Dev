@@ -585,11 +585,10 @@ export function VerifikasiLapangan({ role }: { role: string }) {
 
   return (
     <>
-      {/* TATA LETAK: panel detail KIRI (terbuka di ukuran paling kecil —
-          defaultSize = minSize), tabel KANAN yang butuh lebar. Tanpa gap dan
-          tanpa border luar; satu-satunya garis di antara keduanya adalah
-          pemisah yang bisa ditarik. */}
-      <div className="h-[calc(100dvh-var(--navbar-h,3.5rem)-6.5rem)] min-h-96">
+      {/* TATA LETAK FULL FLUID: panel detail KIRI (terbuka di ukuran paling kecil —
+          defaultSize = minSize), tabel KANAN yang butuh lebar. Mengisi ruang layar penuh
+          secara fluid tanpa container/breadcrumb. */}
+      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col p-3">
         <ResizablePanelGroup
           orientation="horizontal"
           className="h-full min-h-0 items-stretch"
@@ -643,7 +642,7 @@ export function VerifikasiLapangan({ role }: { role: string }) {
                 terbuka={ringkasanTerbuka}
               />
 
-              <div className="min-h-0 min-w-0 flex-1">
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
                 <PanelTabel
                   periodes={stats?.periodes ?? []}
                   pencatats={pencatats}

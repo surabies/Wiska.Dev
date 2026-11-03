@@ -24,12 +24,17 @@
 // Dua hal sengaja diserahkan ke server, JANGAN dipindahkan ke sini:
 //  1. `transisiTersedia` — matriks TRANSISI server, sudah disaring per role.
 //  2. `sla` — perhitungan terlambat/sisa waktu datang jadi dari server.
+import * as React from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, TriangleAlert } from "@/components/ui/hugeicons-compat"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { PanelKartu } from "@/features/dashboard/pengaduan/components/bersama/PanelKartu"
-import { LinimasaStaf } from "@/features/dashboard/pengaduan/components/LinimasaStaf"
+import {
+  LinimasaStaf,
+  PengalihModeRiwayat,
+  type ModeTampilanRiwayat,
+} from "@/features/dashboard/pengaduan/components/LinimasaStaf"
 import { LembarCetak } from "./cetak/LembarCetak"
 import { useCetak } from "../../hooks/UseCetak"
 import { InfoPerkara } from "./InfoPerkara"
@@ -52,6 +57,8 @@ export function DetailTiket({ pengaduanId }: { pengaduanId: string }) {
   const { detail, petugas, memuat, galat, mengirim, jalankan } =
     useDetailTiket(pengaduanId)
   const { mencetak, tanggalCetak, mulai: cetak } = useCetak()
+  const [modeRiwayat, setModeRiwayat] =
+    React.useState<ModeTampilanRiwayat>("CHAT")
 
   if (memuat && !detail) {
     return (
@@ -94,8 +101,20 @@ export function DetailTiket({ pengaduanId }: { pengaduanId: string }) {
           <div className="flex min-w-0 flex-col gap-4">
             <InfoPerkara detail={detail} />
             <MediaBukti detail={detail} />
-            <PanelKartu judul="Riwayat tindak lanjut">
-              <LinimasaStaf riwayat={detail.riwayat} />
+            <PanelKartu
+              judul="Riwayat tindak lanjut"
+              aksi={
+                <PengalihModeRiwayat
+                  mode={modeRiwayat}
+                  onGantiMode={setModeRiwayat}
+                />
+              }
+            >
+              <LinimasaStaf
+                riwayat={detail.riwayat}
+                modeTampilan={modeRiwayat}
+                onGantiMode={setModeRiwayat}
+              />
             </PanelKartu>
           </div>
 

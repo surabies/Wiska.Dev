@@ -30,10 +30,18 @@ import type { SessionUser } from "../../lib/Sesi"
 import { buatNomorTiketUnik, normalisasiNomorTiket } from "./Tiket"
 import { hitungTargetSla, prioritasAwal, ringkasSla } from "@/lib/domain/SLA"
 import {
+  STATUS_TERBUKA,
+  statusTerbuka,
+  periksaUbahStatus,
+  prioritasLebihTinggi,
+  transisiLewatPetugas,
+  kewenanganTiket,
+  type KonteksPelaku,
+} from "@/lib/domain/AlurPengaduan"
+import {
   transisiPengaduan,
   catatRiwayat,
-  TRANSISI,
-  TRANSISI_PETUGAS,
+  bolehTransisi,
   type Pelaku,
 } from "./Alur"
 import {
@@ -54,14 +62,6 @@ import type {
   KirimChatPengaduanInput,
   EskalasiPengaduanInput,
 } from "./Pengaduan.schema"
-
-const STATUS_TERBUKA: StatusPengaduan[] = [
-  "BARU",
-  "DITUGASKAN",
-  "DIPROSES",
-  "MENUNGGU_PELANGGAN",
-  "DIBUKA_KEMBALI",
-]
 
 /// Pelaku linimasa dari session. Nama di-snapshot di sini (bukan cuma id)
 /// supaya linimasa tetap terbaca kalau user-nya kelak dihapus/berganti nama.
@@ -127,10 +127,13 @@ export async function getStatistikPengaduan() {
 
   return {
     perStatus: Object.fromEntries(
-      perStatus.map((r) => [r.status, r._count._all])
+      perStatus.map((r) => [r.status, (r._count as { _all?: number })?._all ?? 0])
     ),
     perPrioritasTerbuka: Object.fromEntries(
-      perPrioritas.map((r) => [r.prioritas, r._count._all])
+      perPrioritas.map((r) => [
+        r.prioritas,
+        (r._count as { _all?: number })?._all ?? 0,
+      ])
     ),
     melanggarSla,
     belumDitugaskan,
@@ -306,20 +309,16 @@ export async function getPengaduanById(id: string, requester: SessionUser) {
   })
   if (!row) throw new NotFoundError("Pengaduan")
 
-  // Transisi yang BENAR-BENAR bisa dieksekusi pemanggil ini lewat
-  // PATCH /:id/status — bukan matriks mentah. DITUTUP/DIBUKA_KEMBALI hak
-  // pelapor (selalu disaring); STAFF dibatasi aturan operator/petugas yang
-  // sama dengan handler /status.
-  let transisiTersedia = TRANSISI[row.status].filter(
-    (s) => s !== "DITUTUP" && s !== "DIBUKA_KEMBALI"
-  )
-  if (requester.role === "STAFF") {
-    transisiTersedia = transisiTersedia.filter((s) =>
-      s === "TERVERIFIKASI"
-        ? true
-        : row.ditugaskanKeId === requester.id && TRANSISI_PETUGAS.includes(s)
-    )
+  // Transisi dan kewenangan yang BENAR-BENAR sah dieksekusi pemanggil ini
+  // sesuai aturan domain AlurPengaduan.
+  const isPengelola = requester.role !== "STAFF" && requester.role !== "USER"
+  const isMilikSendiri = row.ditugaskanKeId === requester.id
+  const konteks: KonteksPelaku = {
+    pengelola: isPengelola,
+    milikSendiri: isMilikSendiri,
   }
+  const transisiTersedia = transisiLewatPetugas(row.status, konteks)
+  const kewenangan = kewenanganTiket(row.status, konteks)
 
   return {
     ...row,
@@ -328,6 +327,7 @@ export async function getPengaduanById(id: string, requester: SessionUser) {
     /// Diserahkan ke client supaya UI bisa menampilkan HANYA tombol yang
     /// sah — daripada menawarkan aksi yang pasti ditolak server.
     transisiTersedia,
+    kewenangan,
   }
 }
 
@@ -337,6 +337,23 @@ export async function createPengaduan(
 ) {
   const { koordinat, prioritas, ...body } = input
   const pelaku = pelakuDariUser(requester)
+
+  // Cegah tiket duplikat aktif untuk pelanggan dan jenis aduan yang sama
+  if (body.pelangganId) {
+    const tiketAktif = await prisma.pengaduan.findFirst({
+      where: {
+        pelangganId: body.pelangganId,
+        jenis: body.jenis,
+        status: { in: [...STATUS_TERBUKA] },
+      },
+      select: { nomorTiket: true, status: true },
+    })
+    if (tiketAktif) {
+      throw new BadRequestError(
+        `Pelanggan ini masih memiliki tiket aktif ${tiketAktif.nomorTiket} (${tiketAktif.status}) untuk jenis pengaduan ${body.jenis}. Selesaikan tiket sebelumnya terlebih dahulu.`
+      )
+    }
+  }
 
   const prioritasFinal = prioritas ?? prioritasAwal(body.jenis)
   const sekarang = new Date()
@@ -388,16 +405,31 @@ export async function tugaskanPengaduan(
   const { ditugaskanKeId, catatan } = input
   const pelaku = pelakuDariUser(requester)
 
-  // Divalidasi eksplisit (bukan diserahkan ke P2003) supaya pesannya
-  // menyebut MASALAHNYA — "petugas tidak ditemukan", bukan "foreign key
-  // tidak valid" — dan supaya tiket tidak bisa ditugaskan ke akun nonaktif.
-  const petugas = await prisma.user.findUnique({
-    where: { id: ditugaskanKeId },
-    select: { name: true, status: true },
-  })
+  // Divalidasi eksplisit supaya pesannya menyebut masalah operasional,
+  // bukan DB foreign key error, dan mencegah penugasan ke non-aktif atau role pelanggan.
+  const [petugas, tiket] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: ditugaskanKeId },
+      select: { name: true, status: true, role: true },
+    }),
+    prisma.pengaduan.findUnique({
+      where: { id },
+      select: { id: true, status: true },
+    }),
+  ])
   if (!petugas) throw new NotFoundError("Petugas")
   if (petugas.status !== "ACTIVE")
     throw new BadRequestError("Petugas tersebut tidak berstatus aktif.")
+  if (petugas.role === "USER")
+    throw new BadRequestError(
+      "Pengaduan tidak dapat ditugaskan kepada pelanggan (role USER)."
+    )
+  if (!tiket) throw new NotFoundError("Pengaduan")
+  if (!bolehTransisi(tiket.status, "DITUGASKAN")) {
+    throw new BadRequestError(
+      `Tiket berstatus ${tiket.status} tidak dapat langsung ditugaskan.`
+    )
+  }
 
   const row = await prisma.$transaction((tx) =>
     transisiPengaduan(tx, {
@@ -444,35 +476,35 @@ export async function ubahStatusPengaduan(
     fotoPenyelesaianPublicId,
   } = input
 
-  // DITUTUP sengaja TIDAK bisa dipaksakan petugas lewat sini: konfirmasi
-  // "masalah saya memang beres" adalah hak pelapor (POST
-  // /api/public/pengaduan/:nomorTiket/konfirmasi) atau sistem (auto-close).
-  // Membiarkan petugas menutup sendiri akan membuat angka kepuasan karangan.
-  if (status === "DITUTUP") {
-    throw new BadRequestError(
-      "Tiket ditutup oleh pelapor lewat halaman pelacakan, bukan oleh petugas. Tandai SELESAI — pelapor yang mengonfirmasi."
-    )
-  }
-  if (status === "DIBUKA_KEMBALI") {
-    throw new BadRequestError(
-      "DIBUKA_KEMBALI hanya bisa dipicu pelapor dari halaman pelacakan."
-    )
+  const tiket = await prisma.pengaduan.findUnique({
+    where: { id },
+    select: { id: true, status: true, ditugaskanKeId: true },
+  })
+  if (!tiket) throw new NotFoundError("Pengaduan")
+
+  const isPengelola = requester.role !== "STAFF" && requester.role !== "USER"
+  const isMilikSendiri = tiket.ditugaskanKeId === requester.id
+  const konteks: KonteksPelaku = {
+    pengelola: isPengelola,
+    milikSendiri: isMilikSendiri,
   }
 
-  if (requester.role === "STAFF") {
-    const tiket = await prisma.pengaduan.findUnique({
-      where: { id },
-      select: { ditugaskanKeId: true },
-    })
-    if (!tiket) throw new NotFoundError("Pengaduan")
-    const sebagaiOperator = status === "TERVERIFIKASI"
-    const sebagaiPetugas =
-      tiket.ditugaskanKeId === requester.id && TRANSISI_PETUGAS.includes(status)
-    if (!sebagaiOperator && !sebagaiPetugas) {
-      throw new ForbiddenError(
-        "Sebagai STAFF Anda hanya bisa memverifikasi tiket baru, atau mengubah status tiket yang ditugaskan kepada Anda."
-      )
+  const galatTransisi = periksaUbahStatus({
+    dari: tiket.status,
+    ke: status,
+    pelaku: konteks,
+    punyaPetugas: Boolean(tiket.ditugaskanKeId),
+    catatan,
+  })
+
+  if (galatTransisi) {
+    if (
+      galatTransisi.includes("Sebagai STAFF") ||
+      galatTransisi.includes("memerlukan kewenangan Supervisor")
+    ) {
+      throw new ForbiddenError(galatTransisi)
     }
+    throw new BadRequestError(galatTransisi)
   }
 
   // "Selesai" harus BISA DIBUKTIKAN: tanpa foto hasil pekerjaan + catatan,
@@ -632,17 +664,35 @@ export async function eskalasiPengaduan(
   const [pengaduan, atasan] = await Promise.all([
     prisma.pengaduan.findUnique({
       where: { id },
-      select: { id: true, status: true },
+      select: { id: true, status: true, prioritas: true, nomorTiket: true },
     }),
     prisma.user.findUnique({
       where: { id: eskalasiKeId },
-      select: { name: true, status: true },
+      select: { name: true, status: true, role: true },
     }),
   ])
   if (!pengaduan) throw new NotFoundError("Pengaduan")
+  if (!statusTerbuka(pengaduan.status)) {
+    throw new BadRequestError(
+      `Hanya tiket berstatus terbuka yang dapat dieskalasi (status saat ini: ${pengaduan.status}).`
+    )
+  }
   if (!atasan) throw new NotFoundError("Penerima eskalasi")
   if (atasan.status !== "ACTIVE")
     throw new BadRequestError("Penerima eskalasi tidak berstatus aktif.")
+  if (atasan.role === "USER")
+    throw new BadRequestError(
+      "Penerima eskalasi tidak boleh akun pelanggan (role USER)."
+    )
+
+  if (
+    prioritasBaru &&
+    !prioritasLebihTinggi(prioritasBaru, pengaduan.prioritas)
+  ) {
+    throw new BadRequestError(
+      `Eskalasi hanya boleh menaikkan prioritas (prioritas saat ini: ${pengaduan.prioritas}, diminta: ${prioritasBaru}).`
+    )
+  }
 
   const sekarang = new Date()
   const row = await prisma.$transaction(async (tx) => {

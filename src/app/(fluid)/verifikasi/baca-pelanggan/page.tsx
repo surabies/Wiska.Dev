@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import { PageContainer } from "@/components/layout/index"
 import { VerifikasiMandiri } from "@/features/dashboard/verifikasi/components/VerifikasiMandiri"
 import { auth } from "@/lib/auth/Auth"
 
@@ -20,15 +19,5 @@ export default async function VerifikasiMandiriPage() {
   const role = session?.user?.role ?? ""
   const bisaAksi = STAFF_UP.has(role)
 
-  return (
-    <PageContainer
-      className="flex min-h-0 flex-1 flex-col"
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard" },
-        { label: "Pembacaan Pelanggan" },
-      ]}
-    >
-      <VerifikasiMandiri bisaAksi={bisaAksi} role={role} />
-    </PageContainer>
-  )
+  return <VerifikasiMandiri bisaAksi={bisaAksi} role={role} />
 }

@@ -49,6 +49,10 @@ export interface BarisVerifikasi {
   verif2At?: string | null
   verif3At?: string | null
   verifiedAt?: string | null
+  verif1By?: { name: string | null } | null
+  verif2By?: { name: string | null } | null
+  verif3By?: { name: string | null } | null
+  verifiedBy?: { name: string | null } | null
   isVerified?: boolean | null
   laporanMandiriTerverifikasi?: boolean
   status?: string | null

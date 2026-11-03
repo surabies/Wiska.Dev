@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 import { auth } from "@/lib/auth/Auth"
-import { PageContainer } from "@/components/layout/index"
 import { VerifikasiLapangan } from "@/features/dashboard/verifikasi/components/VerifikasiLapangan"
 
 export const metadata: Metadata = { title: "Verifikasi Pembacaan Petugas" }
@@ -11,15 +10,5 @@ export default async function VerifikasiLapanganPage() {
   // butuh tingkatan berbeda per ring (Supervisor/Manager/Senior Manager) —
   // pemetaan grup role ada di komponen client, server tetap penjaga aslinya.
 
-  return (
-    <PageContainer
-      className="flex min-h-0 flex-1 flex-col"
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard" },
-        { label: "Daftar Pencatatan Meter" },
-      ]}
-    >
-      <VerifikasiLapangan role={session?.user?.role ?? ""} />
-    </PageContainer>
-  )
+  return <VerifikasiLapangan role={session?.user?.role ?? ""} />
 }

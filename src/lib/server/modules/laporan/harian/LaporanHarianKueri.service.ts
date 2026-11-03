@@ -22,7 +22,13 @@ export const WHERE_STATUS_VERIF: Record<
   StatusVerif,
   Prisma.LaporanHarianPetugasWhereInput
 > = {
-  MENUNGGU: { verifiedAt: null },
+  SEMUA_MENUNGGU: { isVerified: false, verifiedAt: null },
+  MENUNGGU: { verif1At: null, verifiedAt: null, isVerified: false },
+  MENUNGGU_V1: { verif1At: null, verifiedAt: null, isVerified: false },
+  V1: { verif1At: { not: null }, verif2At: null, isVerified: false },
+  MENUNGGU_V2: { verif1At: { not: null }, verif2At: null, isVerified: false },
+  V2: { verif2At: { not: null }, verif3At: null, isVerified: false },
+  MENUNGGU_V3: { verif2At: { not: null }, verif3At: null, isVerified: false },
   DIVERIFIKASI: { isVerified: true },
   DITOLAK: { isVerified: false, verifiedAt: { not: null } },
 }
@@ -182,7 +188,15 @@ export async function daftarLaporanHarian(query: ListLaporanQuery) {
   if (query.pencatatLanjutanId) {
     and.push({ pencatatId: query.pencatatLanjutanId })
   }
-  if (query.kondisiLanjutan) {
+  if (query.kondisi) {
+    and.push({
+      OR: [
+        { kondisiRevisi: query.kondisi },
+        { kondisiRevisi: null, kondisi: query.kondisi },
+      ],
+    })
+  }
+  if (query.kondisiLanjutan && query.kondisiLanjutan !== query.kondisi) {
     and.push({
       OR: [
         { kondisiRevisi: query.kondisiLanjutan },
@@ -290,7 +304,6 @@ export async function daftarLaporanHarian(query: ListLaporanQuery) {
     isVerified: query.isVerified,
     pencatatId: query.pencatatId,
     pelangganId: query.pelangganId,
-    kondisi: query.kondisi,
     jenisInput: query.jenisInput,
     // Lewat relasi pelanggan — rute bukan kolom laporan. Baris yang
     // pelanggannya belum ter-resolve (pelangganId null) memang ikut
@@ -387,7 +400,7 @@ export async function statistikLaporanHarian(query: StatsLaporanQuery) {
     await Promise.all([
       prisma.laporanHarianPetugas.count({ where }),
       prisma.laporanHarianPetugas.count({
-        where: { ...where, ...WHERE_STATUS_VERIF.MENUNGGU },
+        where: { ...where, ...WHERE_STATUS_VERIF.SEMUA_MENUNGGU },
       }),
       prisma.laporanHarianPetugas.count({
         where: { ...where, ...WHERE_STATUS_VERIF.DIVERIFIKASI },

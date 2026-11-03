@@ -39,7 +39,7 @@ describe("tentukanHasilPembacaan", () => {
     ).toEqual({ standAwal: 1091, standAkhir: 1101, pemakaian: 10 })
   })
 
-  it("calculates MB usage from the old-meter lift and new-meter reading", () => {
+  it("calculates MB usage from the old-meter lift and new-meter reading, setting new meter stand as standAkhir", () => {
     expect(
       tentukanHasilPembacaan({
         standAwal: 100,
@@ -49,10 +49,10 @@ describe("tentukanHasilPembacaan", () => {
         standAngkatLama: 110,
         standMeterBaru: 10,
       })
-    ).toEqual({ standAwal: 100, standAkhir: 110, pemakaian: 20 })
+    ).toEqual({ standAwal: 100, standAkhir: 10, pemakaian: 20 })
   })
 
-  it("does not count the old reported end stand as new-meter usage", () => {
+  it("does not count the old reported end stand as new-meter usage and uses standMeterBaru as standAkhir", () => {
     expect(
       tentukanHasilPembacaan({
         standAwal: 2106,
@@ -62,6 +62,6 @@ describe("tentukanHasilPembacaan", () => {
         standAngkatLama: 2200,
         standMeterBaru: 10,
       })
-    ).toEqual({ standAwal: 2106, standAkhir: 2200, pemakaian: 104 })
+    ).toEqual({ standAwal: 2106, standAkhir: 10, pemakaian: 104 })
   })
 })

@@ -9,7 +9,17 @@ import { paginationQuerySchema, sortQuery } from "../../../lib/Pagination"
 /// isVerified true; DITOLAK = isVerified false TAPI verifiedAt terisi
 /// (reject mengisi verifiedAt tanpa menaikkan isVerified). Filter
 /// isVerified saja tidak bisa membedakan MENUNGGU dari DITOLAK.
-export const STATUS_VERIF = ["MENUNGGU", "DIVERIFIKASI", "DITOLAK"] as const
+export const STATUS_VERIF = [
+  "SEMUA_MENUNGGU",
+  "MENUNGGU",
+  "MENUNGGU_V1",
+  "V1",
+  "MENUNGGU_V2",
+  "V2",
+  "MENUNGGU_V3",
+  "DIVERIFIKASI",
+  "DITOLAK",
+] as const
 export type StatusVerif = (typeof STATUS_VERIF)[number]
 
 export const listQuerySchema = paginationQuerySchema.extend({

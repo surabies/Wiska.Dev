@@ -110,7 +110,7 @@ export function AksiMassal({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 border border-border/70 bg-card p-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/70 bg-card p-2">
         <Badge className="tabular-nums">
           {jumlah.toLocaleString("id-ID")} baris dipilih
         </Badge>

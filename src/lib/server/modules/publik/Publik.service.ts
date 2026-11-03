@@ -11,6 +11,7 @@ import type { SessionUser } from "../../lib/Sesi"
 import { verifikasiPelanggan, samarkanAlamat } from "./Verifikasi"
 import { buatNomorTiketUnik, normalisasiNomorTiket } from "../pengaduan/Tiket"
 import { hitungTargetSla, prioritasAwal, ringkasSla } from "@/lib/domain/SLA"
+import { STATUS_TERBUKA } from "@/lib/domain/AlurPengaduan"
 import {
   transisiPengaduan,
   catatRiwayat,
@@ -234,6 +235,27 @@ export async function buatPengaduanPublik(
         nomorTiket: sudahAda.nomorTiket,
         targetSelesaiAt: sudahAda.targetSelesaiAt,
         pesan: "Pengaduan Anda sudah tercatat sebelumnya. Nomor tiketnya sama.",
+      }
+    }
+  }
+
+  // PENCEGAHAN TIKET GANDA: jika pelanggan sudah memiliki aduan aktif untuk jenis yang sama,
+  // pulangkan tiket aktif tersebut agar tidak terjadi duplikasi pengerjaan di lapangan.
+  if (nomorLangganan) {
+    const tiketAktif = await prisma.pengaduan.findFirst({
+      where: {
+        nomorLangganan,
+        jenis: body.jenis,
+        status: { in: [...STATUS_TERBUKA] },
+      },
+      select: { nomorTiket: true, targetSelesaiAt: true, status: true },
+      orderBy: { createdAt: "desc" },
+    })
+    if (tiketAktif) {
+      return {
+        nomorTiket: tiketAktif.nomorTiket,
+        targetSelesaiAt: tiketAktif.targetSelesaiAt,
+        pesan: `Pengaduan aktif untuk jenis ${body.jenis} dengan nomor langganan ini sudah tercatat (Tiket: ${tiketAktif.nomorTiket}, Status: ${tiketAktif.status}). Petugas kami sedang menindaklanjuti.`,
       }
     }
   }

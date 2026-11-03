@@ -15,6 +15,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { TEMA_TOGGLE_ITEM } from "../lib/TemaGridVerifikasi"
 
 export function KontrolTampilan({
   ringkasanTerbuka,
@@ -50,7 +51,11 @@ export function KontrolTampilan({
     >
       <Tooltip>
         <TooltipTrigger asChild>
-          <ToggleGroupItem value="ringkasan" aria-label="Kartu ringkasan">
+          <ToggleGroupItem
+            value="ringkasan"
+            aria-label="Kartu ringkasan"
+            className={TEMA_TOGGLE_ITEM}
+          >
             <HugeiconsIcon
               icon={DashboardSquare01Icon}
               strokeWidth={2}
@@ -67,7 +72,11 @@ export function KontrolTampilan({
       {onPadat && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <ToggleGroupItem value="padat" aria-label="Kerapatan baris padat">
+            <ToggleGroupItem
+              value="padat"
+              aria-label="Kerapatan baris padat"
+              className={TEMA_TOGGLE_ITEM}
+            >
               <HugeiconsIcon
                 icon={Menu01Icon}
                 strokeWidth={2}

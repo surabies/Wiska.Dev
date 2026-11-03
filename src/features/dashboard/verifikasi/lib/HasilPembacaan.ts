@@ -19,11 +19,12 @@ export function tentukanHasilPembacaan(row: DataPembacaan) {
   const standAwal = row.standAwalRevisi ?? row.standAwal ?? null
   const kondisi = row.kondisiRevisi ?? row.kondisi
   const standAkhir =
-    kondisi === "MB" && row.standAngkatLama != null
-      ? row.standAngkatLama
+    kondisi === "MB" && row.standMeterBaru != null
+      ? row.standMeterBaru
       : (row.pembacaan?.standAkhir ??
         row.standAkhirRevisi ??
         row.standAkhir ??
+        row.standAngkatLama ??
         null)
   const adaKoreksi =
     row.standAwalRevisi != null ||
@@ -36,7 +37,7 @@ export function tentukanHasilPembacaan(row: DataPembacaan) {
 
   if (row.pembacaan?.pemakaianRiil != null) {
     pemakaian = row.pembacaan.pemakaianRiil
-  } else if (adaKoreksi && standAwal != null && standAkhir != null) {
+  } else if (adaKoreksi && standAwal != null) {
     pemakaian =
       kondisi === "MB" &&
       row.standAngkatLama != null &&
@@ -46,7 +47,9 @@ export function tentukanHasilPembacaan(row: DataPembacaan) {
             standAngkatLama: row.standAngkatLama,
             standMeterBaru: row.standMeterBaru,
           })
-        : standAkhir - standAwal
+        : standAkhir != null
+          ? standAkhir - standAwal
+          : null
   }
 
   return { standAwal, standAkhir, pemakaian }

@@ -148,6 +148,8 @@ export function PanelLapangan({ id }: { id: string | null }) {
   const tahap = tahapLaporanHarian(detail)
   const nama = detail.pelanggan?.nama ?? detail.namaPelanggan ?? "Tanpa nama"
   const alamat = detail.pelanggan?.alamat ?? detail.alamatPelanggan
+  const kondisiAktif = detail.kondisiRevisi ?? detail.kondisi
+  const isMB = kondisiAktif === "MB"
   // Tiga angka yang sama di panel Petugas dan Pelanggan.
   const {
     standAwal,
@@ -164,7 +166,7 @@ export function PanelLapangan({ id }: { id: string | null }) {
           nomor={detail.nomorLangganan}
           kondisi={label(
             LABEL_KONDISI_CATAT,
-            detail.kondisiRevisi ?? detail.kondisi
+            kondisiAktif
           )}
           alamat={alamat}
         />
@@ -180,7 +182,20 @@ export function PanelLapangan({ id }: { id: string | null }) {
         <GridStand
           sel={[
             { label: "ST awal", nilai: standAwal },
-            { label: "ST akhir", nilai: stAkhir, nada: "info" },
+            ...(isMB && detail.standAngkatLama != null
+              ? [
+                  {
+                    label: "ST angkat",
+                    nilai: detail.standAngkatLama,
+                    nada: "netral" as const,
+                  },
+                ]
+              : []),
+            {
+              label: isMB ? "ST baru" : "ST akhir",
+              nilai: stAkhir,
+              nada: "info",
+            },
             { label: "Pakai", nilai: pakai, nada: "sukses" },
           ]}
         />

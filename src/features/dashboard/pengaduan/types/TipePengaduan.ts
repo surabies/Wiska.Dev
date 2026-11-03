@@ -85,6 +85,12 @@ export interface PengaduanDetail extends PengaduanBaris {
    *  (matriks TRANSISI di alur.ts), supaya UI tidak menawarkan tombol yang
    *  pasti ditolak. */
   transisiTersedia: StatusPengaduan[]
+  /** Kewenangan tindakan selain transisi status (tugaskan, eskalasi, chat). */
+  kewenangan?: {
+    bisaTugaskan: boolean
+    bisaEskalasi: boolean
+    bisaChat: boolean
+  }
 }
 
 export interface StatistikPengaduan {

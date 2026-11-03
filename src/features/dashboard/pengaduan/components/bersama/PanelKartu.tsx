@@ -10,6 +10,7 @@ export function PanelKartu({
   ikon: Ikon,
   nada = "biasa",
   className,
+  aksi,
   children,
 }: {
   judul: string
@@ -17,6 +18,7 @@ export function PanelKartu({
   /** "sukses" = ikon header berwarna --success (mis. blok penyelesaian). */
   nada?: "biasa" | "sukses"
   className?: string
+  aksi?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
@@ -27,16 +29,19 @@ export function PanelKartu({
         className
       )}
     >
-      <header className="flex items-center gap-2 border-b border-border-subtle px-4 py-3">
-        {Ikon && (
-          <Ikon
-            className={cn(
-              "size-4",
-              nada === "sukses" ? "text-success" : "text-muted-foreground"
-            )}
-          />
-        )}
-        <h3 className="text-sm font-medium">{judul}</h3>
+      <header className="flex items-center justify-between gap-2 border-b border-border-subtle px-4 py-2.5">
+        <div className="flex items-center gap-2">
+          {Ikon && (
+            <Ikon
+              className={cn(
+                "size-4",
+                nada === "sukses" ? "text-success" : "text-muted-foreground"
+              )}
+            />
+          )}
+          <h3 className="text-sm font-medium">{judul}</h3>
+        </div>
+        {aksi && <div className="flex items-center">{aksi}</div>}
       </header>
       <div className="flex flex-col gap-3 p-4">{children}</div>
     </section>

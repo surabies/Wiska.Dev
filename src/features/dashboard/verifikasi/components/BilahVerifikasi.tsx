@@ -43,6 +43,7 @@ import {
   KELAS_KONTROL,
   KELAS_KONTROL_AKTIF,
 } from "../../shared/data-grid/KelasKontrol"
+import { TEMA_TOGGLE_ITEM } from "../lib/TemaGridVerifikasi"
 import { KotakCari } from "../../shared/data-grid/toolbar/KotakCari"
 import { FilterPilihan } from "../../shared/data-grid/toolbar/PenyaringPilihan"
 import { PenyaringTanggal } from "../../shared/data-grid/toolbar/PenyaringTanggal"
@@ -387,8 +388,20 @@ export function ToolbarVerifikasi({
                     label: "Status",
                     opsi: [
                       { value: "MENUNGGU", label: "Menunggu" },
-                      { value: "DIVERIFIKASI", label: "Resmi (V3)" },
-                      { value: "DITOLAK", label: "Cek ulang" },
+                      {
+                        value: "MENUNGGU_V2",
+                        label: "Tervalidasi V1 (Antrean V2)",
+                      },
+                      {
+                        value: "MENUNGGU_V3",
+                        label: "Tervalidasi V2 (Antrean V3)",
+                      },
+                      { value: "DIVERIFIKASI", label: "Disetujui (Resmi V3)" },
+                      { value: "DITOLAK", label: "Perlu Review" },
+                      {
+                        value: "SEMUA_MENUNGGU",
+                        label: "Semua Belum Selesai (V1/V2/V3)",
+                      },
                     ],
                   }}
                   nilai={filter.statusVerif}
@@ -486,6 +499,7 @@ export function ToolbarVerifikasi({
                         value="anomali"
                         aria-label="Hanya anomali"
                         className={cn(
+                          TEMA_TOGGLE_ITEM,
                           "relative size-8 min-w-8 p-0",
                           filter.hanyaAnomali && KELAS_KONTROL_AKTIF
                         )}
