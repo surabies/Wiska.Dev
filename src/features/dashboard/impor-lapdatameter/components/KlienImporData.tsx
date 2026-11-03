@@ -16,15 +16,17 @@
 
 import * as React from "react"
 import {
-  AlertTriangle,
-  CheckCircle2,
-  FileSpreadsheet,
-  Loader2,
-  Upload,
-  X,
-  RotateCcw,
-  Ban,
-} from "@/components/ui/hugeicons-compat"
+  Alert02Icon,
+  CheckmarkCircle02Icon,
+  FileSpreadsheetIcon,
+  Upload01Icon,
+  Cancel01Icon,
+  RotateLeft01Icon,
+  UnavailableIcon,
+  Folder01Icon,
+} from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Spinner } from "@/components/ui/spinner"
 import { kirimJson, ApiError } from "@/features/dashboard/api/ApiDashboard"
 import { usePeriodeKerja } from "@/features/dashboard/hooks/UsePeriodeKerja"
 import { Button } from "@/components/ui/button"
@@ -46,7 +48,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   uraiCsv,
   uraiExcel,
@@ -371,64 +372,75 @@ export function ImporDataClient() {
     : 0
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Impor berkas sumber
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Berkas dibaca dan diperiksa di peramban dulu, lalu dikirim bertahap.
-          Aman diulang: setiap baris dikunci pada nomor langganan + periode,
-          jadi pengiriman ganda tercatat sebagai duplikat, bukan data dobel.
-        </p>
-      </div>
-
-      <Tabs
-        value={jenis}
-        onValueChange={(v) => {
-          setJenis(v as Jenis)
-          reset()
-        }}
-      >
-        <TabsList>
-          {(Object.keys(JENIS_INFO) as Jenis[]).map((j) => (
-            <TabsTrigger key={j} value={j} disabled={berjalan}>
-              {JENIS_INFO[j].judul}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileSpreadsheet className="size-5" aria-hidden />
-            {info.judul}
-            <Badge variant="outline" className="font-mono text-xs">
-              {info.berkas}
-            </Badge>
-          </CardTitle>
-          <CardDescription>{info.jelas}</CardDescription>
+    <div className="flex flex-col gap-5">
+      <Card className="border border-border/80 shadow-xs">
+        <CardHeader className="pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <HugeiconsIcon
+                icon={FileSpreadsheetIcon}
+                strokeWidth={2}
+                className="size-5 text-primary"
+                aria-hidden
+              />
+              {info.judul}
+              <Badge variant="outline" className="font-mono text-xs">
+                {info.berkas}
+              </Badge>
+            </CardTitle>
+            <div className="flex items-center gap-1.5 rounded-lg border bg-muted/40 p-1 text-xs">
+              {(Object.keys(JENIS_INFO) as Jenis[]).map((j) => (
+                <button
+                  key={j}
+                  type="button"
+                  disabled={berjalan}
+                  onClick={() => {
+                    setJenis(j)
+                    reset()
+                  }}
+                  className={`rounded-md px-2.5 py-1 font-medium transition-all ${
+                    jenis === j
+                      ? "bg-background text-foreground shadow-xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {JENIS_INFO[j].judul}
+                </button>
+              ))}
+            </div>
+          </div>
+          <CardDescription className="text-xs sm:text-sm">
+            {info.jelas}
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {/* Kontrol pilih-berkas biasa — SENGAJA BUKAN drag-and-drop.
-              Kotak drag-and-drop lama selalu tampil ukuran penuh walau
-              berkas sudah dipilih/proses sudah berjalan, buang-buang tinggi
-              layar tanpa manfaat tambahan. Ini satu baris tetap, tidak
-              pernah membengkak apa pun keadaannya. */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               variant="outline"
               disabled={berjalan}
               onClick={() => inputRef.current?.click()}
+              className="h-9 gap-2 text-xs sm:text-sm"
             >
-              <Upload className="size-4" aria-hidden />
+              <HugeiconsIcon
+                icon={Upload01Icon}
+                strokeWidth={2}
+                className="size-4"
+                aria-hidden
+              />
               {terurai ? "Ganti berkas" : "Pilih berkas CSV / Excel"}
             </Button>
             {terurai && (
-              <span className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
-                <FileSpreadsheet className="size-4 shrink-0" aria-hidden />
+              <span className="flex min-w-0 items-center gap-2 rounded-md border bg-muted/30 px-2.5 py-1 text-xs font-medium text-foreground">
+                <HugeiconsIcon
+                  icon={Folder01Icon}
+                  strokeWidth={2}
+                  className="size-3.5 shrink-0 text-muted-foreground"
+                  aria-hidden
+                />
                 <span className="truncate">{terurai.namaBerkas}</span>
+                <span className="text-[11px] text-muted-foreground">
+                  ({(terurai.ukuranByte / 1024).toFixed(1)} KB)
+                </span>
               </span>
             )}
             <input
@@ -445,7 +457,12 @@ export function ImporDataClient() {
 
           {galatUrai && (
             <Alert variant="destructive">
-              <AlertTriangle className="size-4" aria-hidden />
+              <HugeiconsIcon
+                icon={Alert02Icon}
+                strokeWidth={2}
+                className="size-4"
+                aria-hidden
+              />
               <AlertTitle>Berkas tidak dikenali</AlertTitle>
               <AlertDescription>{galatUrai}</AlertDescription>
             </Alert>
@@ -453,7 +470,7 @@ export function ImporDataClient() {
 
           {terurai && (
             <div className="flex flex-col gap-4">
-              <div className="grid gap-3 sm:grid-cols-4">
+              <div className="grid gap-2.5 sm:grid-cols-4">
                 <Ringkasan label="Berkas" nilai={terurai.namaBerkas} kecil />
                 <Ringkasan
                   label="Baris siap kirim"
@@ -477,7 +494,12 @@ export function ImporDataClient() {
                 terurai.periode.length === 1 &&
                 terurai.periode[0] !== periodeKerja && (
                   <Alert variant="destructive">
-                    <AlertTriangle className="size-4" aria-hidden />
+                    <HugeiconsIcon
+                      icon={Alert02Icon}
+                      strokeWidth={2}
+                      className="size-4"
+                      aria-hidden
+                    />
                     <AlertTitle>
                       Periode berkas berbeda dari periode kerja
                     </AlertTitle>
@@ -494,7 +516,12 @@ export function ImporDataClient() {
 
               {terurai.periode.length > 1 && (
                 <Alert>
-                  <AlertTriangle className="size-4" aria-hidden />
+                  <HugeiconsIcon
+                    icon={Alert02Icon}
+                    strokeWidth={2}
+                    className="size-4"
+                    aria-hidden
+                  />
                   <AlertTitle>Berkas memuat lebih dari satu periode</AlertTitle>
                   <AlertDescription>
                     Ditemukan periode {terurai.periode.join(", ")}. Impor tetap
@@ -506,7 +533,12 @@ export function ImporDataClient() {
 
               {terurai.ditolak.length > 0 && (
                 <Alert>
-                  <AlertTriangle className="size-4" aria-hidden />
+                  <HugeiconsIcon
+                    icon={Alert02Icon}
+                    strokeWidth={2}
+                    className="size-4"
+                    aria-hidden
+                  />
                   <AlertTitle>
                     {angka(terurai.ditolak.length)} baris tidak bisa dibaca
                   </AlertTitle>
@@ -523,15 +555,21 @@ export function ImporDataClient() {
                 </Alert>
               )}
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 pt-1">
                 <Button
                   onClick={() => void jalankan()}
                   disabled={berjalan || terurai.baris.length === 0}
+                  className="h-9 gap-2"
                 >
                   {berjalan ? (
-                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                    <Spinner className="size-4" />
                   ) : (
-                    <Upload className="size-4" aria-hidden />
+                    <HugeiconsIcon
+                      icon={Upload01Icon}
+                      strokeWidth={2}
+                      className="size-4"
+                      aria-hidden
+                    />
                   )}
                   {berjalan
                     ? "Mengirim…"
@@ -540,25 +578,48 @@ export function ImporDataClient() {
                 {berjalan && (
                   <Button
                     variant="outline"
+                    className="h-9 gap-1.5"
                     onClick={() => {
                       batalRef.current = true
                     }}
                   >
-                    <Ban className="size-4" aria-hidden /> Hentikan
+                    <HugeiconsIcon
+                      icon={UnavailableIcon}
+                      strokeWidth={2}
+                      className="size-4"
+                      aria-hidden
+                    />
+                    Hentikan
                   </Button>
                 )}
                 {!berjalan && batchGagal.length > 0 && (
                   <Button
                     variant="secondary"
+                    className="h-9 gap-1.5"
                     onClick={() => void jalankan(batchGagal)}
                   >
-                    <RotateCcw className="size-4" aria-hidden /> Ulangi{" "}
-                    {batchGagal.length} batch yang gagal
+                    <HugeiconsIcon
+                      icon={RotateLeft01Icon}
+                      strokeWidth={2}
+                      className="size-4"
+                      aria-hidden
+                    />
+                    Ulangi {batchGagal.length} batch yang gagal
                   </Button>
                 )}
                 {!berjalan && (
-                  <Button variant="ghost" onClick={reset}>
-                    <X className="size-4" aria-hidden /> Bersihkan
+                  <Button
+                    variant="ghost"
+                    className="h-9 gap-1.5"
+                    onClick={reset}
+                  >
+                    <HugeiconsIcon
+                      icon={Cancel01Icon}
+                      strokeWidth={2}
+                      className="size-4"
+                      aria-hidden
+                    />
+                    Bersihkan
                   </Button>
                 )}
               </div>
@@ -568,17 +629,22 @@ export function ImporDataClient() {
       </Card>
 
       {(berjalan || selesai) && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Card className="border border-border/80 shadow-xs">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
               {berjalan ? (
-                <Loader2 className="size-5 animate-spin" aria-hidden />
+                <Spinner className="size-4" />
               ) : (
-                <CheckCircle2 className="size-5" aria-hidden />
+                <HugeiconsIcon
+                  icon={CheckmarkCircle02Icon}
+                  strokeWidth={2}
+                  className="size-5 text-emerald-600 dark:text-emerald-400"
+                  aria-hidden
+                />
               )}
               {berjalan ? "Sedang mengirim" : "Impor selesai"}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               {angka(terkirim)} dari {angka(total)} baris •{" "}
               {formatDurasi(berlalu)}
               {berjalan && terkirim > 0 && total > terkirim
@@ -594,10 +660,7 @@ export function ImporDataClient() {
               </p>
             </div>
 
-            {/* Kartu "Dilengkapi" hanya muncul kalau memang ada — pada impor
-                pencatatan angkanya selalu nol, dan kolom kosong permanen
-                cuma menambah bacaan tanpa menambah kabar. */}
-            <div className={`grid gap-3 ${kolomRingkas}`}>
+            <div className={`grid gap-2.5 ${kolomRingkas}`}>
               <Ringkasan
                 label="Tersimpan"
                 nilai={angka(ringkas.tersimpan)}
@@ -634,16 +697,14 @@ export function ImporDataClient() {
               )}
             </div>
 
-            {/* NERACA BARIS — pengaman terakhir bahwa tidak ada baris yang
-                hilang tanpa disebut. `diproses` hanya menjumlahkan batch yang
-                DIJAWAB server; kalau sebuah batch mati di jalan, barisnya
-                tidak muncul di kolom mana pun. Perbandingan eksplisit ini
-                yang membuat kehilangan seperti itu mustahil lolos dari mata:
-                sebuah impor yang kehilangan seribu baris tidak boleh terlihat
-                sama dengan impor yang utuh. */}
             {selesai && belumTerhitung !== 0 && (
               <Alert variant="destructive">
-                <AlertTriangle className="size-4" aria-hidden />
+                <HugeiconsIcon
+                  icon={Alert02Icon}
+                  strokeWidth={2}
+                  className="size-4"
+                  aria-hidden
+                />
                 <AlertTitle>Neraca baris tidak cocok</AlertTitle>
                 <AlertDescription>
                   Berkas berisi {angka(total)} baris siap kirim, tetapi yang
@@ -662,27 +723,25 @@ export function ImporDataClient() {
 
             {galatKirim && (
               <Alert variant="destructive">
-                <AlertTriangle className="size-4" aria-hidden />
+                <HugeiconsIcon
+                  icon={Alert02Icon}
+                  strokeWidth={2}
+                  className="size-4"
+                  aria-hidden
+                />
                 <AlertTitle>Pengiriman dihentikan</AlertTitle>
                 <AlertDescription>{galatKirim}</AlertDescription>
               </Alert>
             )}
 
-            {/* Batch yang gagal disebut BERIKUT RENTANG BARISNYA di berkas —
-                "3 batch gagal" tidak bisa ditindaklanjuti, "baris 251–1.000"
-                bisa dibuka langsung di Excel.
-
-                SEBABNYA DIKUTIP, TIDAK DITEBAK. Teks lama menyatakan
-                "lazimnya batas waktu jaringan, BUKAN ISI BERKASNYA" untuk
-                setiap kegagalan apa pun — dan ketika sebabnya justru isi
-                berkas (satu baris ditolak validasi lalu menjatuhkan seluruh
-                batch), kalimat itu mengirim operator berburu ke arah yang
-                salah: mengulang, menunggu, men-deploy ulang, sementara
-                berkasnya tidak pernah berubah. Yang ditampilkan sekarang
-                pesan server apa adanya. */}
             {selesai && batchGagal.length > 0 && (
               <Alert variant="destructive">
-                <AlertTriangle className="size-4" aria-hidden />
+                <HugeiconsIcon
+                  icon={Alert02Icon}
+                  strokeWidth={2}
+                  className="size-4"
+                  aria-hidden
+                />
                 <AlertTitle>
                   {batchGagal.length} batch tidak terkirim
                 </AlertTitle>
@@ -696,7 +755,7 @@ export function ImporDataClient() {
             )}
 
             {ringkas.masalah.length > 0 && (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 pt-2">
                 <p className="text-sm font-medium">
                   Baris yang perlu ditinjau ({angka(ringkas.masalah.length)}
                   {ringkas.masalah.length >= 500
@@ -706,18 +765,18 @@ export function ImporDataClient() {
                 </p>
                 <div className="max-h-96 overflow-auto rounded-md border">
                   <Table>
-                    <TableHeader className="sticky top-0 bg-muted/50">
+                    <TableHeader className="sticky top-0 bg-muted/60">
                       <TableRow>
-                        <TableHead className="w-24">Baris</TableHead>
-                        <TableHead className="w-40">No. langganan</TableHead>
-                        <TableHead className="w-32">Status</TableHead>
+                        <TableHead className="w-20">Baris</TableHead>
+                        <TableHead className="w-36">No. langganan</TableHead>
+                        <TableHead className="w-28">Status</TableHead>
                         <TableHead>Keterangan</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {ringkas.masalah.map((m, i) => (
                         <TableRow key={`${m.baris}-${i}`}>
-                          <TableCell className="tabular-nums">
+                          <TableCell className="font-mono text-xs tabular-nums">
                             {m.baris}
                           </TableCell>
                           <TableCell className="font-mono text-xs">
@@ -728,7 +787,9 @@ export function ImporDataClient() {
                               variant={
                                 m.status === "GAGAL"
                                   ? "destructive"
-                                  : "secondary"
+                                  : m.status === "DIPERBARUI"
+                                    ? "default"
+                                    : "secondary"
                               }
                             >
                               {m.status}
@@ -769,9 +830,9 @@ function Ringkasan({
         ? "text-amber-600 dark:text-amber-400"
         : nada === "merah"
           ? "text-red-600 dark:text-red-400"
-          : ""
+          : "text-foreground"
   return (
-    <div className="rounded-lg border bg-muted/40 p-3">
+    <div className="rounded-lg border bg-card/60 p-3 shadow-2xs">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p
         className={`mt-0.5 font-semibold tabular-nums ${kecil ? "truncate text-sm" : "text-lg"} ${warna}`}

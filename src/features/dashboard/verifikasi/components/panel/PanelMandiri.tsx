@@ -18,6 +18,7 @@ import {
   ambilList,
   ApiError,
 } from "@/features/dashboard/api/ApiDashboard"
+import { LABEL_KONDISI_CATAT } from "../../../lib/LabelPencatatan"
 import type {
   LaporanMandiriDetail,
   MeterRingkas,
@@ -188,6 +189,14 @@ export function PanelMandiri({
           nama={detail.pelanggan?.nama ?? "—"}
           status={detail.status}
           nomor={detail.nomorLangganan}
+          kondisi={
+            LABEL_KONDISI_CATAT[
+              detail.kondisi ?? detail.pembacaan?.kondisi ?? "STAND_KONSUMEN"
+            ] ??
+            detail.kondisi ??
+            detail.pembacaan?.kondisi ??
+            "Stand konsumen"
+          }
           alamat={detail.pelanggan?.alamat}
         />
       </Seksi>

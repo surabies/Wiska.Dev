@@ -1,5 +1,5 @@
-import { ImporDataClient } from "./components/KlienImporData"
+import { ModuleTestView } from "./ModuleTestView"
 
-export function ImporLapdatameterView() {
-  return <ImporDataClient />
+export function ImporLapdatameterView({ role }: { role?: string }) {
+  return <ModuleTestView tabAwal="lapdatameter" role={role} />
 }

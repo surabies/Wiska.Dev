@@ -182,7 +182,14 @@ export async function daftarLaporanHarian(query: ListLaporanQuery) {
   if (query.pencatatLanjutanId) {
     and.push({ pencatatId: query.pencatatLanjutanId })
   }
-  if (query.kondisiLanjutan) and.push({ kondisi: query.kondisiLanjutan })
+  if (query.kondisiLanjutan) {
+    and.push({
+      OR: [
+        { kondisiRevisi: query.kondisiLanjutan },
+        { kondisiRevisi: null, kondisi: query.kondisiLanjutan },
+      ],
+    })
+  }
   if (query.tarifGolonganId) {
     and.push({
       pelanggan: { is: { tarifGolonganId: query.tarifGolonganId } },
@@ -199,6 +206,7 @@ export async function daftarLaporanHarian(query: ListLaporanQuery) {
       OR: [
         { standAwalRevisi: { not: null } },
         { standAkhirRevisi: { not: null } },
+        { kondisiRevisi: { not: null } },
       ],
     }
     and.push(
@@ -207,6 +215,7 @@ export async function daftarLaporanHarian(query: ListLaporanQuery) {
         : {
             standAwalRevisi: null,
             standAkhirRevisi: null,
+            kondisiRevisi: null,
           }
     )
   }

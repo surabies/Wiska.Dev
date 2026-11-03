@@ -94,6 +94,7 @@ export interface PembacaanRingkas {
   pemakaianM3: number
   pemakaianRiil?: number | null
   blokTarif: number
+  kondisi?: string | null
   fotoBukti?: string | null
   sumberLaporan?: "PETUGAS" | "KONSUMEN" | null
 }
@@ -181,6 +182,7 @@ export interface LaporanMandiriDetail {
   nomorPelapor: string
   namaPelapor: string
   status: "MENUNGGU" | "DIVERIFIKASI" | "DITOLAK" | "DIGUNAKAN"
+  kondisi?: string | null
   alasanDitolak?: string | null
   verifiedAt?: string | null
   pembacaanId?: string | null

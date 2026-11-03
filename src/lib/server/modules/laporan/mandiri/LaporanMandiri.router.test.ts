@@ -170,6 +170,8 @@ describe("PATCH /:id/verify laporan mandiri", () => {
       expect.objectContaining({
         data: expect.objectContaining({
           jenisInput: "KONSUMEN",
+          kondisi: "STAND_KONSUMEN",
+          kondisiRevisi: null,
           pencatatId: "pencatat-rute-1",
         }),
       })
@@ -228,6 +230,8 @@ describe("PATCH /:id/verify laporan mandiri", () => {
         data: expect.objectContaining({
           standAkhir: 125,
           pemakaian: 25,
+          kondisi: "STAND_KONSUMEN",
+          kondisiRevisi: null,
           verif1At: null,
           verif2At: null,
           verif3At: null,

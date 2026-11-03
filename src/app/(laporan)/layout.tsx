@@ -1,7 +1,6 @@
 import type { ReactNode } from "react"
 import { redirect } from "next/navigation"
-import { Navbar } from "@/components/layout/index"
-import { SidebarNav } from "@/components/layout/navigation/SidebarNav"
+import { DashboardShell, Navbar } from "@/components/layout/index"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { auth, signOut } from "@/lib/auth/index"
 
@@ -32,15 +31,7 @@ export default async function LaporanRootLayout({
         onKeluar={keluar}
       />
       <TooltipProvider delayDuration={100}>
-        <aside
-          aria-label="Navigasi modul"
-          className="fixed top-14 bottom-0 left-0 hidden w-60 overflow-y-auto overscroll-contain bg-muted px-3 py-6 lg:block"
-        >
-          <SidebarNav />
-        </aside>
-        <main className="fixed top-14 right-0 bottom-0 left-60 overflow-auto bg-background max-lg:inset-x-0 max-lg:top-28">
-          {children}
-        </main>
+        <DashboardShell>{children}</DashboardShell>
       </TooltipProvider>
     </>
   )

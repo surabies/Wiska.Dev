@@ -27,7 +27,11 @@
 //    gagal: impor catatannya lebih dulu lalu ulangi.
 import JSZip from "jszip"
 import { prisma } from "@db"
-import { BadRequestError, isPrismaKnownError } from "../../../lib/Galat"
+import {
+  BadRequestError,
+  ConflictError,
+  isPrismaKnownError,
+} from "../../../lib/Galat"
 import { simpanBerkas, BerkasTidakValidError } from "../../../lib/Penyimpanan"
 import type { SessionUser } from "../../../lib/Sesi"
 import {
@@ -404,7 +408,13 @@ export async function imporCatatanLaporanHarian(
         const row = await simpanLaporan(parsed.data, pencatatIdDefault)
         hasil.push({ ...identitas, status: "TERSIMPAN", id: row.id })
       } catch (err) {
-        if (isPrismaKnownError(err) && err.code === "P2002") {
+        if (err instanceof ConflictError) {
+          hasil.push({
+            ...identitas,
+            status: "DUPLIKAT",
+            pesan: err.message,
+          })
+        } else if (isPrismaKnownError(err) && err.code === "P2002") {
           hasil.push({
             ...identitas,
             status: "DUPLIKAT",

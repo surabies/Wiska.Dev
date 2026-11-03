@@ -156,6 +156,7 @@ export async function listLaporanMandiri(query: ListLaporanMandiriQuery) {
             pemakaianRiil: true,
             pemakaianM3: true,
             pemakaianLalu: true,
+            kondisi: true,
             tagihan: { select: { id: true } },
           },
         },
@@ -198,6 +199,8 @@ export async function listLaporanMandiri(query: ListLaporanMandiriQuery) {
             nomorLangganan: true,
             periode: true,
             jenisInput: true,
+            kondisi: true,
+            kondisiRevisi: true,
             verif1At: true,
             verif2At: true,
             verif3At: true,
@@ -243,11 +246,24 @@ export async function listLaporanMandiri(query: ListLaporanMandiriQuery) {
     const pembacaanPeriode = petaPembacaan.get(
       `${row.pelangganId}:${row.periode}`
     )
+    const pembacaanAktif = sudahResmiDariMandiri
+      ? (pembacaanPeriode ??
+        (row.pembacaan ? denganSumberResmi(row.pembacaan) : null))
+      : null
+    const kondisi =
+      terverifikasiMandiri &&
+      petugas?.jenisInput === JenisInputLaporanHarian.KONSUMEN
+        ? (pembacaanAktif?.kondisi ??
+          petugas.kondisiRevisi ??
+          petugas.kondisi ??
+          ("STAND_KONSUMEN" as KondisiCatat))
+        : ("STAND_KONSUMEN" as KondisiCatat)
     return {
       ...row,
       verifiedByRole: row.verifiedBy?.role ?? null,
       sudahTahapPetugas,
       sudahDitagih,
+      kondisi,
       standAwal:
         pembacaanPeriode?.standLalu ??
         standAwalSebelumnya.get(`${row.pelangganId}:${row.periode}`) ??
@@ -257,10 +273,7 @@ export async function listLaporanMandiri(query: ListLaporanMandiriQuery) {
         row.pembacaan?.pemakaianLalu,
         pemakaianPeriodeSebelumnya.get(`${row.periode}:${row.pelangganId}`)
       ),
-      pembacaan: sudahResmiDariMandiri
-        ? (pembacaanPeriode ??
-          (row.pembacaan ? denganSumberResmi(row.pembacaan) : null))
-        : null,
+      pembacaan: pembacaanAktif,
     }
   })
   return { data: dataDenganPembacaan, meta: buildMeta(total, query) }
@@ -319,6 +332,8 @@ export async function getLaporanMandiriById(id: string) {
       },
       select: {
         jenisInput: true,
+        kondisi: true,
+        kondisiRevisi: true,
         pembacaanId: true,
         verif3At: true,
         isVerified: true,
@@ -334,15 +349,24 @@ export async function getLaporanMandiriById(id: string) {
         (petugas?.pembacaanId != null ||
           petugas?.verif3At != null ||
           petugas?.isVerified)))
+  const pembacaanAktif = sudahResmiDariMandiri
+    ? denganSumberResmi(
+        pembacaan.find((item) => item.meter.pelangganId === row.pelangganId) ??
+          row.pembacaan
+      )
+    : null
+  const kondisi =
+    terverifikasiMandiri &&
+    petugas?.jenisInput === JenisInputLaporanHarian.KONSUMEN
+      ? (pembacaanAktif?.kondisi ??
+        petugas.kondisiRevisi ??
+        petugas.kondisi ??
+        ("STAND_KONSUMEN" as KondisiCatat))
+      : ("STAND_KONSUMEN" as KondisiCatat)
   return {
     ...row,
-    pembacaan: sudahResmiDariMandiri
-      ? denganSumberResmi(
-          pembacaan.find(
-            (item) => item.meter.pelangganId === row.pelangganId
-          ) ?? row.pembacaan
-        )
-      : null,
+    kondisi,
+    pembacaan: pembacaanAktif,
   }
 }
 
@@ -533,6 +557,7 @@ export async function verifikasiLaporanMandiri(
         pemakaian,
         laporanPetugas?.pemakaianLalu ?? null
       ),
+      kondisi: "STAND_KONSUMEN" as KondisiCatat,
       kategori: "OFFSITE" as const,
       jenisInput: JenisInputLaporanHarian.KONSUMEN,
       pencatatId:

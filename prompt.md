@@ -1,25 +1,21 @@
-Bertindaklah sebagai Principal Full-Stack Architect dan Senior Code Reviewer. Lakukan audit, review mendalam, dan restrukturisasi menyeluruh pada codebase project ini (Next.js, Hono Server, Prisma ORM, TypeScript).
+Bertindaklah sebagai Principal Full-Stack Architect dan Senior Code Reviewer. Lakukan audit, review mendalam, dan perbaikan pada modul Pengaduan Air (Water Complaint) di project ini (Next.js, Hono Server, Prisma ORM).
 
-Berikut adalah fokus area audit yang harus Anda lakukan:
+Berikut adalah instruksi spesifik yang harus Anda kerjakan secara mandiri:
 
-1. **Business Logic & Scenario Alignment:**
-   - Periksa apakah alur logika bisnis sudah sesuai dengan arsitektur modern full-stack.
-   - Pastikan penanganan _edge cases_, validasi data (menggunakan Zod atau sejenisnya), dan manajemen _error handling_ di sisi backend (Hono) maupun frontend (Next.js) sudah solid.
+1. Audit Logika Bisnis & SLA Pengaduan Air:
+   - Periksa alur pembuatan tiket pengaduan, status penanganan, penghitungan SLA (Service Level Agreement), hingga penyelesaiannya.
+   - Pastikan tidak ada celah logika (edge cases) yang terlewat, seperti duplikasi tiket, perubahan status yang tidak valid, atau penugasan petugas yang keliru.
 
-2. **Separation of Concerns (SoC) & Clean Architecture:**
-   - **Backend (Hono):** Pastikan pemisahan yang tegas antara _Routes_, _Controllers/Handlers_, _Services/Business Logic_, dan _Data Access Layer_ (Prisma). Hindari _fat routes_.
-   - **Frontend (Next.js):** Pastikan pemisahan yang jelas antara _Server Components_ dan _Client Components_, _UI Components_ (reusable), _State Management_, serta _API Client/Services_.
+2. Koreksi Logika Ambigu & Tidak Masuk Akal:
+   - Identifikasi kode, validasi, atau alur bisnis yang membingungkan (ambiguous), redundan, atau tidak logis di sisi frontend (Next.js) maupun backend (Hono).
+   - Langsung perbaiki dan tulis ulang bagian kode tersebut agar bersih, semantik, aman, dan mengikuti best practices arsitektur modern.
 
-3. **Semantic Code & Best Practices:**
-   - Periksa penamaan variabel, fungsi, komponen, dan endpoint agar deskriptif dan semantik.
-   - Pastikan tipe data TypeScript (types/interfaces) terdefinisi dengan baik tanpa ada penggunaan `any` yang tidak perlu.
+3. Restrukturisasi & Pembersihan Kode (Separation of Concerns):
+   - Pastikan pemisahan tugas terjaga ketat antara Routes/Handlers (Hono), Services, Prisma Database, dan UI Components/Hooks (Next.js).
+   - Rapikan penempatan file jika ada yang tidak sesuai dengan struktur folder arsitektur project.
 
-4. **Root Folder Structure & Layout Hygiene:**
-   - Evaluasi tata letak struktur folder root project saat ini.
-   - Jika ada file atau folder yang salah tempat (misalnya logic backend di folder frontend, atau konfigurasi yang berantakan), lakukan **restrukturisasi dan pemindahan file secara fisik** ke direktori yang semestinya agar bersih dan terstandarisasi.
+4. Pembuatan File Dokumentasi Skenario Nyata (.md):
+   - Buat dan simpan sebuah file dokumentasi baru berformat Markdown (beri nama file arsip yang sesuai, misal: AUDIT_PENGADUAN_AIR_SCENARIOS.md) di dalam direktori project.
+   - File tersebut wajib memuat daftar skenario pengujian nyata (real-world test scenarios) yang mencakup alur normal, penanganan kendala di lapangan, pengujian batas SLA, serta kriteria keberhasilannya.
 
-Instruksi Eksekusi untuk Anda (Claude Opus):
-
-1. **Analisis:** Scan seluruh struktur folder dan file utama project ini terlebih dahulu.
-2. **Laporkan:** Berikan ringkasan singkat mengenai celah logika, pelanggaran SoC, atau kesalahan struktur folder yang Anda temukan.
-3. **Eksekusi Perbaikan:** Langsung perbaiki kode yang salah, rapikan, dan lakukan restrukturisasi file/folder yang berantakan secara mandiri menggunakan _tools_ file editing Anda.
+Silakan mulai lakukan scan pada modul pengaduan air, eksekusi perbaikan kodenya, dan buat file dokumentasi skenarionya sekarang juga.

@@ -602,28 +602,11 @@ export const navGroups: NavGroup[] = [
     title: "Module Test",
     items: [
       {
-        title: "Import Pbpk",
-        href: "/test/import-pbpk",
-        description: "Sinkronkan kirim data mutasi.",
-        keywords: ["sync", "mutasi", "sinkronisasi"],
-      },
-      {
-        title: "Import Lapdatameter",
-        href: "/test/import-lapdatameter",
-        description: "Sinkronkan kirim data meter.",
-        keywords: ["sync", "datameter", "meter"],
-      },
-      {
-        title: "Import R-Nomor",
-        href: "/test/import-r-nomor",
-        description: "Import STI sinkronisasi.",
-        keywords: ["sync", "sti", "import"],
-      },
-      {
-        title: "Import Rekonsiliasi",
-        href: "/test/import-rekonsiliasi",
-        description: "Sinkronkan data bulan baru.",
-        keywords: ["sync", "bulan baru"],
+        title: "Module Test",
+        href: "/test",
+        description:
+          "Pusat simulasi impor lapdatameter, PBPK, R-Nomor, dan cadangan.",
+        keywords: ["test", "simulasi", "impor", "lapdatameter", "pbpk", "r-nomor"],
       },
     ],
   },

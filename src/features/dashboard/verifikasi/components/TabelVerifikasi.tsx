@@ -559,10 +559,12 @@ export function TabelVerifikasi({
           return row.persentase ?? null
         case "rute":
           return row.pelanggan?.rute?.kode ?? null
-        case "kondisi":
-          return row.kondisi
-            ? (LABEL_KONDISI_CATAT[row.kondisi] ?? row.kondisi)
+        case "kondisi": {
+          const kondisiAktif = row.kondisiRevisi ?? row.kondisi
+          return kondisiAktif
+            ? (LABEL_KONDISI_CATAT[kondisiAktif] ?? kondisiAktif)
             : null
+        }
         case "petugas":
           return row.pencatat?.namaLapangan ?? null
         case "tanggal":
@@ -838,11 +840,19 @@ export function TabelVerifikasi({
               const standAkhirDikoreksi =
                 row.standAkhirRevisi != null &&
                 row.standAkhirRevisi !== row.standAkhir
+              const kondisiDikoreksi =
+                row.kondisiRevisi != null && row.kondisiRevisi !== row.kondisi
+              const gantiMeterDikoreksi =
+                row.standAngkatLama != null || row.standMeterBaru != null
               const pemakaianDikoreksi =
                 standAwalDikoreksi ||
                 standAkhirDikoreksi ||
+                gantiMeterDikoreksi ||
                 pemakaianTagih != null
-              const barisDikoreksi = pemakaianDikoreksi
+              const barisDikoreksi =
+                pemakaianDikoreksi ||
+                kondisiDikoreksi ||
+                row.pemakaianTagihVerif != null
               const barisKoreksiAktif =
                 barisDikoreksi && !modeBelumDibaca && tahap === "MENUNGGU"
 
@@ -1104,18 +1114,25 @@ export function TabelVerifikasi({
                             {row.pelanggan?.rute?.kode ?? "—"}
                           </td>
                         )
-                      case "kondisi":
+                      case "kondisi": {
+                        const kondisiAktif = row.kondisiRevisi ?? row.kondisi
                         return (
                           <td
                             key={kolom}
                             className="max-w-36 truncate text-muted-foreground"
+                            title={
+                              kondisiDikoreksi && row.kondisi
+                                ? `Dikoreksi verifikator; ket. catat awal ${LABEL_KONDISI_CATAT[row.kondisi] ?? row.kondisi}.`
+                                : undefined
+                            }
                           >
-                            {row.kondisi
-                              ? (LABEL_KONDISI_CATAT[row.kondisi] ??
-                                row.kondisi)
+                            {kondisiAktif
+                              ? (LABEL_KONDISI_CATAT[kondisiAktif] ??
+                                kondisiAktif)
                               : "—"}
                           </td>
                         )
+                      }
                       case "petugas":
                         return (
                           <td

@@ -1,6 +1,6 @@
 "use client"
 
-// Shell umum dashboard; route laporan memakai route group tersendiri.
+// Shell umum dashboard dan laporan: membungkus card konten dengan navbar dan sidebar.
 import type { ReactNode } from "react"
 
 import { cn } from "@/lib/Utilitas"
@@ -65,7 +65,7 @@ export function DashboardShell({
         <main
           id={MAIN_CONTENT_ID}
           tabIndex={-1}
-          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-background focus:outline-none lg:rounded-xl lg:border"
+          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-background focus:outline-none lg:rounded-xl lg:border lg:border-t-0"
         >
           {children}
         </main>

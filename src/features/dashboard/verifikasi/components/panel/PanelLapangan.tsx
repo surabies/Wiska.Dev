@@ -162,7 +162,10 @@ export function PanelLapangan({ id }: { id: string | null }) {
           nama={nama}
           status={tahap}
           nomor={detail.nomorLangganan}
-          kondisi={label(LABEL_KONDISI_CATAT, detail.kondisi)}
+          kondisi={label(
+            LABEL_KONDISI_CATAT,
+            detail.kondisiRevisi ?? detail.kondisi
+          )}
           alamat={alamat}
         />
         {!detail.pelanggan && (

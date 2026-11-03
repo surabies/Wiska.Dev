@@ -1,7 +1,5 @@
-import { MenuPage } from "@/components/layout/index"
-
-export const metadata = { title: "Import Rekonsiliasi" }
+import { redirect } from "next/navigation"
 
 export default function ImportRekonsiliasiPage() {
-  return <MenuPage href="/test/import-rekonsiliasi" />
+  redirect("/test?tab=cadangan")
 }

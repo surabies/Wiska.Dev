@@ -144,17 +144,32 @@ export async function imporPencatatanBatch(
   // Preload sekali per batch — bukan per baris. Dengan 1.000 baris, dua
   // query di sini menggantikan 2.000 round-trip.
   const nomor = baris.map((b) => b.nomorLangganan)
-  const [pelanggan, pencatat] = await Promise.all([
+  const [pelanggan, pencatat, laporanAda] = await Promise.all([
     prisma.pelanggan.findMany({
       where: { nomorLangganan: { in: nomor }, deletedAt: null },
       select: { id: true, nomorLangganan: true, nama: true, alamat: true },
     }),
     prisma.pencatat.findMany({ select: { id: true, namaLapangan: true } }),
+    prisma.laporanHarianPetugas.findMany({
+      where: {
+        nomorLangganan: { in: nomor },
+        periode,
+      },
+      select: {
+        id: true,
+        nomorLangganan: true,
+        isVerified: true,
+        verifiedAt: true,
+        jenisInput: true,
+        pembacaanId: true,
+      },
+    }),
   ])
   const petaPelanggan = new Map(pelanggan.map((p) => [p.nomorLangganan, p]))
   const petaPencatat = new Map(
     pencatat.map((p) => [p.namaLapangan.toUpperCase(), p.id])
   )
+  const petaLaporanAda = new Map(laporanAda.map((l) => [l.nomorLangganan, l]))
 
   // `diproses` menghitung SEMUA baris yang dikirim, termasuk yang cacat.
   // Klien membandingkan angka ini dengan jumlah baris berkas (neraca baris
@@ -250,43 +265,103 @@ export async function imporPencatatanBatch(
       pencatatSaya?.id ??
       null
     const tanggalCatat = b.tanggalCatat ? new Date(b.tanggalCatat) : null
+    const existing = petaLaporanAda.get(b.nomorLangganan)
+
+    // Jika baris sedang berstatus DITOLAK (cek ulang / baca ulang),
+    // setoran baru petugas MENIMPA data lama sebagai hasil pelaksanaan cek ulang.
+    const sedangBacaUlang = Boolean(
+      existing && !existing.isVerified && existing.verifiedAt != null
+    )
+
+    if (existing && !sedangBacaUlang) {
+      hasil.duplikat++
+      let pesan = "Pencatatan periode ini sudah pernah masuk."
+      if (existing.jenisInput === "KONSUMEN") {
+        pesan =
+          "Periode ini sudah terisi dari hasil Verifikasi Mandiri Konsumen (batalkan/unverifikasi di halaman Mandiri terlebih dahulu jika ingin mengganti dengan data petugas)."
+      } else if (
+        existing.jenisInput === "MANUAL_SATUAN" ||
+        existing.jenisInput === "MANUAL_MASSAL"
+      ) {
+        pesan = "Periode ini sudah terisi dari Manual Add."
+      } else if (existing.isVerified || existing.pembacaanId) {
+        pesan = "Pencatatan periode ini sudah diverifikasi resmi."
+      }
+      hasil.masalah.push({
+        baris: b.baris,
+        nomorLangganan: b.nomorLangganan,
+        status: "DUPLIKAT",
+        pesan,
+      })
+      return
+    }
 
     try {
-      await prisma.laporanHarianPetugas.create({
-        data: {
-          nomorLangganan: b.nomorLangganan,
-          pelangganId: p.id,
-          namaPelanggan: p.nama,
-          alamatPelanggan: p.alamat,
-          periode: b.periode,
-          standAwal: b.standAwal,
-          standAkhir: b.standAkhir,
-          // PEMAKAIAN DIAMBIL APA ADANYA dari berkas, bukan dihitung dari
-          // selisih stand. lapdatameter & ProgresCater adalah keluaran
-          // verifikasi berjenjang Aurora — angkanya sudah matang, dan
-          // menghitung ulang berarti menaksir ulang keputusan yang sudah
-          // diambil manusia. Selisih stand tetap tersimpan terpisah
-          // (standAwal/standAkhir) supaya keduanya bisa dibandingkan.
-          //
-          // Fallback ke selisih stand HANYA bila berkasnya memang tidak
-          // membawa kolom pemakaian.
-          pemakaian: b.pemakaian ?? Math.max(0, b.standAkhir - b.standAwal),
-          ...(b.pemakaianLalu !== null && b.pemakaianLalu !== undefined
-            ? { pemakaianLalu: b.pemakaianLalu }
-            : {}),
-          // Diambil apa adanya dari berkas — ini angka yang jadi dasar
-          // penyaringan anomali di layar verifikasi.
-          ...(b.persentase !== null && b.persentase !== undefined
-            ? { persentase: b.persentase }
-            : {}),
-          ...(kondisi ? { kondisi } : {}),
-          ...(pencatatId ? { pencatatId } : {}),
-          ...(tanggalCatat && !Number.isNaN(tanggalCatat.getTime())
-            ? { tanggalCatat }
-            : {}),
-        },
-      })
-      hasil.tersimpan++
+      const dataLaporan = {
+        nomorLangganan: b.nomorLangganan,
+        pelangganId: p.id,
+        namaPelanggan: p.nama,
+        alamatPelanggan: p.alamat,
+        periode: b.periode,
+        standAwal: b.standAwal,
+        standAkhir: b.standAkhir,
+        // PEMAKAIAN DIAMBIL APA ADANYA dari berkas, bukan dihitung dari
+        // selisih stand. lapdatameter & ProgresCater adalah keluaran
+        // verifikasi berjenjang Aurora — angkanya sudah matang, dan
+        // menghitung ulang berarti menaksir ulang keputusan yang sudah
+        // diambil manusia. Selisih stand tetap tersimpan terpisah
+        // (standAwal/standAkhir) supaya keduanya bisa dibandingkan.
+        //
+        // Fallback ke selisih stand HANYA bila berkasnya memang tidak
+        // membawa kolom pemakaian.
+        pemakaian: b.pemakaian ?? Math.max(0, b.standAkhir - b.standAwal),
+        ...(b.pemakaianLalu !== null && b.pemakaianLalu !== undefined
+          ? { pemakaianLalu: b.pemakaianLalu }
+          : {}),
+        // Diambil apa adanya dari berkas — ini angka yang jadi dasar
+        // penyaringan anomali di layar verifikasi.
+        ...(b.persentase !== null && b.persentase !== undefined
+          ? { persentase: b.persentase }
+          : {}),
+        ...(kondisi ? { kondisi } : {}),
+        ...(pencatatId ? { pencatatId } : {}),
+        ...(tanggalCatat && !Number.isNaN(tanggalCatat.getTime())
+          ? { tanggalCatat }
+          : {}),
+      }
+
+      if (sedangBacaUlang && existing) {
+        await prisma.laporanHarianPetugas.update({
+          where: { id: existing.id },
+          data: {
+            ...dataLaporan,
+            isVerified: false,
+            verifiedAt: null,
+            verifiedById: null,
+            catatanVerif: null,
+            verif1At: null,
+            verif1ById: null,
+            verif2At: null,
+            verif2ById: null,
+            verif3At: null,
+            verif3ById: null,
+            standAwalRevisi: null,
+            standAkhirRevisi: null,
+            kondisiRevisi: null,
+            standAngkatLama: null,
+            standMeterBaru: null,
+            pemakaianTagihVerif: null,
+            blokTarifVerif: null,
+            meterVerifId: null,
+          },
+        })
+        hasil.tersimpan++
+      } else {
+        await prisma.laporanHarianPetugas.create({
+          data: dataLaporan,
+        })
+        hasil.tersimpan++
+      }
     } catch (err) {
       if (isPrismaKnownError(err) && err.code === "P2002") {
         hasil.duplikat++

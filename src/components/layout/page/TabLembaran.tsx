@@ -23,6 +23,7 @@ export function TabLembaran<K extends string>({
   onGanti,
   className,
   panelClassName,
+  tabListClassName,
   tinggiLayar = false,
   kerangkaHalaman = false,
   transisi = true,
@@ -37,6 +38,7 @@ export function TabLembaran<K extends string>({
   onGanti: (kunci: K) => void
   className?: string
   panelClassName?: string
+  tabListClassName?: string
   /** Isi ruang layar yang tersedia di bawah header halaman. */
   tinggiLayar?: boolean
   /** Jadikan komponen kerangka halaman tanpa bingkai panel tambahan. */
@@ -88,8 +90,9 @@ export function TabLembaran<K extends string>({
           role="tablist"
           aria-label={label}
           className={cn(
-            "relative z-10 flex shrink-0 items-end gap-1 px-4",
-            warnaTab === "muted" && "bg-muted"
+            "relative z-10 flex shrink-0 items-end gap-1 px-0 border-b border-border",
+            warnaTab === "muted" && "bg-muted",
+            tabListClassName
           )}
         >
           {tab.map((t, i) => {
@@ -106,12 +109,14 @@ export function TabLembaran<K extends string>({
                 onClick={() => pilih(t.kunci)}
                 onKeyDown={(e) => onKey(e, i)}
                 className={cn(
-                  "relative -mb-px flex items-center gap-2 rounded-t-lg border border-b-0 px-4 text-sm font-medium outline-none",
+                  "relative -mb-px flex items-center gap-2 border border-b-0 px-4 text-sm font-medium outline-none",
+                  i === 0 ? "rounded-tl-none rounded-tr-lg" : "rounded-t-lg",
+                  kerangkaHalaman && i === 0 && "border-l-0",
                   transisi && "transition-all duration-300 ease-out",
                   "focus-visible:ring-2 focus-visible:ring-ring/50",
                   dipilih
                     ? cn(
-                        "h-10 border-border text-foreground",
+                        "h-10 border-border font-medium text-foreground",
                         warnaTabAktif === "card" ? "bg-card" : "bg-background"
                       )
                     : cn(
@@ -127,8 +132,8 @@ export function TabLembaran<K extends string>({
                     icon={t.icon}
                     strokeWidth={2}
                     className={cn(
-                      "size-4",
-                      transisi && "transition-opacity duration-300",
+                      "size-4 shrink-0",
+                      transisi && "transition-all duration-300",
                       !dipilih && "opacity-70"
                     )}
                     aria-hidden
@@ -145,7 +150,7 @@ export function TabLembaran<K extends string>({
         className={cn(
           "relative min-h-0 min-w-0 flex-1 overflow-hidden bg-background",
           !kerangkaHalaman &&
-            "rounded-lg border border-border bg-card shadow-panel"
+            "rounded-lg rounded-tl-none border border-border bg-card shadow-panel"
         )}
       >
         <div

@@ -176,18 +176,86 @@ export async function simpanLaporan(
   // adalah kapan meternya dibaca, dan itu ada di dalam periodenya.
   const tanggalCatat = body.tanggalCatat ?? akhirBulanPeriode(body.periode)
 
-  const row = await prisma.laporanHarianPetugas.create({
-    data: {
-      ...body,
-      pencatatId,
-      tanggalCatat,
-      namaPelanggan,
-      alamatPelanggan,
-      pemakaian,
-      jarakMeter,
-      tanggalUpload: new Date(),
+  const existing = await prisma.laporanHarianPetugas.findUnique({
+    where: {
+      nomorLangganan_periode: {
+        nomorLangganan: body.nomorLangganan,
+        periode: body.periode,
+      },
+    },
+    select: {
+      id: true,
+      isVerified: true,
+      verifiedAt: true,
+      jenisInput: true,
+      pembacaanId: true,
     },
   })
+
+  let row
+  if (existing) {
+    const sedangBacaUlang = !existing.isVerified && existing.verifiedAt != null
+    if (sedangBacaUlang) {
+      row = await prisma.laporanHarianPetugas.update({
+        where: { id: existing.id },
+        data: {
+          ...body,
+          pencatatId,
+          tanggalCatat,
+          namaPelanggan,
+          alamatPelanggan,
+          pemakaian,
+          jarakMeter,
+          tanggalUpload: new Date(),
+          isVerified: false,
+          verifiedAt: null,
+          verifiedById: null,
+          catatanVerif: null,
+          verif1At: null,
+          verif1ById: null,
+          verif2At: null,
+          verif2ById: null,
+          verif3At: null,
+          verif3ById: null,
+          standAwalRevisi: null,
+          standAkhirRevisi: null,
+          kondisiRevisi: null,
+          standAngkatLama: null,
+          standMeterBaru: null,
+          pemakaianTagihVerif: null,
+          blokTarifVerif: null,
+          meterVerifId: null,
+        },
+      })
+    } else {
+      let pesan = "Laporan periode ini sudah pernah terunggah."
+      if (existing.jenisInput === "KONSUMEN") {
+        pesan =
+          "Periode ini sudah terisi dari hasil Verifikasi Mandiri Konsumen (batalkan/unverifikasi di halaman Mandiri terlebih dahulu jika ingin mengganti dengan data petugas)."
+      } else if (
+        existing.jenisInput === "MANUAL_SATUAN" ||
+        existing.jenisInput === "MANUAL_MASSAL"
+      ) {
+        pesan = "Periode ini sudah terisi dari Manual Add."
+      } else if (existing.isVerified || existing.pembacaanId) {
+        pesan = "Pencatatan periode ini sudah diverifikasi resmi."
+      }
+      throw new ConflictError(pesan)
+    }
+  } else {
+    row = await prisma.laporanHarianPetugas.create({
+      data: {
+        ...body,
+        pencatatId,
+        tanggalCatat,
+        namaPelanggan,
+        alamatPelanggan,
+        pemakaian,
+        jarakMeter,
+        tanggalUpload: new Date(),
+      },
+    })
+  }
 
   // Pembaruan kontak dari lapangan diterapkan SETELAH laporan tersimpan —
   // gagalnya update notelp (mis. pelanggan terhapus) tidak boleh
@@ -260,7 +328,13 @@ export async function buatBatchLaporanHarian(
       const row = await simpanLaporan(item, pencatatIdDefault)
       hasil.push({ ...identitas, status: "TERSIMPAN", id: row.id })
     } catch (err) {
-      if (isPrismaKnownError(err) && err.code === "P2002") {
+      if (err instanceof ConflictError) {
+        hasil.push({
+          ...identitas,
+          status: "DUPLIKAT",
+          pesan: err.message,
+        })
+      } else if (isPrismaKnownError(err) && err.code === "P2002") {
         hasil.push({
           ...identitas,
           status: "DUPLIKAT",
