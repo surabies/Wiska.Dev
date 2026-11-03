@@ -14,110 +14,25 @@
 // di POST /api/public/cek-tagihan. Dua rem anti-panen tambahan:
 // rate limit per-akun saat menambah + kuota maksimal tautan per akun.
 import { Hono } from "hono"
-import { z } from "zod"
-import { prisma } from "@db"
-import type { Prisma } from "@db"
 import { validate } from "../../lib/Validasi"
 import { ok, created } from "../../lib/Respons"
-import { BadRequestError, ConflictError, NotFoundError } from "../../lib/Galat"
 import { cekRateLimit } from "../../lib/PembatasLaju"
 import { getSessionUser } from "../../lib/Sesi"
-import { verifikasiPelanggan, samarkanAlamat } from "./Verifikasi"
+import { tambahSchema } from "./LanggananSaya.schema"
+import {
+  daftarLanggananSaya,
+  tambahLanggananSaya,
+  jadikanLanggananUtama,
+  hapusLanggananSaya,
+} from "./LanggananSaya.service"
 
 export const langgananSayaRouter = new Hono()
-
-/// Kuota tautan per akun — rumah kedua/kios masih masuk akal, memanen
-/// puluhan nomor lewat satu akun tidak.
-const MAKS_TAUTAN = 5
-
-const LANGGANAN_SELECT = {
-  id: true,
-  isUtama: true,
-  createdAt: true,
-  pelanggan: {
-    select: {
-      nomorLangganan: true,
-      nama: true,
-      alamat: true,
-      rt: true,
-      rw: true,
-      status: true,
-      tarifGolongan: { select: { kodeAsli: true, kategori: true } },
-    },
-  },
-} satisfies Prisma.LanggananWargaSelect
-
-type BarisLangganan = Prisma.LanggananWargaGetPayload<{
-  select: typeof LANGGANAN_SELECT
-}>
-
-/// Bentuk satu baris untuk client: biodata (alamat disamarkan) + ringkasan
-/// tunggakan agregat. `tunggakan` = map pelangganId -> {jumlah, total}.
-function bentukBaris(
-  baris: BarisLangganan,
-  tunggakan: Map<string, { jumlah: number; total: number }>,
-  pelangganId: string
-) {
-  const t = tunggakan.get(pelangganId)
-  return {
-    id: baris.id,
-    isUtama: baris.isUtama,
-    createdAt: baris.createdAt,
-    nomorLangganan: baris.pelanggan.nomorLangganan,
-    nama: baris.pelanggan.nama,
-    alamat: samarkanAlamat(baris.pelanggan.alamat),
-    rt: baris.pelanggan.rt,
-    rw: baris.pelanggan.rw,
-    status: baris.pelanggan.status,
-    tarifGolongan: baris.pelanggan.tarifGolongan,
-    jumlahTagihanBelumBayar: t?.jumlah ?? 0,
-    totalTunggakan: t?.total ?? 0,
-  }
-}
-
-async function ringkasTunggakan(pelangganIds: string[]) {
-  if (pelangganIds.length === 0)
-    return new Map<string, { jumlah: number; total: number }>()
-  const grup = await prisma.tagihan.groupBy({
-    by: ["pelangganId"],
-    where: {
-      pelangganId: { in: pelangganIds },
-      status: { in: ["BELUM_BAYAR", "JATUH_TEMPO"] },
-    },
-    _count: { _all: true },
-    _sum: { totalTagihan: true },
-  })
-  return new Map(
-    grup.map((g) => [
-      g.pelangganId,
-      { jumlah: g._count._all, total: g._sum.totalTagihan ?? 0 },
-    ])
-  )
-}
 
 /// Daftar langganan tertaut akun ini — sumber kartu biodata di beranda
 /// aplikasi publik. Utama selalu di urutan pertama.
 langgananSayaRouter.get("/", async (c) => {
   const user = getSessionUser(c)
-
-  const rows = await prisma.langgananWarga.findMany({
-    where: { userId: user.id },
-    orderBy: [{ isUtama: "desc" }, { createdAt: "asc" }],
-    select: { ...LANGGANAN_SELECT, pelangganId: true },
-  })
-
-  const tunggakan = await ringkasTunggakan(rows.map((r) => r.pelangganId))
-  return ok(
-    c,
-    rows.map((r) => bentukBaris(r, tunggakan, r.pelangganId))
-  )
-})
-
-const tambahSchema = z.object({
-  nomorLangganan: z
-    .string()
-    .trim()
-    .regex(/^\d{11}$/, "Nomor langganan harus 11 digit angka"),
+  return ok(c, await daftarLanggananSaya(user.id))
 })
 
 /// Tautkan satu nomor langganan lagi ke akun ini (pelanggan dengan lebih
@@ -132,35 +47,8 @@ langgananSayaRouter.post("/", validate("json", tambahSchema), async (c) => {
     jendelaMs: 15 * 60 * 1000,
   })
 
-  const { nomorLangganan } = c.req.valid("json")
-
-  const jumlah = await prisma.langgananWarga.count({
-    where: { userId: user.id },
-  })
-  if (jumlah >= MAKS_TAUTAN) {
-    throw new BadRequestError(
-      `Maksimal ${MAKS_TAUTAN} nomor langganan per akun. Hapus salah satu tautan sebelum menambah yang baru.`
-    )
-  }
-
-  const pelanggan = await verifikasiPelanggan(nomorLangganan)
-
-  const sudahTertaut = await prisma.langgananWarga.findUnique({
-    where: {
-      userId_pelangganId: { userId: user.id, pelangganId: pelanggan.id },
-    },
-    select: { id: true },
-  })
-  if (sudahTertaut)
-    throw new ConflictError("Nomor langganan ini sudah tertaut ke akun Anda.")
-
-  const baris = await prisma.langgananWarga.create({
-    data: { userId: user.id, pelangganId: pelanggan.id, isUtama: jumlah === 0 },
-    select: { ...LANGGANAN_SELECT, pelangganId: true },
-  })
-
-  const tunggakan = await ringkasTunggakan([baris.pelangganId])
-  return created(c, bentukBaris(baris, tunggakan, baris.pelangganId))
+  const hasil = await tambahLanggananSaya(user.id, c.req.valid("json"))
+  return created(c, hasil)
 })
 
 /// Jadikan satu tautan sebagai utama (biodata yang tampil pertama di
@@ -168,24 +56,8 @@ langgananSayaRouter.post("/", validate("json", tambahSchema), async (c) => {
 /// satu — supaya "tepat satu utama" tidak pernah sempat dilanggar.
 langgananSayaRouter.patch("/:id/utama", async (c) => {
   const user = getSessionUser(c)
-  const id = c.req.param("id")
-
-  // Terikat userId: id milik akun lain berakhir NotFound, bukan bocor.
-  const milik = await prisma.langgananWarga.findFirst({
-    where: { id, userId: user.id },
-    select: { id: true },
-  })
-  if (!milik) throw new NotFoundError("Tautan langganan")
-
-  await prisma.$transaction([
-    prisma.langgananWarga.updateMany({
-      where: { userId: user.id },
-      data: { isUtama: false },
-    }),
-    prisma.langgananWarga.update({ where: { id }, data: { isUtama: true } }),
-  ])
-
-  return ok(c, { pesan: "Langganan utama diperbarui." })
+  const hasil = await jadikanLanggananUtama(user.id, c.req.param("id"))
+  return ok(c, hasil)
 })
 
 /// Lepas tautan. Tautan terakhir TIDAK boleh dilepas (akun warga selalu
@@ -194,39 +66,6 @@ langgananSayaRouter.patch("/:id/utama", async (c) => {
 /// utama supaya beranda tidak pernah kosong.
 langgananSayaRouter.delete("/:id", async (c) => {
   const user = getSessionUser(c)
-  const id = c.req.param("id")
-
-  const milik = await prisma.langgananWarga.findFirst({
-    where: { id, userId: user.id },
-    select: { id: true, isUtama: true },
-  })
-  if (!milik) throw new NotFoundError("Tautan langganan")
-
-  const jumlah = await prisma.langgananWarga.count({
-    where: { userId: user.id },
-  })
-  if (jumlah <= 1) {
-    throw new BadRequestError(
-      "Nomor langganan terakhir tidak bisa dihapus — akun warga harus tetap tertaut ke minimal satu langganan."
-    )
-  }
-
-  await prisma.$transaction(async (tx) => {
-    await tx.langgananWarga.delete({ where: { id } })
-    if (milik.isUtama) {
-      const pengganti = await tx.langgananWarga.findFirst({
-        where: { userId: user.id },
-        orderBy: { createdAt: "asc" },
-        select: { id: true },
-      })
-      if (pengganti) {
-        await tx.langgananWarga.update({
-          where: { id: pengganti.id },
-          data: { isUtama: true },
-        })
-      }
-    }
-  })
-
-  return ok(c, { pesan: "Tautan langganan dihapus." })
+  const hasil = await hapusLanggananSaya(user.id, c.req.param("id"))
+  return ok(c, hasil)
 })

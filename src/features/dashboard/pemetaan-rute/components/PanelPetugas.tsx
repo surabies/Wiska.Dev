@@ -5,7 +5,7 @@
 // rutenya diatur di panel kanan (pola master-detail bawaan DataGrid:
 // onRowClicked + idTerpilih).
 import { DataGrid } from "../../shared/data-grid/index"
-import { KOLOM_PETUGAS_RUTE } from "./KolomPetugasRute"
+import { KOLOM_PETUGAS_RUTE } from "../lib/KolomPetugasRute"
 import type { PencatatBaris } from "../lib/ModelPemetaanRute"
 
 // Di luar komponen supaya identitasnya stabil. Hanya pencatat meter yang

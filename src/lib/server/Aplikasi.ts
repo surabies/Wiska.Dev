@@ -38,10 +38,10 @@ import { kesehatanRouter } from "./modules/kesehatan/Kesehatan.router"
 import { tagihanLainRouter } from "./modules/tagihan/TagihanLain.router"
 import { pembayaranRouter } from "./modules/pembayaran/Pembayaran.router"
 import { pengaduanRouter } from "./modules/pengaduan/Pengaduan.router"
-import { laporanHarianRouter } from "./modules/laporan/LaporanHarian.router"
+import { laporanHarianRouter } from "./modules/laporan/harian/LaporanHarian.router"
 import { drdRouter } from "./modules/laporan/Drd.router"
-import { manualAddRouter } from "./modules/laporan/ManualTambah.router"
-import { laporanMandiriRouter } from "./modules/laporan/LaporanMandiri.router"
+import { manualAddRouter } from "./modules/laporan/manual-tambah/ManualTambah.router"
+import { laporanMandiriRouter } from "./modules/laporan/mandiri/LaporanMandiri.router"
 import { anomaliRouter } from "./modules/anomali/Anomali.router"
 import { mutasiRouter } from "./modules/mutasi/Mutasi.router"
 import { pemutusanRouter } from "./modules/pemutusan/Pemutusan.router"
@@ -83,13 +83,13 @@ const corsOrigins = (process.env.CORS_ORIGINS ?? "http://localhost:8081")
 app.use(
   "/api/*",
   cors({
-    // Menggunakan callback function agar Hono mengembalikan origin yang sesuai request
-    origin: (origin) => {
-      if (!origin || corsOrigins.includes(origin)) {
-        return origin || "*"
-      }
-      return null
-    },
+    // Menggunakan callback function agar Hono mengembalikan origin yang sesuai request.
+    // Request tanpa header Origin (klien native/server-to-server) bukan request
+    // CORS, jadi tidak perlu header Access-Control-Allow-Origin sama sekali —
+    // mengembalikan "*" bersama credentials: true justru kombinasi yang ditolak
+    // browser dan menyesatkan pembaca konfigurasi ini.
+    origin: (origin) =>
+      origin && corsOrigins.includes(origin) ? origin : null,
     credentials: true,
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
@@ -114,7 +114,7 @@ app.use("/api/auth/*", authHandler())
 //
 // Aturan untuk penghuni /api/public: rate limit + verifikasi identitas
 // (nomor langganan + nama) + balas data seminimal mungkin. Lihat
-// server/modules/publik/verifikasi.ts.
+// server/modules/publik/Verifikasi.ts.
 const publik = new Hono()
 publik.route("/", publikRouter)
 publik.route("/berkas", berkasRouter)
@@ -131,24 +131,24 @@ app.route("/api/mobile/auth", authMobileRouter)
 // tersembunyi di mobile-petugas (ganti server produksi/lokal). TANPA login
 // (dipakai justru untuk mengarahkan app ke server lain), dijaga
 // PETUGAS_DEV_ACCESS_CODE + rate limit, bukan requireRole. Lihat
-// server/modules/mobile/dev-access.router.ts.
+// server/modules/mobile/DevAkses.router.ts.
 app.route("/api/mobile/dev-access", devAccessRouter)
 
 // /api/cron/* — pekerjaan latar terjadwal (mis. tutup-otomatis pengaduan).
 // TANPA sesi manusia: dijaga CRON_SECRET (bukan requireRole), jadi sengaja di
 // LUAR blanket verifyAuth() /api/v1 — pola sama seperti /api/public. Lihat
-// server/modules/cron/cron.router.ts.
+// server/modules/cron/Cron.router.ts.
 app.route("/api/cron", cronRouter)
 
 // Semua endpoint bisnis ada di bawah /api/v1/* dan WAJIB login — sistem ini
 // dashboard internal PERUMDA, bukan API publik. RBAC per-role di atas ini
-// dipasang per-route/grup lewat requireRole() (server/middleware/rbac.ts).
+// dipasang per-route/grup lewat requireRole() (server/middleware/RBAC.ts).
 // verifyAuthFleksibel = blanket verifyAuth() yang juga menerima Bearer token
 // mobile — default-nya tetap 401, jaring pengamannya utuh.
 const v1 = new Hono()
 v1.use("*", verifyAuthFleksibel())
 // Token yang bisa didekripsi belum tentu milik user yang masih ada/aktif —
-// lihat server/middleware/sesi-hidup.ts. Tanpa ini, sesi basi baru ketahuan
+// lihat server/middleware/SesiHidup.ts. Tanpa ini, sesi basi baru ketahuan
 // sebagai kegagalan foreign key saat menulis (verif1ById, verifiedById, dll).
 v1.use("*", pastikanSesiHidup())
 
@@ -197,7 +197,7 @@ v1.route("/users", userRouter)
 v1.route("/audit-log", auditRouter)
 v1.route("/dashboard", dashboardRouter)
 // Self-service akun warga (role USER) — tanpa requireRole, setiap query
-// terikat userId sesi. Lihat catatan di modules/publik/langganan-saya.router.ts.
+// terikat userId sesi. Lihat catatan di modules/publik/LanggananSaya.router.ts.
 v1.route("/langganan-saya", langgananSayaRouter)
 // Push notification: token perangkat (mobile) + inbox in-app. Inbox terikat
 // userId sesi (tanpa requireRole); pendaftaran token dibatasi STAFF_UP.

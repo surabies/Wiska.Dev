@@ -17,40 +17,26 @@
 // Service-nya menolak sama sekali bila ada tagihan yang sudah lunas.
 
 import { Hono } from "hono"
-import { z } from "zod"
-import { prisma } from "@db"
 import { validate } from "../../lib/Validasi"
 import { requireRole, ROLE_GROUPS } from "../../middleware/RBAC"
 import { getSessionUser } from "../../lib/Sesi"
 import { auditMetaFromRequest } from "../../lib/Audit"
 import { ok } from "../../lib/Respons"
-import { pratinjauClosing, tutupPeriode, bukaPeriode } from "./Closing.service"
+import { periodeParam, tutupSchema, bukaSchema } from "./Closing.schema"
+import {
+  daftarPeriodePenagihan,
+  dapatkanPeriodeKerja,
+  pratinjauClosing,
+  tutupPeriode,
+  bukaPeriode,
+} from "./Closing.service"
 import { pratinjauBulanBaru, bukaBulanBaru } from "./BulanBaru.service"
 import { eksporDrd } from "./DRDEkspor.service"
 
 export const closingRouter = new Hono()
 
-const periodeParam = z.coerce.number().int().min(190001).max(999912)
-
 closingRouter.get("/", requireRole(...ROLE_GROUPS.STAFF_UP), async (c) => {
-  const rows = await prisma.periodePenagihan.findMany({
-    orderBy: { periode: "desc" },
-    take: 36,
-    include: {
-      ditutupBy: { select: { id: true, name: true } },
-      dibukaBy: { select: { id: true, name: true } },
-    },
-  })
-  // BigInt tidak bisa di-JSON.stringify — dikonversi ke string di batas API
-  // supaya klien menerima angka utuh (bukan number yang kehilangan presisi
-  // di atas 2^53).
-  return ok(
-    c,
-    rows.map((r) => ({
-      ...r,
-      totalTagihan: r.totalTagihan?.toString() ?? null,
-    }))
-  )
+  return ok(c, await daftarPeriodePenagihan())
 })
 
 // ── PERIODE KERJA — satu sumber kebenaran untuk seluruh layar ────────────
@@ -76,32 +62,7 @@ closingRouter.get(
   "/periode-kerja",
   requireRole(...ROLE_GROUPS.STAFF_UP),
   async (c) => {
-    const [periodeDaftarCatat, terkunci] = await Promise.all([
-      prisma.daftarCatat.groupBy({
-        by: ["periode"],
-        orderBy: { periode: "desc" },
-      }),
-      prisma.periodePenagihan.findMany({
-        where: { status: "TERKUNCI" },
-        select: { periode: true },
-      }),
-    ])
-    const kunci = new Set(terkunci.map((p) => p.periode))
-    const semua = periodeDaftarCatat.map((p) => p.periode)
-    const terbuka = semua.find((p) => !kunci.has(p)) ?? null
-
-    return ok(c, {
-      /// Periode yang harus dipakai layar. null = tidak ada yang terbuka.
-      periodeKerja: terbuka,
-      /// Semua periode yang punya daftar catat, terbaru dulu — untuk pemilih
-      /// periode; yang terkunci boleh dilihat, tapi hanya baca.
-      periode: semua.map((p) => ({ periode: p, terkunci: kunci.has(p) })),
-      /// Petunjuk tindakan saat tidak ada periode terbuka.
-      saran:
-        terbuka === null && semua.length > 0
-          ? `Semua periode sudah ditutup. Buka bulan baru dari periode ${semua[0]} untuk melanjutkan siklus.`
-          : null,
-    })
+    return ok(c, await dapatkanPeriodeKerja())
   }
 )
 
@@ -113,14 +74,6 @@ closingRouter.get(
     return ok(c, await pratinjauClosing(periode))
   }
 )
-
-const tutupSchema = z.object({
-  /// Jatuh tempo seluruh tagihan periode ini. WAJIB dikirim — tidak ada
-  /// nilai bawaan. Versi impor memakai placeholder "periode + 1 bulan" yang
-  /// tidak punya dasar di sumber data mana pun; menetapkannya di sini
-  /// membuat tanggal itu jadi keputusan yang tercatat, bukan tebakan kode.
-  tanggalJatuhTempo: z.coerce.date(),
-})
 
 closingRouter.post(
   "/:periode/tutup",
@@ -193,12 +146,6 @@ closingRouter.get(
     })
   }
 )
-
-const bukaSchema = z.object({
-  /// Wajib, minimal 10 karakter: membuka periode yang sudah ditagihkan
-  /// harus bisa dipertanggungjawabkan belakangan, dan "ok" bukan alasan.
-  alasan: z.string().trim().min(10).max(500),
-})
 
 closingRouter.post(
   "/:periode/buka",

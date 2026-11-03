@@ -12,7 +12,7 @@ export type { StatusPengaduan }
 
 export type PrioritasPengaduan = "RENDAH" | "NORMAL" | "TINGGI" | "DARURAT"
 
-/// Cerminan `ringkasSla()` di server/modules/pengaduan/sla.ts. Dihitung
+/// Cerminan `ringkasSla()` di `@/lib/domain/SLA`. Dihitung
 /// server, TIDAK dihitung ulang di sini: aturan "terlambat" adalah kebijakan
 /// layanan, dan menyalinnya ke browser berarti dua sumber kebenaran yang
 /// pasti menyimpang.

@@ -1,6 +1,10 @@
 import "server-only"
 
-// Single place for password hashing and verification.
+// lib/auth/Sandi.ts — SATU-SATUNYA tempat password di-hash & diverifikasi.
+// Dipakai lintas lapisan: Auth.ts (login), features/auth (reset password),
+// server/modules/user (admin membuat/mereset akun), prisma/seed (bootstrap
+// admin). Jangan memanggil pustaka hashing langsung dari tempat lain —
+// kalau parameternya perlu dinaikkan suatu hari, cukup ubah file ini.
 //
 // KENAPA argon2id, BUKAN bcrypt:
 //  - Auth.js TIDAK menyediakan hashing password sama sekali (sudah

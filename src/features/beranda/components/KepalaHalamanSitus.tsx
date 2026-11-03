@@ -13,7 +13,7 @@ import { AppLogo } from "@/components/LogoAplikasi"
 import { ThemeToggle } from "@/components/PengalihTema"
 import { Button } from "@/components/ui/button"
 import { TombolPasang } from "@/components/pwa/TombolPasang"
-import { NAV_LAYANAN } from "./TautanNavigasi"
+import { NAV_LAYANAN } from "../lib/TautanNavigasi"
 import { MobileNav } from "./NavigasiSeluler"
 
 export function SiteHeader({ sesiPetugas = false }: { sesiPetugas?: boolean }) {

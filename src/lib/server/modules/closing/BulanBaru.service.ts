@@ -79,7 +79,7 @@ import type { Prisma } from "@db"
 import { prisma } from "@db"
 import { BadRequestError, ConflictError } from "../../lib/Galat"
 import { recordAudit } from "../../lib/Audit"
-import { periodeToDate } from "../../lib/Periode"
+import { periodeToDate } from "@/lib/domain/Periode"
 import type { HambatanClosing, JejakAudit } from "./Closing.service"
 
 /// Sama alasannya dengan UKURAN_BATCH di closing.service.ts: 22 ribu insert

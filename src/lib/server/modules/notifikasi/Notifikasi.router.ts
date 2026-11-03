@@ -6,26 +6,25 @@
 // disaring userId sesi, pola sama dengan langganan-saya). Pendaftaran token
 // dibatasi STAFF_UP — hanya akun petugas/staf yang menerima push kerja.
 import { Hono } from "hono"
-import { z } from "zod"
 import { validate } from "../../lib/Validasi"
-import { prisma } from "@db"
 import { requireRole, ROLE_GROUPS } from "../../middleware/RBAC"
 import { getSessionUser } from "../../lib/Sesi"
-import {
-  paginationQuerySchema,
-  buildSkipTake,
-  buildMeta,
-} from "../../lib/Pagination"
 import { ok, paginated } from "../../lib/Respons"
-import { NotFoundError } from "../../lib/Galat"
+import {
+  daftarTokenSchema,
+  hapusTokenSchema,
+  listQuerySchema,
+} from "./Notifikasi.schema"
+import {
+  daftarkanTokenPerangkat,
+  hapusTokenPerangkat,
+  listNotifikasi,
+  tandaiNotifikasiDibaca,
+  tandaiSemuaNotifikasiDibaca,
+} from "./Notifikasi.service"
 
 // ── Perangkat (token FCM) ──────────────────────────────────────────────
 export const perangkatRouter = new Hono()
-
-const daftarTokenSchema = z.object({
-  token: z.string().trim().min(1).max(4096),
-  platform: z.enum(["android", "ios", "web"]).optional(),
-})
 
 // Upsert by token: satu baris per perangkat fisik. Token bisa berpindah akun
 // (perangkat dipakai bergantian) — upsert memindahkan kepemilikan ke user
@@ -36,22 +35,10 @@ perangkatRouter.post(
   validate("json", daftarTokenSchema),
   async (c) => {
     const user = getSessionUser(c)
-    const { token, platform } = c.req.valid("json")
-    const row = await prisma.perangkatNotif.upsert({
-      where: { token },
-      create: { token, userId: user.id, platform: platform ?? "android" },
-      update: {
-        userId: user.id,
-        platform: platform ?? "android",
-        lastSeenAt: new Date(),
-      },
-      select: { id: true, platform: true },
-    })
+    const row = await daftarkanTokenPerangkat(user.id, c.req.valid("json"))
     return ok(c, row)
   }
 )
-
-const hapusTokenSchema = z.object({ token: z.string().trim().min(1).max(4096) })
 
 // Hanya token MILIK sendiri yang bisa dilepas (dipanggil saat logout).
 perangkatRouter.delete(
@@ -60,62 +47,29 @@ perangkatRouter.delete(
   validate("json", hapusTokenSchema),
   async (c) => {
     const user = getSessionUser(c)
-    const { token } = c.req.valid("json")
-    const hasil = await prisma.perangkatNotif.deleteMany({
-      where: { token, userId: user.id },
-    })
-    return ok(c, { deleted: hasil.count })
+    const hasil = await hapusTokenPerangkat(user.id, c.req.valid("json"))
+    return ok(c, hasil)
   }
 )
 
 // ── Inbox notifikasi ────────────────────────────────────────────────────
 export const notifikasiRouter = new Hono()
 
-const listQuerySchema = paginationQuerySchema.extend({
-  belumDibaca: z.coerce.boolean().optional(),
-})
-
 notifikasiRouter.get("/", validate("query", listQuerySchema), async (c) => {
   const user = getSessionUser(c)
   const query = c.req.valid("query")
-  const { skip, take } = buildSkipTake(query)
-  const where = {
-    userId: user.id,
-    ...(query.belumDibaca ? { dibacaAt: null } : {}),
-  }
-  const [data, total, belumDibaca] = await Promise.all([
-    prisma.notifikasi.findMany({
-      where,
-      skip,
-      take,
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.notifikasi.count({ where }),
-    prisma.notifikasi.count({ where: { userId: user.id, dibacaAt: null } }),
-  ])
-  // belumDibaca lewat variabel (bukan literal langsung) agar tidak kena
-  // excess-property check terhadap PaginationMeta; ikut di objek meta respons.
-  const meta = { ...buildMeta(total, query), belumDibaca }
+  const { data, meta } = await listNotifikasi(user.id, query)
   return paginated(c, data, meta)
 })
 
 notifikasiRouter.patch("/:id/baca", async (c) => {
   const user = getSessionUser(c)
-  // Batasi ke milik sendiri lewat updateMany (bukan update by id) supaya tak
-  // bisa menandai notifikasi orang lain.
-  const hasil = await prisma.notifikasi.updateMany({
-    where: { id: c.req.param("id"), userId: user.id },
-    data: { dibacaAt: new Date() },
-  })
-  if (hasil.count === 0) throw new NotFoundError("Notifikasi")
-  return ok(c, { updated: hasil.count })
+  const hasil = await tandaiNotifikasiDibaca(user.id, c.req.param("id"))
+  return ok(c, hasil)
 })
 
 notifikasiRouter.post("/baca-semua", async (c) => {
   const user = getSessionUser(c)
-  const hasil = await prisma.notifikasi.updateMany({
-    where: { userId: user.id, dibacaAt: null },
-    data: { dibacaAt: new Date() },
-  })
-  return ok(c, { updated: hasil.count })
+  const hasil = await tandaiSemuaNotifikasiDibaca(user.id)
+  return ok(c, hasil)
 })

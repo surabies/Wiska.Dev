@@ -3,10 +3,10 @@
 // features/beranda/components/motion/PetaSvg.tsx — bagian interaktif peta
 // cakupan (hover kelurahan menyorot bentuknya + menampilkan nama). Server
 // component pemanggil (peta-cakupan.tsx) yang menghitung proyeksi SVG dari
-// data PostGIS asli (features/beranda/lib/Peta.ts) — file ini murni
+// data PostGIS asli (features/beranda/server/Peta.ts) — file ini murni
 // menggambar & menangani hover, tidak menyentuh database.
 import { useState } from "react"
-import type { PetaCakupan } from "../../lib/Peta"
+import type { PetaCakupan } from "../../lib/PetaTipe"
 
 // Tiga warna kelurahan bersebelahan (lihat warnaPerKelurahan di peta.ts) —
 // SEMUANYA dari rumpun aqua yang sudah dikunci di globals.css (cyan +

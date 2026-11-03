@@ -5,9 +5,9 @@
 // CATATAN: setiap fungsi async yang di-export dari file "use server" menjadi
 // endpoint yang bisa dipanggil dari browser. Jadi HANYA server action yang
 // boleh di-export dari sini — helper internal (mis. hashPassword) tinggal di
-// features/auth/lib/.
+// features/auth/server/.
 import { resetPasswordSchema } from "../lib/Schema"
-import { pakaiTokenReset, hashPassword } from "../lib/SandiAturUlang"
+import { pakaiTokenReset, hashPassword } from "../server/SandiAturUlang"
 
 export interface ResetPasswordState {
   status: "idle" | "sukses" | "error"

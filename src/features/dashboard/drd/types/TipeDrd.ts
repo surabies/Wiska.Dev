@@ -27,6 +27,43 @@ export const DAFTAR_TARIF_DRD = [
   { kode: "GOL_4B", label: "4B" },
 ] as const
 
+export interface TitikKelurahanDrd {
+  kelurahan: string
+  jumlahPelanggan: number
+  pemakaianM3: number
+  totalTagihan: number
+}
+
+export interface TitikTarifDrd {
+  kode: string
+  nama: string
+  jumlahPelanggan: number
+  pemakaianM3: number
+  totalTagihan: number
+}
+
+export interface TitikTaaKelurahanDrd {
+  kelurahan: string
+  jumlahTaa: number
+  persentaseTaa: number
+}
+
+export interface TitikCakupanDrd {
+  kelurahan: string
+  sl: number
+  pemakaianM3: number
+  totalTagihan: number
+}
+
+export interface KomposisiTagihanDrd {
+  hargaAir: number
+  beaBeban: number
+  beaAdmin: number
+  airKotor: number
+  lainLain: number
+  totalTagihan: number
+}
+
 export interface RingkasanDrd {
   periode: number
   jumlahPelanggan: number
@@ -35,6 +72,19 @@ export interface RingkasanDrd {
   jumlahTaa: number
   jumlahDomestik: number
   jumlahKelurahan: number
+  // Visualisasi analytics data
+  dataKelurahan?: TitikKelurahanDrd[]
+  dataDomestik?: TitikTarifDrd[]
+  dataTarif?: TitikTarifDrd[]
+  dataTaaKelurahan?: TitikTaaKelurahanDrd[]
+  dataCakupan?: TitikCakupanDrd[]
+  dataTaaStatus?: {
+    normal: number
+    taa: number
+    persenTaa: number
+    sebaranTarif: Array<{ kode: string; jumlahTaa: number }>
+  }
+  dataTagihanKomposisi?: KomposisiTagihanDrd
 }
 
 export interface TitikGrafikDrd {

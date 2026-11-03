@@ -1,4 +1,4 @@
-// server/modules/pengaduan/alur.ts — mesin alur kerja tiket pengaduan.
+// server/modules/pengaduan/Alur.ts — mesin alur kerja tiket pengaduan.
 //
 // SATU-SATUNYA jalan yang boleh mengubah `Pengaduan.status`. Router TIDAK
 // boleh memanggil `prisma.pengaduan.update({ data: { status } })` langsung.
@@ -18,7 +18,7 @@
 //     terang-terangan.
 import type { Prisma, StatusPengaduan, AksiPengaduan } from "@db"
 import { BadRequestError, NotFoundError } from "../../lib/Galat"
-import { hitungTargetSla } from "./SLA"
+import { hitungTargetSla } from "@/lib/domain/SLA"
 
 /// Transisi yang sah. Yang TIDAK terdaftar di sini ditolak — daftar putih,
 /// bukan daftar hitam: keadaan baru yang ditambahkan kelak otomatis tertutup

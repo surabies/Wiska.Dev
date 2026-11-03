@@ -9,9 +9,9 @@ import { createPortal } from "react-dom"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Search01Icon } from "@hugeicons/core-free-icons"
 import { SearchDialog } from "@/components/layout/search/SearchDialog"
-import { FOCUS_RING } from "./types/Styles"
-import { useIsClient } from "./types/UseIsClient"
-import { useIsMac } from "./types/UseIsMac"
+import { FOCUS_RING } from "./lib/Styles"
+import { useIsClient } from "./hooks/UseIsClient"
+import { useIsMac } from "./hooks/UseIsMac"
 import { cn } from "@/lib/Utilitas"
 
 export function SidebarSearch() {

@@ -2,9 +2,9 @@
 // Tampilan root: daftar grup/direktorat. Satu baris per grup, panah di kanan.
 
 import { navGroups } from "@/config/Navigasi"
-import { getGroupIcon } from "./types/Icons"
+import { getGroupIcon } from "./lib/Icons"
 import { NavRowContent, RowChevron } from "./NavRow"
-import { navRowClass } from "./types/Styles"
+import { navRowClass } from "./lib/Styles"
 
 type Props = {
   activeGroupId?: string

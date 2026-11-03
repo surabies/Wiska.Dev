@@ -48,6 +48,9 @@ export type BarisMandiriTabel = BarisVerifikasi & {
   status: StatusMandiri
   namaPelapor?: string | null
   nomorPelapor?: string | null
+  verifiedByRole?: string | null
+  sudahTahapPetugas?: boolean
+  sudahDitagih?: boolean
 }
 
 /// Bentuk baris mentah /laporan-mandiri yang dibaca tabel.
@@ -62,6 +65,9 @@ interface BarisApi {
   pembacaanId?: string | null
   namaPelapor?: string | null
   nomorPelapor?: string | null
+  verifiedByRole?: string | null
+  sudahTahapPetugas?: boolean
+  sudahDitagih?: boolean
   status: StatusMandiri
   pelanggan?: BarisVerifikasi["pelanggan"]
   pembacaan?: {
@@ -76,13 +82,14 @@ interface BarisApi {
 
 function petaBaris(r: BarisApi): BarisMandiriTabel {
   const terverifikasi = r.status === "DIVERIFIKASI" || r.status === "DIGUNAKAN"
-  const resmi = r.status === "DIGUNAKAN" || r.pembacaanId != null
-  const standAwal = r.pembacaan?.standLalu ?? r.standAwal ?? null
+  const resmi =
+    terverifikasi &&
+    (r.status === "DIGUNAKAN" || r.pembacaanId != null || r.pembacaan != null)
+  const standAwal = r.standAwal ?? r.pembacaan?.standLalu ?? null
   const pemakaian =
-    r.pembacaan?.pemakaianRiil ??
-    (standAwal != null && r.standDilaporkan != null
+    standAwal != null && r.standDilaporkan != null
       ? r.standDilaporkan - standAwal
-      : null)
+      : (r.pembacaan?.pemakaianRiil ?? null)
   return {
     id: r.id,
     status: r.status,
@@ -90,15 +97,16 @@ function petaBaris(r: BarisApi): BarisMandiriTabel {
     standAwal,
     standAkhir: r.standDilaporkan ?? null,
     pemakaian,
-    pembacaan: r.pembacaan
-      ? {
-          standLalu: r.pembacaan.standLalu,
-          standAkhir: r.pembacaan.standAkhir,
-          pemakaianRiil: r.pembacaan.pemakaianRiil,
-          pemakaianM3: r.pembacaan.pemakaianM3,
-          pemakaianLalu: r.pembacaan.pemakaianLalu,
-        }
-      : null,
+    pembacaan:
+      resmi && r.pembacaan
+        ? {
+            standLalu: r.pembacaan.standLalu,
+            standAkhir: r.pembacaan.standAkhir,
+            pemakaianRiil: r.pembacaan.pemakaianRiil,
+            pemakaianM3: r.pembacaan.pemakaianM3,
+            pemakaianLalu: r.pembacaan.pemakaianLalu,
+          }
+        : null,
     pemakaianLalu: r.pemakaianLalu ?? r.pembacaan?.pemakaianLalu ?? null,
     persentase: null,
     kondisi: r.pembacaan?.kondisi ?? null,
@@ -112,6 +120,9 @@ function petaBaris(r: BarisApi): BarisMandiriTabel {
     pelanggan: r.pelanggan,
     namaPelapor: r.namaPelapor,
     nomorPelapor: r.nomorPelapor,
+    verifiedByRole: r.verifiedByRole ?? null,
+    sudahTahapPetugas: r.sudahTahapPetugas ?? false,
+    sudahDitagih: r.sudahDitagih ?? false,
   }
 }
 

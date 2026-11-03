@@ -101,6 +101,20 @@ export const nearPelangganQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
 })
 
+export const perluRuteQuerySchema = z.object({
+  /// Periode yang sedang dikerjakan. Bila diisi, SELURUH sambungan PBPK
+  /// periode itu ikut ditampilkan — termasuk yang rutenya SUDAH terisi.
+  ///
+  /// Kenapa yang sudah terisi pun ikut: rute pada berkas PBPK datang dari
+  /// bagian langganan dan bisa salah, sedangkan kode rute lama pada baris PK
+  /// kerap sudah dihapus atau digabung. Menyembunyikan yang "sudah terpetakan"
+  /// membuat kesalahan itu tidak bisa dikoreksi di mana pun — operator baru
+  /// menyadarinya bulan depan, saat sambungannya masuk daftar kerja petugas
+  /// yang keliru.
+  periode: z.coerce.number().int().min(190001).max(999912).optional(),
+})
+
 export type CreatePelangganInput = z.infer<typeof createPelangganSchema>
 export type UpdatePelangganInput = z.infer<typeof updatePelangganSchema>
 export type ListPelangganQuery = z.infer<typeof listPelangganQuerySchema>
+export type PerluRuteQuery = z.infer<typeof perluRuteQuerySchema>

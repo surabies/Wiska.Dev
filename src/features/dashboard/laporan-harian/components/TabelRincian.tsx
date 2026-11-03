@@ -5,7 +5,7 @@ import {
   tanggalPendek,
   warnaProgres,
 } from "../lib/FormatTampilan"
-import { GAYA_HARI } from "./Konstanta"
+import { GAYA_HARI } from "../lib/Konstanta"
 import { Legenda } from "./Legenda"
 import { LencanaStatus } from "./LencanaStatus"
 import { Seksi } from "./Seksi"

@@ -1,4 +1,4 @@
-// server/modules/tagihan/tagihan.service.ts — pembentukan tagihan air.
+// server/modules/tagihan/tagihan.service.ts — pembentukan dan pengelolaan tagihan air.
 //
 // PRINSIP: nominal tagihan SELALU dihitung ulang di server dari TarifBlok
 // yang berlaku pada periode ybs — client tidak pernah bisa mengirim
@@ -22,9 +22,32 @@ import {
   hitungTotalTagihan,
   type RincianBlok,
 } from "@/lib/domain/Tagihan"
+import { periodeToDate, dateToPeriode } from "@/lib/domain/Periode"
 import { NotFoundError, ConflictError, BadRequestError } from "../../lib/Galat"
+import { recordAudit } from "../../lib/Audit"
+import { buildSkipTake, buildMeta, buildOrderBy } from "../../lib/Pagination"
+import type {
+  ListTagihanQuery,
+  DrdQuery,
+  DrdRekapQuery,
+  SimulasiTagihanInput,
+  PatchTagihanStatusInput,
+} from "./Tagihan.schema"
 
 export type { RincianBlok }
+
+// BigInt (Tagihan.nominalTunggak) tidak bisa di-JSON.stringify -> ubah ke
+// string di boundary API. Presisinya wajib dipertahankan (tunggakan bisa
+// ratusan juta rupiah), jadi string, bukan Number.
+export function serializeTagihan<T extends { nominalTunggak?: bigint | null }>(
+  row: T
+) {
+  return {
+    ...row,
+    nominalTunggak:
+      row.nominalTunggak == null ? null : row.nominalTunggak.toString(),
+  }
+}
 
 /// Hitung biaya air progresif untuk `pemakaianM3` memakai blok tarif yang
 /// berlaku pada `periode`. Tipis saja — seluruh rumusnya ada di domain.
@@ -145,6 +168,18 @@ export async function generateTagihan(input: GenerateTagihanInput) {
         `Tidak ada TarifBlok yang berlaku untuk golongan tarif pelanggan pada periode ${pembacaan.periode.toISOString().slice(0, 7)}`
       )
     }
+    const batasTertinggi = blok.reduce(
+      (maks, b) =>
+        b.batasAkhirM3 === null
+          ? Number.POSITIVE_INFINITY
+          : Math.max(maks, b.batasAkhirM3),
+      0
+    )
+    if (pembacaan.pemakaianM3 > batasTertinggi) {
+      throw new BadRequestError(
+        `Pemakaian ${pembacaan.pemakaianM3} m3 melampaui blok tertinggi yang diatur pada TarifBlok golongan ini`
+      )
+    }
 
     const { total: jmlHargaAir, rincian } = hitungBiayaAir(
       pembacaan.pemakaianM3,
@@ -179,6 +214,7 @@ export async function generateTagihan(input: GenerateTagihanInput) {
       data: {
         pelangganId: pelanggan.id,
         pembacaanId: pembacaan.id,
+        tarifGolonganId: pelanggan.tarifGolonganId,
         periode: pembacaan.periode,
         pemakaianM3: pembacaan.pemakaianM3,
         jmlHargaAir,
@@ -194,4 +230,196 @@ export async function generateTagihan(input: GenerateTagihanInput) {
 
     return { ...tagihan, rincianBlok: rincian }
   })
+}
+
+export async function listTagihan(query: ListTagihanQuery) {
+  const { skip, take } = buildSkipTake(query)
+  const where = {
+    pelangganId: query.pelangganId,
+    status: query.status,
+    periode: query.periode ? periodeToDate(query.periode) : undefined,
+  }
+  const [rows, total] = await Promise.all([
+    prisma.tagihan.findMany({
+      where,
+      skip,
+      take,
+      orderBy: buildOrderBy(query, { periode: "desc" }),
+      include: {
+        pelanggan: { select: { id: true, nomorLangganan: true, nama: true } },
+      },
+    }),
+    prisma.tagihan.count({ where }),
+  ])
+  return {
+    data: rows.map(serializeTagihan),
+    meta: buildMeta(total, query),
+  }
+}
+
+/// Baris DRD = Tagihan + identitas pelanggan selengkap kebutuhan cetakan
+/// DRD (nomor langganan, nama, alamat, golongan tarif, rute) — berbeda dari
+/// GET / yang include-nya minimal untuk daftar umum.
+export async function listDrd(query: DrdQuery) {
+  const { skip, take } = buildSkipTake(query)
+  const where = {
+    status: query.status,
+    periode: query.periode ? periodeToDate(query.periode) : undefined,
+    ...(query.q
+      ? {
+          pelanggan: {
+            OR: [
+              { nomorLangganan: { contains: query.q } },
+              { nama: { contains: query.q, mode: "insensitive" as const } },
+            ],
+          },
+        }
+      : {}),
+  }
+  const [rows, total] = await Promise.all([
+    prisma.tagihan.findMany({
+      where,
+      skip,
+      take,
+      orderBy: buildOrderBy(query, [{ periode: "desc" }, { createdAt: "asc" }]),
+      include: {
+        pelanggan: {
+          select: {
+            id: true,
+            nomorLangganan: true,
+            nama: true,
+            alamat: true,
+            tarifGolongan: { select: { kodeAsli: true, nama: true } },
+            rute: { select: { kode: true } },
+          },
+        },
+      },
+    }),
+    prisma.tagihan.count({ where }),
+  ])
+  return {
+    data: rows.map(serializeTagihan),
+    meta: buildMeta(total, query),
+  }
+}
+
+export async function getDrdRekap(query: DrdRekapQuery) {
+  const { periode } = query
+  const where = periode ? { periode: periodeToDate(periode) } : {}
+  const [totalAgg, perStatus, periodes] = await Promise.all([
+    prisma.tagihan.aggregate({
+      where,
+      _count: { _all: true },
+      _sum: {
+        pemakaianM3: true,
+        jmlHargaAir: true,
+        denda: true,
+        totalTagihan: true,
+      },
+    }),
+    prisma.tagihan.groupBy({
+      by: ["status"],
+      where,
+      _count: { _all: true },
+      _sum: { totalTagihan: true },
+    }),
+    prisma.tagihan.groupBy({
+      by: ["periode"],
+      orderBy: { periode: "desc" },
+      take: 24,
+    }),
+  ])
+  return {
+    totalRekening: totalAgg._count._all,
+    totalPemakaianM3: totalAgg._sum.pemakaianM3 ?? 0,
+    totalHargaAir: totalAgg._sum.jmlHargaAir ?? 0,
+    totalDenda: totalAgg._sum.denda ?? 0,
+    totalTagihan: totalAgg._sum.totalTagihan ?? 0,
+    perStatus: perStatus.map((s) => ({
+      status: s.status,
+      jumlah: s._count._all,
+      nominal: s._sum.totalTagihan ?? 0,
+    })),
+    periodes: periodes.map((p) => dateToPeriode(p.periode)),
+  }
+}
+
+export async function getTagihanById(id: string) {
+  const row = await prisma.tagihan.findUnique({
+    where: { id },
+    include: {
+      pelanggan: {
+        select: { id: true, nomorLangganan: true, nama: true, alamat: true },
+      },
+      pembacaan: true,
+      riwayatPembayaran: { orderBy: { createdAt: "desc" } },
+      validator: { select: { id: true, name: true } },
+    },
+  })
+  if (!row) throw new NotFoundError("Tagihan")
+  return serializeTagihan(row)
+}
+
+export async function simulasiTagihan(input: SimulasiTagihanInput) {
+  const { tarifGolonganId, pemakaianM3, periode } = input
+  const tanggal = periodeToDate(periode)
+  const blok = await prisma.tarifBlok.findMany({
+    where: {
+      tarifGolonganId,
+      berlakuMulai: { lte: tanggal },
+      OR: [{ berlakuSampai: null }, { berlakuSampai: { gte: tanggal } }],
+    },
+  })
+  if (blok.length === 0)
+    throw new BadRequestError(
+      "Tidak ada TarifBlok yang berlaku untuk golongan/periode tersebut"
+    )
+  const { total, rincian } = hitungBiayaAir(pemakaianM3, blok)
+  return { pemakaianM3, jmlHargaAir: total, rincianBlok: rincian }
+}
+
+export async function updateTagihanStatus(
+  id: string,
+  input: PatchTagihanStatusInput,
+  requesterId: string,
+  auditMeta: { ipAddress: string | null; userAgent: string | null }
+) {
+  const { status, catatanValidasi } = input
+  const { ipAddress, userAgent } = auditMeta
+
+  const existing = await prisma.tagihan.findUnique({ where: { id } })
+  if (!existing) throw new NotFoundError("Tagihan")
+  if (existing.status === "SUDAH_BAYAR") {
+    throw new BadRequestError(
+      "Tagihan yang sudah dibayar tidak bisa diubah statusnya lewat endpoint ini"
+    )
+  }
+
+  const row = await prisma.$transaction(async (tx) => {
+    const row = await tx.tagihan.update({
+      where: { id },
+      data: {
+        status,
+        catatanValidasi,
+        validatorId: requesterId,
+        validasiAt: new Date(),
+      },
+    })
+    await recordAudit(tx, {
+      userId: requesterId,
+      aksi: `TAGIHAN_STATUS_${status}`,
+      entitas: "Tagihan",
+      entitasId: id,
+      perubahan: {
+        before: { status: existing.status },
+        after: { status },
+        catatanValidasi,
+      },
+      ipAddress,
+      userAgent,
+    })
+    return row
+  })
+
+  return serializeTagihan(row)
 }

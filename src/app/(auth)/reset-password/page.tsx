@@ -8,7 +8,7 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth/index"
-import { tokenResetValid } from "@/features/auth/lib/SandiAturUlang"
+import { tokenResetValid } from "@/features/auth/server/SandiAturUlang"
 import { ResetPasswordCard } from "@/features/auth/components/KartuAturUlangSandi"
 
 export const metadata: Metadata = {

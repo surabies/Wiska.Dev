@@ -1,5 +1,5 @@
 {
-  "name": "my-app",
+  "name": "azkaqueen",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -102,7 +102,7 @@
     "prisma": "7.10.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
-    "typescript": "^7.0.2",
+    "typescript": "~6.0.3",
     "vitest": "^5.0.5"
   }
 }

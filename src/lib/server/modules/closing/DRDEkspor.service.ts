@@ -21,7 +21,7 @@
 
 import { prisma } from "@db"
 import { BadRequestError, ConflictError } from "../../lib/Galat"
-import { periodeToDate } from "../../lib/Periode"
+import { periodeToDate } from "@/lib/domain/Periode"
 
 /// Urutan kolom ProgresCater-PW5.csv, diverifikasi terhadap berkas nyata
 /// periode 202601–202606. JANGAN diubah urutannya — konsumen membacanya

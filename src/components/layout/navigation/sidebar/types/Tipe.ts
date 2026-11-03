@@ -1,4 +1,4 @@
-// components/layout/navigation/sidebar/types.ts
+// components/layout/navigation/sidebar/types/Tipe.ts
 
 import type { NavFolder, NavItem } from "@/config/Navigasi"
 

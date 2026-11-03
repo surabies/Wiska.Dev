@@ -2,14 +2,14 @@
 // dari batas kelurahan/kecamatan ASLI tersimpan di PostGIS (sumber sama
 // dengan peta wilayah dashboard) — bukan ilustrasi peta dunia generik ala
 // komponen showcase pihak ketiga. Server component: query + proyeksi ke
-// SVG terjadi di features/beranda/lib/Peta.ts, halaman ini cuma merangkai
+// SVG terjadi di features/beranda/server/Peta.ts, halaman ini cuma merangkai
 // bagian statis (judul, angka) dan melempar hasilnya ke <PetaSvg> (client,
 // untuk interaksi hover).
 //
 // Kalau database kosong (deploy baru, area belum di-seed), seksi ini
 // disembunyikan total — sama aturannya dengan stats-strip.tsx: tidak ada
 // peta kosong yang berpura-pura menunjukkan cakupan.
-import { getPetaCakupan } from "../lib/Peta"
+import { getPetaCakupan } from "../server/Peta"
 import { Reveal } from "./motion/Tampilkan"
 import { PetaBasemap } from "./motion/PetaBasemap"
 

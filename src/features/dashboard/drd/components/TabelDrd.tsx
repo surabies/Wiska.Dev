@@ -41,7 +41,10 @@ export interface DefinisiKolomDrd {
   pinned?: boolean
   sortable?: boolean
   format?: (nilai: unknown, baris: Record<string, unknown>) => React.ReactNode
-  formatCsv?: (nilai: unknown, baris: Record<string, unknown>) => string | number
+  formatCsv?: (
+    nilai: unknown,
+    baris: Record<string, unknown>
+  ) => string | number
 }
 
 const fmtAngka = (v: unknown) =>
@@ -242,8 +245,7 @@ const KOLOM_TAA: DefinisiKolomDrd[] = [
     label: "Keterangan",
     minWidth: 170,
     sortable: true,
-    format: (v) =>
-      v ? (LABEL_KONDISI_CATAT[String(v)] ?? String(v)) : "—",
+    format: (v) => (v ? (LABEL_KONDISI_CATAT[String(v)] ?? String(v)) : "—"),
   },
   KOLOM_PELANGGAN[5]!,
   KOLOM_PELANGGAN[6]!,
@@ -582,7 +584,7 @@ export function TabelDrd({
               ))}
             </colgroup>
             <thead className="sticky top-0 z-20">
-              <tr className="bg-muted/95 text-muted-foreground supports-backdrop-filter:bg-muted/85 [&>th]:border-r [&>th]:border-b [&>th]:border-border [&>th]:px-3 [&>th]:text-left [&>th]:text-xs [&>th]:leading-4 [&>th]:font-medium [&>th]:tracking-wide [&>th]:whitespace-nowrap [&>th]:backdrop-blur [&>th:last-child]:border-r-0 [&>th]:py-3">
+              <tr className="bg-muted/95 text-muted-foreground supports-backdrop-filter:bg-muted/85 [&>th]:border-r [&>th]:border-b [&>th]:border-border [&>th]:px-3 [&>th]:py-3 [&>th]:text-left [&>th]:text-xs [&>th]:leading-4 [&>th]:font-medium [&>th]:tracking-wide [&>th]:whitespace-nowrap [&>th]:backdrop-blur [&>th:last-child]:border-r-0">
                 {kolomTampil.map((kol) => {
                   const aktifSort = sortir?.kolom === kol.id
                   return (
@@ -590,7 +592,7 @@ export function TabelDrd({
                       key={kol.id}
                       className={cn(
                         kol.pinned &&
-                          "sticky left-0 z-30 bg-muted/95 supports-backdrop-filter:bg-muted/85 backdrop-blur",
+                          "sticky left-0 z-30 bg-muted/95 backdrop-blur supports-backdrop-filter:bg-muted/85",
                         "relative select-none"
                       )}
                       style={{ width: kol.minWidth, minWidth: kol.minWidth }}
@@ -644,7 +646,7 @@ export function TabelDrd({
                 return (
                   <tr
                     key={barisId}
-                    className="group hover:bg-(color:--hover-baris) [&>td]:border-r [&>td]:border-b [&>td]:border-border [&>td]:px-3 [&>td]:whitespace-nowrap [&>td:last-child]:border-r-0"
+                    className="group hover:bg-(--hover-baris) [&>td]:border-r [&>td]:border-b [&>td]:border-border [&>td]:px-3 [&>td]:whitespace-nowrap [&>td:last-child]:border-r-0"
                   >
                     {kolomTampil.map((kol) => {
                       const nilai = row[kol.id]
@@ -653,9 +655,8 @@ export function TabelDrd({
                           key={kol.id}
                           className={cn(
                             kol.pinned &&
-                              "sticky left-0 z-10 bg-card group-hover:bg-(color:--hover-baris)",
-                            kol.align === "right" &&
-                              "text-right tabular-nums",
+                              "sticky left-0 z-10 bg-card group-hover:bg-(--hover-baris)",
+                            kol.align === "right" && "text-right tabular-nums",
                             kol.mono && "font-mono"
                           )}
                         >

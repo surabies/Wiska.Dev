@@ -23,7 +23,10 @@ import type { TitikTren } from "../types/TipeRingkasan"
 // resolusinya baru diuji saat halaman dijalankan, sehingga kesalahan resolusi
 // lolos dari typecheck DAN build lalu baru meledak di layar operator.
 import { periksaKesehatan } from "@/lib/server/modules/kesehatan/Kesehatan.service"
-import { daftarAnomali, trenAnomali } from "@server/modules/anomali"
+import {
+  daftarAnomali,
+  trenAnomali,
+} from "@server/modules/anomali/Anomali.service"
 import { AMBANG_BULAN_DEFAULT, SEMUA_KATEGORI } from "@/lib/domain/Anomali"
 
 async function periodeTerakhir(): Promise<Date | null> {

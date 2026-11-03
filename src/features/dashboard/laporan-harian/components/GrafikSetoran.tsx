@@ -13,7 +13,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import { angka, tanggalPendek } from "../lib/FormatTampilan"
-import { GAYA_HARI, KONFIG_GRAFIK, WARNA_BATANG } from "./Konstanta"
+import { GAYA_HARI, KONFIG_GRAFIK, WARNA_BATANG } from "../lib/Konstanta"
 import { Legenda } from "./Legenda"
 import { Seksi } from "./Seksi"
 import type { JenisHari, TitikGrafik } from "../types/TipeLaporanHarian"

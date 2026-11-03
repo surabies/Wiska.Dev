@@ -51,8 +51,8 @@ export type PelangganTerverifikasi = Prisma.PelangganGetPayload<{
 export async function verifikasiPelanggan(
   nomorLangganan: string
 ): Promise<PelangganTerverifikasi> {
-  const pelanggan = await prisma.pelanggan.findUnique({
-    where: { nomorLangganan },
+  const pelanggan = await prisma.pelanggan.findFirst({
+    where: { nomorLangganan, deletedAt: null },
     select: PELANGGAN_SELECT,
   })
 

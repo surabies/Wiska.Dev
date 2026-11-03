@@ -42,42 +42,251 @@ export async function ambilRingkasanDrd(
   periode: number
 ): Promise<RingkasanDrd> {
   const tanggalPeriode = periodeToDate(periode)
-  const [tagihan, jumlahTaa, jumlahDomestik, jumlahKelurahan] =
-    await Promise.all([
-      prisma.tagihan.aggregate({
-        where: { periode: tanggalPeriode },
-        _count: { _all: true },
-        _sum: { pemakaianM3: true, totalTagihan: true },
-      }),
-      prisma.tagihan.count({
-        where: {
-          periode: tanggalPeriode,
-          pembacaan: { is: { kondisi: "TIDAK_ADA_AIR" } },
-        },
-      }),
-      prisma.tagihan.count({
-        where: {
-          periode: tanggalPeriode,
-          tarifGolongan: { is: { kode: { in: KODE_TARIF_DOMESTIK } } },
-        },
-      }),
-      prisma.$queryRaw<Array<{ jumlah: number }>>`
-        SELECT COUNT(DISTINCT COALESCE(k.nama, 'Tidak diketahui'))::int AS jumlah
-          FROM tagihan t
-          JOIN pelanggan p ON p.id = t."pelangganId"
-          LEFT JOIN kelurahan k ON k.id = p."kelurahanId"
-         WHERE t.periode = ${tanggalPeriode}
-      `,
-    ])
+  const [
+    tagihan,
+    jumlahTaa,
+    jumlahDomestik,
+    jumlahKelurahan,
+    rawKelurahan,
+    rawDomestik,
+    rawTarif,
+    rawTaaKelurahan,
+    rawCakupan,
+    rawTaaTarif,
+  ] = await Promise.all([
+    prisma.tagihan.aggregate({
+      where: { periode: tanggalPeriode },
+      _count: { _all: true },
+      _sum: {
+        pemakaianM3: true,
+        totalTagihan: true,
+        jmlHargaAir: true,
+        beaBeban: true,
+        beaAdmin: true,
+        airKotor: true,
+        lainLain: true,
+      },
+    }),
+    prisma.tagihan.count({
+      where: {
+        periode: tanggalPeriode,
+        pembacaan: { is: { kondisi: "TIDAK_ADA_AIR" } },
+      },
+    }),
+    prisma.tagihan.count({
+      where: {
+        periode: tanggalPeriode,
+        tarifGolongan: { is: { kode: { in: KODE_TARIF_DOMESTIK } } },
+      },
+    }),
+    prisma.$queryRaw<Array<{ jumlah: number }>>`
+      SELECT COUNT(DISTINCT COALESCE(k.nama, 'Tidak diketahui'))::int AS jumlah
+        FROM tagihan t
+        JOIN pelanggan p ON p.id = t."pelangganId"
+        LEFT JOIN kelurahan k ON k.id = p."kelurahanId"
+       WHERE t.periode = ${tanggalPeriode}
+    `,
+    // 1. Data Kelurahan (Top 8 berdasarkan total tagihan)
+    prisma.$queryRaw<
+      Array<{
+        kelurahan: string
+        jumlahPelanggan: number
+        pemakaianM3: string
+        totalTagihan: string
+      }>
+    >`
+      SELECT COALESCE(k.nama, 'Tidak diketahui') AS kelurahan,
+             COUNT(*)::int AS "jumlahPelanggan",
+             COALESCE(SUM(t."pemakaianM3"), 0)::text AS "pemakaianM3",
+             COALESCE(SUM(t."totalTagihan"), 0)::text AS "totalTagihan"
+        FROM tagihan t
+        JOIN pelanggan p ON p.id = t."pelangganId"
+        LEFT JOIN kelurahan k ON k.id = p."kelurahanId"
+       WHERE t.periode = ${tanggalPeriode}
+       GROUP BY COALESCE(k.nama, 'Tidak diketahui')
+       ORDER BY SUM(t."totalTagihan") DESC, COALESCE(k.nama, 'Tidak diketahui') ASC
+       LIMIT 8
+    `,
+    // 2. Data Domestik (Tangga tarif rumah tangga)
+    prisma.$queryRaw<
+      Array<{
+        kode: string
+        nama: string
+        jumlahPelanggan: number
+        pemakaianM3: string
+        totalTagihan: string
+      }>
+    >`
+      SELECT COALESCE(REPLACE(tg.kode::text, 'GOL_', ''), 'Tidak diketahui') AS kode,
+             COALESCE(tg.nama, 'Tarif tidak diketahui') AS nama,
+             COUNT(*)::int AS "jumlahPelanggan",
+             COALESCE(SUM(t."pemakaianM3"), 0)::text AS "pemakaianM3",
+             COALESCE(SUM(t."totalTagihan"), 0)::text AS "totalTagihan"
+        FROM tagihan t
+        JOIN tarif_golongan tg ON tg.id = t."tarifGolonganId"
+       WHERE t.periode = ${tanggalPeriode}
+         AND tg.kode::text = ANY(${KODE_TARIF_DOMESTIK}::text[])
+       GROUP BY tg.kode, tg.nama
+       ORDER BY tg.kode ASC
+    `,
+    // 3. Data Tarif (Seluruh Golongan Tarif)
+    prisma.$queryRaw<
+      Array<{
+        kode: string
+        nama: string
+        jumlahPelanggan: number
+        pemakaianM3: string
+        totalTagihan: string
+      }>
+    >`
+      SELECT COALESCE(REPLACE(tg.kode::text, 'GOL_', ''), 'Tanpa tarif') AS kode,
+             COALESCE(tg.nama, 'Tanpa tarif') AS nama,
+             COUNT(*)::int AS "jumlahPelanggan",
+             COALESCE(SUM(t."pemakaianM3"), 0)::text AS "pemakaianM3",
+             COALESCE(SUM(t."totalTagihan"), 0)::text AS "totalTagihan"
+        FROM tagihan t
+        LEFT JOIN tarif_golongan tg ON tg.id = t."tarifGolonganId"
+       WHERE t.periode = ${tanggalPeriode}
+       GROUP BY tg.kode, tg.nama
+       ORDER BY SUM(t."totalTagihan") DESC
+    `,
+    // 4. Data TAA per Kelurahan
+    prisma.$queryRaw<
+      Array<{
+        kelurahan: string
+        jumlahTaa: number
+      }>
+    >`
+      SELECT COALESCE(k.nama, 'Tidak diketahui') AS kelurahan,
+             COUNT(*)::int AS "jumlahTaa"
+        FROM tagihan t
+        JOIN pembacaan_meter b ON b.id = t."pembacaanId"
+        JOIN pelanggan p ON p.id = t."pelangganId"
+        LEFT JOIN kelurahan k ON k.id = p."kelurahanId"
+       WHERE t.periode = ${tanggalPeriode}
+         AND b.kondisi = 'TIDAK_ADA_AIR'
+       GROUP BY COALESCE(k.nama, 'Tidak diketahui')
+       ORDER BY COUNT(*) DESC, COALESCE(k.nama, 'Tidak diketahui') ASC
+       LIMIT 8
+    `,
+    // 5. Data Cakupan (Top 8 Kelurahan - SL & Pemakaian)
+    prisma.$queryRaw<
+      Array<{
+        kelurahan: string
+        sl: number
+        pemakaianM3: string
+        totalTagihan: string
+      }>
+    >`
+      SELECT COALESCE(k.nama, 'Tidak diketahui') AS kelurahan,
+             COUNT(*)::int AS sl,
+             COALESCE(SUM(t."pemakaianM3"), 0)::text AS "pemakaianM3",
+             COALESCE(SUM(t."totalTagihan"), 0)::text AS "totalTagihan"
+        FROM tagihan t
+        JOIN pelanggan p ON p.id = t."pelangganId"
+        LEFT JOIN kelurahan k ON k.id = p."kelurahanId"
+       WHERE t.periode = ${tanggalPeriode}
+       GROUP BY COALESCE(k.nama, 'Tidak diketahui')
+       ORDER BY COUNT(*) DESC, COALESCE(k.nama, 'Tidak diketahui') ASC
+       LIMIT 8
+    `,
+    // 6. Data TAA Sebaran Tarif
+    prisma.$queryRaw<
+      Array<{
+        kode: string
+        jumlahTaa: number
+      }>
+    >`
+      SELECT COALESCE(REPLACE(tg.kode::text, 'GOL_', ''), 'Tanpa tarif') AS kode,
+             COUNT(*)::int AS "jumlahTaa"
+        FROM tagihan t
+        JOIN pembacaan_meter b ON b.id = t."pembacaanId"
+        LEFT JOIN tarif_golongan tg ON tg.id = t."tarifGolonganId"
+       WHERE t.periode = ${tanggalPeriode}
+         AND b.kondisi = 'TIDAK_ADA_AIR'
+       GROUP BY tg.kode
+       ORDER BY COUNT(*) DESC
+       LIMIT 6
+    `,
+  ])
+
+  const totalPelanggan = tagihan._count._all
+  const dataKelurahan = rawKelurahan.map((r) => ({
+    kelurahan: r.kelurahan,
+    jumlahPelanggan: r.jumlahPelanggan,
+    pemakaianM3: Number(r.pemakaianM3),
+    totalTagihan: Number(r.totalTagihan),
+  }))
+
+  const dataDomestik = rawDomestik.map((r) => ({
+    kode: r.kode,
+    nama: r.nama,
+    jumlahPelanggan: r.jumlahPelanggan,
+    pemakaianM3: Number(r.pemakaianM3),
+    totalTagihan: Number(r.totalTagihan),
+  }))
+
+  const dataTarif = rawTarif.map((r) => ({
+    kode: r.kode,
+    nama: r.nama,
+    jumlahPelanggan: r.jumlahPelanggan,
+    pemakaianM3: Number(r.pemakaianM3),
+    totalTagihan: Number(r.totalTagihan),
+  }))
+
+  const dataTaaKelurahan = rawTaaKelurahan.map((r) => ({
+    kelurahan: r.kelurahan,
+    jumlahTaa: r.jumlahTaa,
+    persentaseTaa:
+      totalPelanggan > 0
+        ? Number(((r.jumlahTaa / totalPelanggan) * 100).toFixed(1))
+        : 0,
+  }))
+
+  const dataCakupan = rawCakupan.map((r) => ({
+    kelurahan: r.kelurahan,
+    sl: r.sl,
+    pemakaianM3: Number(r.pemakaianM3),
+    totalTagihan: Number(r.totalTagihan),
+  }))
+
+  const dataTaaStatus = {
+    normal: Math.max(0, totalPelanggan - jumlahTaa),
+    taa: jumlahTaa,
+    persenTaa:
+      totalPelanggan > 0
+        ? Number(((jumlahTaa / totalPelanggan) * 100).toFixed(1))
+        : 0,
+    sebaranTarif: rawTaaTarif.map((r) => ({
+      kode: r.kode,
+      jumlahTaa: r.jumlahTaa,
+    })),
+  }
+
+  const dataTagihanKomposisi = {
+    hargaAir: tagihan._sum.jmlHargaAir ?? 0,
+    beaBeban: tagihan._sum.beaBeban ?? 0,
+    beaAdmin: tagihan._sum.beaAdmin ?? 0,
+    airKotor: tagihan._sum.airKotor ?? 0,
+    lainLain: tagihan._sum.lainLain ?? 0,
+    totalTagihan: tagihan._sum.totalTagihan ?? 0,
+  }
 
   return {
     periode,
-    jumlahPelanggan: tagihan._count._all,
+    jumlahPelanggan: totalPelanggan,
     pemakaianM3: tagihan._sum.pemakaianM3 ?? 0,
     totalTagihan: tagihan._sum.totalTagihan ?? 0,
     jumlahTaa,
     jumlahDomestik,
     jumlahKelurahan: jumlahKelurahan[0]?.jumlah ?? 0,
+    dataKelurahan,
+    dataDomestik,
+    dataTarif,
+    dataTaaKelurahan,
+    dataCakupan,
+    dataTaaStatus,
+    dataTagihanKomposisi,
   }
 }
 

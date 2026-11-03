@@ -21,7 +21,7 @@ import { DATA_DIR } from "./Lingkungan"
 import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { prisma } from "@db"
-import { periodeToDate } from "../lib/Periode"
+import { periodeToDate } from "@/lib/domain/Periode"
 import { hitungCalon } from "../modules/closing/BulanBaru.service"
 
 const PERIODE = [

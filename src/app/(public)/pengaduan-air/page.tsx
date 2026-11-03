@@ -8,7 +8,7 @@ import { auth } from "@/lib/auth/index"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PengaduanForm } from "@/features/public/components/PengaduanFormulir"
 import { LacakTiketForm } from "@/features/public/components/LacakTiketFormulir"
-import { getPetaCakupan } from "@/features/beranda/lib/Peta"
+import { getPetaCakupan } from "@/features/beranda/server/Peta"
 import {
   HalamanPublik,
   AsideBlok,

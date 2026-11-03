@@ -4,12 +4,12 @@
 import { cn } from "@/lib/Utilitas"
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons"
 import type { NavGroup } from "@/config/Navigasi"
-import { getGroupIcon } from "./types/Icons"
+import { getGroupIcon } from "./lib/Icons"
 import { NavNodeRow } from "./NavNodeRow"
 import { NavRowContent, RowSeparator } from "./NavRow"
-import { navRowClass } from "./types/Styles"
+import { navRowClass } from "./lib/Styles"
 import type { ActiveInfo } from "./types/Tipe"
-import { nodeKey } from "./types/Utilitas"
+import { nodeKey } from "./lib/Utilitas"
 
 type Props = {
   group: NavGroup

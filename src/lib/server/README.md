@@ -6,8 +6,8 @@ the `/api` prefix, for example `/api/v1/me` and `/api/auth/session`.
 
 ## Layout
 
-- `app.ts` assembles middleware and mounts the API modules.
-- `modules/` contains route handlers and domain-specific services.
+- `Aplikasi.ts` assembles middleware and mounts the API modules (`index.ts` re-exports `app`).
+- `modules/` contains thin route handlers (`*.router.ts`), Zod schemas (`*.schema.ts`), and domain-specific services (`*.service.ts`).
 - `middleware/` contains authentication and role checks.
 - `lib/` contains shared request, response, database, and storage helpers.
 - `scripts/` contains database checks and maintenance commands.

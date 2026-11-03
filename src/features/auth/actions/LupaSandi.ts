@@ -8,9 +8,9 @@
 import { headers } from "next/headers"
 import { prisma } from "@/lib/Prisma"
 import { forgotPasswordSchema } from "../lib/Schema"
-import { buatTokenReset } from "../lib/SandiAturUlang"
-import { kirimEmail } from "../lib/PengirimEmail"
-import { emailResetPassword } from "../lib/TemplatEmail"
+import { buatTokenReset } from "../server/SandiAturUlang"
+import { kirimEmail } from "../server/PengirimEmail"
+import { emailResetPassword } from "../server/TemplatEmail"
 
 export interface ForgotPasswordState {
   status: "idle" | "sukses" | "error"

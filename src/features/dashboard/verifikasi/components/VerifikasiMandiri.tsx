@@ -51,11 +51,30 @@ import {
   type ProfilMenu,
 } from "../lib/MenuAksi"
 
+function bobotRole(role: string | null | undefined): number {
+  switch (role) {
+    case "SUPER_ADMIN":
+    case "DIREKSI":
+    case "SENIOR_MANAGER":
+      return 3
+    case "MANAGER":
+      return 2
+    case "SUPERVISOR":
+      return 1
+    case "STAFF":
+      return 0
+    default:
+      return -1
+  }
+}
+
 export function VerifikasiMandiri({
   bisaAksi,
+  role = "",
   profilMenu = "penilai",
 }: {
   bisaAksi: boolean
+  role?: string
   /** "chn" = menu CHN / Batal Baca Ulang / Unverifikasi mati. */
   profilMenu?: ProfilMenu
 }) {
@@ -136,6 +155,24 @@ export function VerifikasiMandiri({
     const tanpaAkses = "Akun Anda tidak punya akses verifikasi"
     const disetujui =
       baris.status === "DIVERIFIKASI" || baris.status === "DIGUNAKAN"
+    const kalahJenjangVerifikator = Boolean(
+      baris.verifiedByRole &&
+      role &&
+      bobotRole(role) < bobotRole(baris.verifiedByRole)
+    )
+    const tertahanTahapPetugas = Boolean(
+      baris.sudahTahapPetugas ||
+      baris.verif3At != null ||
+      baris.pembacaan != null
+    )
+    const bolehUnverify =
+      bisaAksi &&
+      disetujui &&
+      !baris.sudahDitagih &&
+      !tertahanTahapPetugas &&
+      !kalahJenjangVerifikator
+    const bolehBatalBacaUlang =
+      bisaAksi && baris.status === "DITOLAK" && !kalahJenjangVerifikator
 
     const bukaKonfirmasi = (judul: string, deskripsi: string) => {
       setMenu(null)
@@ -164,16 +201,22 @@ export function VerifikasiMandiri({
         },
       },
       unverifikasi: {
-        aktif: bisaAksi && disetujui,
+        aktif: bolehUnverify,
         keterangan: !bisaAksi
           ? tanpaAkses
-          : disetujui
-            ? "Kembalikan laporan terverifikasi ke antrean"
-            : "Belum ada verifikasi yang bisa dibatalkan",
+          : !disetujui
+            ? "Belum ada verifikasi yang bisa dibatalkan"
+            : baris.sudahDitagih
+              ? "Pembacaan resmi sudah dipakai tagihan — tidak bisa dibatalkan"
+              : tertahanTahapPetugas
+                ? "Tidak dapat dibatalkan karena data telah diverifikasi di Verifikasi Petugas (V1/V2/V3). Batalkan verifikasi di halaman Petugas terlebih dahulu"
+                : kalahJenjangVerifikator
+                  ? "Pembatalan memerlukan kewenangan minimal setara dengan verifikator sebelumnya"
+                  : "Kembalikan laporan terverifikasi ke antrean dan batalkan sinkronisasi Petugas",
         onPilih: () =>
           bukaKonfirmasi(
-            "Batalkan verifikasi?",
-            `Laporan ${nama} dikembalikan ke status menunggu.`
+            "Batalkan verifikasi laporan mandiri?",
+            `Laporan ${nama} dikembalikan ke status MENUNGGU, koreksi stand mandiri dibatalkan ke kiriman awal warga, dan data pada halaman Verifikasi Petugas dikembalikan ke kondisi semula.`
           ),
       },
       edit: tidakBerlaku,
@@ -192,12 +235,14 @@ export function VerifikasiMandiri({
         },
       },
       batalBacaUlang: {
-        aktif: bisaAksi && baris.status === "DITOLAK",
+        aktif: bolehBatalBacaUlang,
         keterangan: !bisaAksi
           ? tanpaAkses
-          : baris.status === "DITOLAK"
-            ? undefined
-            : "Laporan tidak sedang dibaca ulang",
+          : baris.status !== "DITOLAK"
+            ? "Laporan tidak sedang dibaca ulang"
+            : kalahJenjangVerifikator
+              ? "Pembatalan memerlukan kewenangan minimal setara dengan verifikator sebelumnya"
+              : undefined,
         onPilih: () =>
           bukaKonfirmasi(
             "Batalkan penolakan?",
@@ -236,7 +281,7 @@ export function VerifikasiMandiri({
               <div className="scrollbar-tipis min-h-0 flex-1 overflow-y-auto">
                 {/* key: ganti baris = remount panel, state mulai bersih. */}
                 <PanelMandiri
-                  key={idTerpilih ?? "kosong"}
+                  key={`${idTerpilih ?? "kosong"}-${refreshKey}`}
                   id={idTerpilih}
                   aksi={aksi}
                   onTutupAksi={() => setAksi(null)}

@@ -7,10 +7,10 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { primaryNav } from "@/config/Navigasi"
-import { getPrimaryIcon } from "./types/Icons"
+import { getPrimaryIcon } from "./lib/Icons"
 import { NavRowContent } from "./NavRow"
-import { navRowClass } from "./types/Styles"
-import { isPrimaryActive } from "./types/Utilitas"
+import { navRowClass } from "./lib/Styles"
+import { isPrimaryActive } from "./lib/Utilitas"
 
 export function PrimaryNav() {
   const pathname = usePathname()

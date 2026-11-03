@@ -16,7 +16,7 @@ import {
   LABEL_JENIS_PENGADUAN,
   statusPengaduanWarga,
 } from "@/features/public/lib/Format"
-import type { TiketSaya } from "../lib/Kueri"
+import type { TiketSaya } from "../server/Kueri"
 
 const STATUS_SELESAI = ["SELESAI", "DITUTUP", "DITOLAK"]
 

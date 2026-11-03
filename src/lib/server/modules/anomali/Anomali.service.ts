@@ -17,12 +17,18 @@ import { prisma } from "@db"
 import {
   AMBANG_BULAN_DEFAULT,
   KONDISI_TIDAK_TERUKUR,
+  SEMUA_KATEGORI,
   deteksiAnomali,
   prioritasKunjungan,
   type BarisRiwayat,
   type KategoriAnomali,
 } from "@/lib/domain/Anomali"
-import { dateToPeriode, periodeToDate } from "../../lib/Periode"
+import { dateToPeriode, periodeToDate } from "@/lib/domain/Periode"
+import { NotFoundError, BadRequestError, ConflictError } from "../../lib/Galat"
+import type {
+  DaftarAnomaliQuery,
+  KunjunganAnomaliInput,
+} from "./Anomali.schema"
 
 /// Berapa periode ke belakang yang dibaca. Cukup untuk memastikan deretan
 /// terpanjang yang masuk akal (satu tahun) tanpa menarik seluruh riwayat
@@ -656,6 +662,188 @@ export async function riwayatSambungan(pelangganId: string) {
     })),
     laporanLapangan,
   }
+}
+
+export async function ambilDaftarAnomali(q: DaftarAnomaliQuery) {
+  const baris = await daftarAnomali({
+    ambangBulan: q.ambangBulan,
+    kategori: q.kategori as KategoriAnomali | undefined,
+    kondisi: q.kondisi,
+    hanyaPrioritas: q.hanyaPrioritas,
+    sembunyikanSudahDikunjungi: q.sembunyikanSudahDikunjungi,
+    periode: q.periode,
+  })
+  return {
+    ambangBulan: q.ambangBulan ?? AMBANG_BULAN_DEFAULT,
+    total: baris.length,
+    prioritas: baris.filter((b) => b.prioritas).length,
+    perKategori: Object.fromEntries(
+      SEMUA_KATEGORI.map((k) => [
+        k,
+        baris.filter((b) => b.kategori === k).length,
+      ])
+    ),
+    baris,
+  }
+}
+
+/// Merekam hasil kunjungan.
+///
+/// ANGKA METER TIDAK LANGSUNG JADI PEMBACAAN RESMI. Bila petugas berhasil
+/// membaca meternya, angka itu masuk ANTREAN VERIFIKASI lewat
+/// LaporanHarianPetugas — jalur yang sama dengan pencatatan biasa, dengan
+/// ring V1->V2->V3 yang sudah ada. Alasannya sederhana: angka ini mengubah
+/// tagihan, dan satu orang di lapangan tidak boleh mengubah tagihan tanpa
+/// pemeriksaan kedua. Laporan mandiri warga pun sudah tunduk pada aturan
+/// yang sama.
+export async function catatKunjunganAnomali(
+  b: KunjunganAnomaliInput,
+  userId: string
+) {
+  const pelanggan = await prisma.pelanggan.findUnique({
+    where: { id: b.pelangganId },
+    select: {
+      id: true,
+      nomorLangganan: true,
+      nama: true,
+      alamat: true,
+      deletedAt: true,
+    },
+  })
+  if (!pelanggan || pelanggan.deletedAt) throw new NotFoundError("Pelanggan")
+
+  if (b.hasil === "BERTEMU_TERBACA" && b.standDitemukan === undefined) {
+    throw new BadRequestError(
+      "Hasil BERTEMU_TERBACA harus disertai angka meter yang terbaca — itu satu-satunya gunanya."
+    )
+  }
+
+  const pencatat = await prisma.pencatat.findUnique({
+    where: { userId },
+    select: { id: true, namaLapangan: true },
+  })
+
+  const sudahAda = await prisma.kunjunganAnomali.findUnique({
+    where: {
+      pelangganId_periode: { pelangganId: b.pelangganId, periode: b.periode },
+    },
+  })
+  if (sudahAda) {
+    throw new ConflictError(
+      `Sambungan ${pelanggan.nomorLangganan} sudah dikunjungi pada periode ${b.periode} (hasil: ${sudahAda.hasil}). Satu kunjungan per periode.`
+    )
+  }
+
+  const row = await prisma.$transaction(async (tx) => {
+    const kunjungan = await tx.kunjunganAnomali.create({
+      data: {
+        pelangganId: b.pelangganId,
+        periode: b.periode,
+        kategori: b.kategori as never,
+        bulanBerturut: b.bulanBerturut,
+        m3TanpaDasar: b.m3TanpaDasar,
+        pencatatId: pencatat?.id ?? null,
+        hasil: b.hasil as never,
+        standDitemukan: b.standDitemukan ?? null,
+        fotoUrl: b.fotoUrl ?? null,
+        fotoPublicId: b.fotoPublicId ?? null,
+        fotoSegelUrl: b.fotoSegelUrl ?? null,
+        fotoRumahUrl: b.fotoRumahUrl ?? null,
+        isSegel: b.isSegel ?? null,
+        catatan: b.catatan ?? null,
+      },
+    })
+
+    // Koordinat lewat raw SQL — kolom PostGIS tidak bisa disentuh query
+    // builder Prisma (lihat panduan di prisma/docs/README.md).
+    if (b.latitude !== undefined && b.longitude !== undefined) {
+      await tx.$executeRaw`
+      UPDATE kunjungan_anomali
+      SET koordinat = ST_SetSRID(ST_MakePoint(${b.longitude}, ${b.latitude}), 4326)
+      WHERE id = ${kunjungan.id}`
+    }
+
+    // Angka terbaca -> antrean verifikasi, BUKAN pembacaan resmi.
+    if (b.hasil === "BERTEMU_TERBACA" && b.standDitemukan !== undefined) {
+      const sebelumnya = await tx.pembacaanMeter.findFirst({
+        where: { meter: { pelangganId: b.pelangganId } },
+        select: { standAkhir: true, pemakaianM3: true },
+        orderBy: { periode: "desc" },
+      })
+      const standAwal = sebelumnya?.standAkhir ?? 0
+      await tx.laporanHarianPetugas.create({
+        data: {
+          nomorLangganan: pelanggan.nomorLangganan,
+          pelangganId: pelanggan.id,
+          namaPelanggan: pelanggan.nama,
+          alamatPelanggan: pelanggan.alamat,
+          periode: b.periode,
+          standAwal,
+          standAkhir: b.standDitemukan,
+          pemakaian: Math.max(0, b.standDitemukan - standAwal),
+          pemakaianLalu: sebelumnya?.pemakaianM3 ?? null,
+          kondisi: "NORMAL",
+          // OFFSITE: dibaca saat kunjungan anomali, bukan pada kunjungan
+          // rutin rute — bedanya perlu terlihat saat verifikator menilai.
+          kategori: "OFFSITE",
+          pencatatId: pencatat?.id ?? null,
+          tanggalCatat: new Date(),
+          tanggalUpload: new Date(),
+          // Ketiga foto DIBAWA SERTA ke antrean verifikasi. Verifikator
+          // menilai angka ini lewat panel yang sama dengan pencatatan rutin;
+          // kalau fotonya tertinggal di tabel kunjungan, ia harus membuka dua
+          // layar untuk satu keputusan — dan yang biasanya terjadi adalah ia
+          // memutuskan tanpa melihat fotonya sama sekali.
+          fotoStandUrl: b.fotoUrl ?? null,
+          fotoSegelUrl: b.fotoSegelUrl ?? null,
+          fotoRumahUrl: b.fotoRumahUrl ?? null,
+          isSegel: b.isSegel ?? null,
+          latCatat: b.latitude ?? null,
+          longCatat: b.longitude ?? null,
+          catatanVerif: `Dari kunjungan anomali (${b.kategori}, ${b.bulanBerturut} bulan tidak terbaca).`,
+        },
+      })
+    }
+
+    return kunjungan
+  })
+
+  return {
+    ...row,
+    masukAntreanVerifikasi: b.hasil === "BERTEMU_TERBACA",
+    pesan:
+      b.hasil === "BERTEMU_TERBACA"
+        ? "Kunjungan tercatat. Angka meter masuk antrean verifikasi — belum menjadi pembacaan resmi sampai diperiksa."
+        : "Kunjungan tercatat.",
+  }
+}
+
+/// Kunjungan yang SUDAH dilakukan penyelia ini — bukan daftar tugas, tapi
+/// catatan kerjanya sendiri.
+export async function daftarKunjunganSaya(userId: string) {
+  const pencatat = await prisma.pencatat.findUnique({
+    where: { userId },
+    select: { id: true },
+  })
+  if (!pencatat) return { total: 0, baris: [] }
+  const baris = await prisma.kunjunganAnomali.findMany({
+    where: { pencatatId: pencatat.id },
+    select: {
+      id: true,
+      periode: true,
+      kategori: true,
+      hasil: true,
+      standDitemukan: true,
+      catatan: true,
+      dikunjungiAt: true,
+      pelanggan: {
+        select: { nomorLangganan: true, nama: true, alamat: true },
+      },
+    },
+    orderBy: { dikunjungiAt: "desc" },
+    take: 200,
+  })
+  return { total: baris.length, baris }
 }
 
 export const KONDISI_DIPANTAU = KONDISI_TIDAK_TERUKUR

@@ -82,7 +82,7 @@ vi.mock("../src/lib/server/middleware/RBAC", () => ({
   ),
 }))
 
-import { manualAddRouter } from "../src/lib/server/modules/laporan/ManualTambah.router"
+import { manualAddRouter } from "../src/lib/server/modules/laporan/manual-tambah/ManualTambah.router"
 import { errorHandler } from "../src/lib/server/lib/Galat"
 
 const app = new Hono()
@@ -367,6 +367,41 @@ describe("Manual Add API end-to-end", () => {
       mocks.tx,
       expect.objectContaining({ aksi: "MANUAL_ADD_SATUAN_REPLACE" })
     )
+  })
+
+  it("menolak penggantian laporan pending yang belum melewati verifikasi", async () => {
+    const laporanPending = {
+      ...laporanTerverifikasi(),
+      isVerified: false,
+      verifiedAt: null,
+      verifiedById: null,
+      pembacaanId: null,
+      pembacaan: null,
+      verif1At: null,
+      verif1ById: null,
+      verif2At: null,
+      verif2ById: null,
+      verif3At: null,
+      verif3ById: null,
+    }
+    mocks.tx.periodePenagihan.findUnique.mockResolvedValue({
+      status: "TERBUKA",
+    })
+    mocks.tx.pelanggan.findUnique.mockResolvedValue(pelangganAktif())
+    mocks.tx.laporanHarianPetugas.findFirst.mockResolvedValue(laporanPending)
+    mocks.tx.pembacaanMeter.findMany.mockResolvedValue([])
+
+    const res = await requestJson("/satuan", "POST", {
+      pelangganId: "pelanggan-1",
+      periode: PERIODE,
+      tanggalCatat: "2026-10-15",
+      standAwal: 120,
+      standAkhir: 123,
+      alasanManual: "Koreksi laporan setelah pemeriksaan.",
+    })
+
+    expect(res.response.status).toBe(409)
+    expect(mocks.tx.laporanHarianPetugas.updateMany).not.toHaveBeenCalled()
   })
 
   it("hanya menampilkan alamat belum tercatat dan menyimpan ST Awal/Akhir dari stand terakhir", async () => {

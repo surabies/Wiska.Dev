@@ -1,5 +1,5 @@
 import { cn } from "@/lib/Utilitas"
-import { GAYA_HARI, URUTAN_JENIS } from "./Konstanta"
+import { GAYA_HARI, URUTAN_JENIS } from "../lib/Konstanta"
 
 export function Legenda() {
   return (

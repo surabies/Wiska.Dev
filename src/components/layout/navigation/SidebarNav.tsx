@@ -24,7 +24,7 @@ import { RowSeparator } from "./sidebar/NavRow"
 import { PrimaryNav } from "./sidebar/PrimaryNav"
 import { SidebarSearch } from "./sidebar/SidebarSearch"
 import { Slide } from "./sidebar/Slide"
-import { useSidebarDrilldown } from "./sidebar/types/UseSidebarDrilldown"
+import { useSidebarDrilldown } from "./sidebar/hooks/UseSidebarDrilldown"
 
 export function SidebarNav({ className }: { className?: string }) {
   const {

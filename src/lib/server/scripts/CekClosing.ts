@@ -16,7 +16,7 @@
 
 import "./Lingkungan"
 import { prisma } from "@db"
-import { periodeToDate } from "../lib/Periode"
+import { periodeToDate } from "@/lib/domain/Periode"
 import {
   hitungBarisSiapTagih,
   pratinjauClosing,

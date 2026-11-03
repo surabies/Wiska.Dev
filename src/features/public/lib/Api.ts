@@ -234,7 +234,7 @@ export function kirimPengaduan(input: InputPengaduan) {
   )
 }
 
-/// Ringkasan SLA — dihitung server (server/modules/pengaduan/sla.ts), bukan
+/// Ringkasan SLA — dihitung server (`@/lib/domain/SLA`), bukan
 /// di sini. Aturan "terlambat" adalah kebijakan layanan; menyalinnya ke
 /// browser berarti dua sumber kebenaran yang pasti menyimpang.
 export interface SlaTiket {

@@ -1,5 +1,6 @@
 "use client"
 
+import type { ComponentProps } from "react"
 import dynamic from "next/dynamic"
 
 // dynamic import dengan ssr: false aman ditaruh di Client Component ini
@@ -17,6 +18,6 @@ const PetaWilayah = dynamic(
   }
 )
 
-export function PetaClientWrapper(props: any) {
+export function PetaClientWrapper(props: ComponentProps<typeof PetaWilayah>) {
   return <PetaWilayah {...props} />
 }

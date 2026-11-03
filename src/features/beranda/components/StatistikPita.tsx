@@ -1,12 +1,12 @@
 // features/beranda/components/StatistikPita.tsx — baris angka nyata dari
-// database (features/beranda/lib/Statistik.ts). Async server component; dirender
+// database (features/beranda/server/Statistik.ts). Async server component; dirender
 // di dalam <Suspense> dari app/page.tsx supaya hero tidak menunggu query.
 // Angka dianimasikan lewat <AnimatedNumber> (client leaf) — komponen ini
 // sendiri TETAP server component, cuma mengoper angka mentah.
 //
 // Kalau database kosong (deploy baru), seluruh strip disembunyikan — angka
 // nol besar-besar lebih merusak kepercayaan daripada tidak ada angka.
-import { getStatsBeranda } from "../lib/Statistik"
+import { getStatsBeranda } from "../server/Statistik"
 import { formatPeriode } from "@/features/public/lib/Format"
 import { AnimatedNumber } from "./motion/AngkaAnimasi"
 import { Reveal } from "./motion/Tampilkan"

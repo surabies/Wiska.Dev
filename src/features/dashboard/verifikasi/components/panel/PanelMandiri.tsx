@@ -177,9 +177,9 @@ export function PanelMandiri({
   // Pagar kedua — menu klik kanan sudah menyaring status MENUNGGU.
   const bisaModal = detail.status === "MENUNGGU"
 
-  // Tiga angka yang sama persis dengan panel Petugas.
-  const stAkhir = detail.pembacaan?.standAkhir ?? detail.standDilaporkan
-  const pakai = detail.pembacaan?.pemakaianRiil ?? pemakaianCatat
+  // Tiga angka di panel Mandiri selalu mengutamakan angka laporan konsumen.
+  const stAkhir = detail.standDilaporkan ?? detail.pembacaan?.standAkhir ?? null
+  const pakai = pemakaianCatat ?? detail.pembacaan?.pemakaianRiil ?? null
 
   return (
     <div className="flex min-w-0 flex-col gap-2 p-3">

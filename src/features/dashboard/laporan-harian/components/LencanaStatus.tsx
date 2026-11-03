@@ -1,5 +1,5 @@
 import { cn } from "@/lib/Utilitas"
-import { GAYA_STATUS } from "./Konstanta"
+import { GAYA_STATUS } from "../lib/Konstanta"
 import type { Status } from "../types/TipeLaporanHarian"
 
 export function LencanaStatus({ status }: { status: Status }) {

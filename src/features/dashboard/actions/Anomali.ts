@@ -23,7 +23,7 @@ import {
   daftarAnomali,
   riwayatSambungan,
   type OpsiDaftar,
-} from "@server/modules/anomali"
+} from "@server/modules/anomali/Anomali.service"
 import { SEMUA_KATEGORI, type KategoriAnomali } from "@/lib/domain/Anomali"
 
 export type RiwayatSambungan = NonNullable<

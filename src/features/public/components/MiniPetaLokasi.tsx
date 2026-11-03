@@ -2,7 +2,7 @@
 
 // features/public/components/MiniPetaLokasi.tsx — pratinjau lokasi di
 // form pengaduan. Pakai batas wilayah ASLI yang sama dengan peta cakupan
-// beranda (features/beranda/lib/Peta.ts) — bukan gambar peta generik —
+// beranda (features/beranda/server/Peta.ts) — bukan gambar peta generik —
 // supaya warga bisa lihat sendiri titik yang barusan dideteksi browser-nya
 // benar-benar jatuh di wilayah cakupan, bukan meleset.
 //

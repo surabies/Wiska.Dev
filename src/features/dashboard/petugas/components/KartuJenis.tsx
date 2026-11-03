@@ -1,6 +1,6 @@
 // features/dashboard/petugas/components/KartuJenis.tsx — kartu ringkasan
 // satu jenis tugas: nama, jumlah petugas, penjelasan.
-import type { InfoJenis } from "./Konstanta"
+import type { InfoJenis } from "../lib/Konstanta"
 
 export function KartuJenis({
   info,

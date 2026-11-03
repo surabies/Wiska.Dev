@@ -17,7 +17,8 @@ const STAFF_UP = new Set([
 
 export default async function VerifikasiMandiriPage() {
   const session = await auth()
-  const bisaAksi = STAFF_UP.has(session?.user?.role ?? "")
+  const role = session?.user?.role ?? ""
+  const bisaAksi = STAFF_UP.has(role)
 
   return (
     <PageContainer
@@ -27,7 +28,7 @@ export default async function VerifikasiMandiriPage() {
         { label: "Pembacaan Pelanggan" },
       ]}
     >
-      <VerifikasiMandiri bisaAksi={bisaAksi} />
+      <VerifikasiMandiri bisaAksi={bisaAksi} role={role} />
     </PageContainer>
   )
 }

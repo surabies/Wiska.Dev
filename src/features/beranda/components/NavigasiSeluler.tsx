@@ -13,7 +13,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { TombolPasang } from "@/components/pwa/TombolPasang"
-import { NAV_LAYANAN } from "./TautanNavigasi"
+import { NAV_LAYANAN } from "../lib/TautanNavigasi"
 
 export function MobileNav({
   ctaHref,

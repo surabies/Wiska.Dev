@@ -21,7 +21,7 @@
 
 import { prisma } from "@db"
 import { recordAudit } from "../../lib/Audit"
-import { periodeToDate } from "../../lib/Periode"
+import { periodeToDate } from "@/lib/domain/Periode"
 
 export type Keparahan = "GAWAT" | "PERHATIAN" | "INFO"
 

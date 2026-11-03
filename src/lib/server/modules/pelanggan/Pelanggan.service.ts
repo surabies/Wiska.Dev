@@ -5,7 +5,7 @@
 import type { Prisma } from "@db"
 import { prisma } from "@db"
 import { bacaAsalUsul, KOLOM_TERJAGA } from "@/lib/domain/AsalUsul"
-import { NotFoundError, ConflictError } from "../../lib/Galat"
+import { NotFoundError, ConflictError, BadRequestError } from "../../lib/Galat"
 import {
   GEO,
   setPoint,
@@ -23,7 +23,10 @@ import type {
   CreatePelangganInput,
   UpdatePelangganInput,
   ListPelangganQuery,
+  PerluRuteQuery,
 } from "./Pelanggan.schema"
+import { imporMasterSti } from "./MasterSti.service"
+import { imporPbpk } from "./PBPK.service"
 
 const LIST_INCLUDE = {
   tarifGolongan: { select: { kode: true, nama: true } },
@@ -365,4 +368,215 @@ export async function findPelangganNear(params: {
       (r): r is (typeof rows)[number] & { jarakMeter: number } =>
         r.id !== undefined
     )
+}
+
+// ── Master pelanggan STI (PEL{periode}-PW5.csv) & PBPK ───────────────────
+/// Batas ukuran berkas. Master nyata ~2,5 MB; 20 MB memberi ruang besar
+/// tanpa membuka pintu unggahan yang membekukan proses.
+const MAKS_BERKAS_BYTE = 20 * 1024 * 1024
+
+export async function bacaBerkasMaster(req: Request): Promise<string> {
+  const form = await req.formData()
+  const berkas = form.get("berkas")
+  if (!(berkas instanceof File)) {
+    throw new BadRequestError("Lampirkan berkas master pada field `berkas`.")
+  }
+  if (berkas.size === 0) throw new BadRequestError("Berkas master kosong.")
+  if (berkas.size > MAKS_BERKAS_BYTE) {
+    throw new BadRequestError("Ukuran berkas melebihi 20 MB.")
+  }
+  return berkas.text()
+}
+
+// `periode` WAJIB dikirim — berkas PBPK tidak punya kolom periode dan namanya
+// bervariasi, jadi menebaknya dari nama berkas berarti satu penggantian nama
+// diam-diam memasukkan sambungan ke bulan yang salah.
+export async function bacaBerkasPbpk(req: Request): Promise<{
+  berkas: { nama: string; teks?: string; buffer?: ArrayBuffer }
+  periode: number
+}> {
+  const form = await req.formData()
+  const f = form.get("berkas")
+  if (!(f instanceof File))
+    throw new BadRequestError("Lampirkan berkas PBPK pada field `berkas`.")
+  if (f.size === 0) throw new BadRequestError("Berkas PBPK kosong.")
+  if (f.size > MAKS_BERKAS_BYTE)
+    throw new BadRequestError("Ukuran berkas melebihi 20 MB.")
+
+  const periode = Number(form.get("periode"))
+  if (
+    !Number.isInteger(periode) ||
+    periode < 190001 ||
+    periode > 999912 ||
+    periode % 100 < 1 ||
+    periode % 100 > 12
+  ) {
+    throw new BadRequestError(
+      "Field `periode` wajib diisi dalam bentuk TTTTBB (mis. 202606)."
+    )
+  }
+
+  const excel = /\.xlsx?$/i.test(f.name)
+  return {
+    berkas: excel
+      ? { nama: f.name, buffer: await f.arrayBuffer() }
+      : { nama: f.name, teks: await f.text() },
+    periode,
+  }
+}
+
+export async function pratinjauImporPbpk(req: Request, requester: SessionUser) {
+  const { berkas, periode } = await bacaBerkasPbpk(req)
+  return imporPbpk({
+    berkas,
+    periode,
+    terapkan: false,
+    olehUserId: requester.id,
+  })
+}
+
+export async function terapkanImporPbpk(req: Request, requester: SessionUser) {
+  const { berkas, periode } = await bacaBerkasPbpk(req)
+  return imporPbpk({
+    berkas,
+    periode,
+    terapkan: true,
+    olehUserId: requester.id,
+    jejak: auditMetaFromRequest(req),
+  })
+}
+
+export async function pratinjauImporMaster(
+  req: Request,
+  requester: SessionUser
+) {
+  return imporMasterSti({
+    teks: await bacaBerkasMaster(req),
+    terapkan: false,
+    terapkanStatus: false,
+    olehUserId: requester.id,
+  })
+}
+
+export async function terapkanImporMaster(
+  req: Request,
+  terapkanStatus: boolean,
+  requester: SessionUser
+) {
+  return imporMasterSti({
+    teks: await bacaBerkasMaster(req),
+    terapkan: true,
+    terapkanStatus,
+    olehUserId: requester.id,
+    jejak: auditMetaFromRequest(req),
+  })
+}
+
+// ── Sambungan yang perlu dipetakan ke rute ──────────────────────────────
+// Endpoint tersendiri, BUKAN filter di /pelanggan biasa: pertanyaannya bukan
+// "pelanggan mana yang rutenya X" melainkan "siapa yang JATUH DI CELAH" —
+// belum punya rute sama sekali, atau rutenya belum ditugaskan ke pencatat
+// mana pun. Keduanya berakibat sama: tidak muncul di beban kerja siapa pun,
+// jadi tidak dikunjungi, tidak dicatat, tidak tertagih.
+//
+// Sekalian mengembalikan daftar rute + pencatatnya, supaya layar pemetaan
+// tidak perlu memanggil dua endpoint hanya untuk mengisi satu dropdown.
+export async function getPelangganPerluRute({ periode }: PerluRuteQuery) {
+  const [tanpaRute, ruteTanpaPencatat, rute] = await Promise.all([
+    prisma.pelanggan.findMany({
+      where: {
+        deletedAt: null,
+        status: "AKTIF",
+        ...(periode
+          ? {
+              OR: [
+                { ruteId: null },
+                { daftarCatat: { some: { periode, sumber: "PBPK" } } },
+              ],
+            }
+          : { ruteId: null }),
+      },
+      select: {
+        id: true,
+        nomorLangganan: true,
+        nama: true,
+        alamat: true,
+        rt: true,
+        rw: true,
+        ruteId: true,
+        noUrutRute: true,
+        kelurahan: { select: { nama: true } },
+        rute: { select: { kode: true } },
+        // Sudah punya laporan periode ini? Itu penanda "pekerjaannya selesai"
+        // — barisnya tetap ditampilkan supaya rutenya masih bisa dikoreksi,
+        // tapi tidak lagi dihitung sebagai pekerjaan yang menunggu.
+        laporanHarian: periode
+          ? { where: { periode }, select: { id: true }, take: 1 }
+          : { where: { id: "-" }, select: { id: true }, take: 1 },
+      },
+      orderBy: { nomorLangganan: "asc" },
+      take: 500,
+    }),
+    prisma.pelanggan.findMany({
+      where: {
+        deletedAt: null,
+        status: "AKTIF",
+        ruteId: { not: null },
+        rute: { penugasanRute: { none: {} } },
+      },
+      select: {
+        id: true,
+        nomorLangganan: true,
+        nama: true,
+        alamat: true,
+        rt: true,
+        rw: true,
+        ruteId: true,
+        noUrutRute: true,
+        kelurahan: { select: { nama: true } },
+        rute: { select: { kode: true } },
+      },
+      orderBy: { nomorLangganan: "asc" },
+      take: 500,
+    }),
+    prisma.rute.findMany({
+      select: {
+        id: true,
+        kode: true,
+        penugasanRute: {
+          select: { pencatat: { select: { namaLapangan: true } } },
+          take: 1,
+        },
+      },
+      orderBy: { kode: "asc" },
+    }),
+  ])
+
+  return {
+    // `kelurahan` diratakan jadi teks: layar hanya menampilkannya, dan
+    // mengirim objek bersarang untuk satu nama cuma menambah kedalaman yang
+    // harus dibongkar di sisi klien.
+    // kodeRute DIAMBIL dari relasinya, bukan dipaksa null. Dulu daftar ini
+    // hanya berisi sambungan tanpa rute sehingga null selalu benar; sejak ia
+    // juga memuat seluruh PBPK periode berjalan, memaksa null menyembunyikan
+    // rute yang SUDAH terisi — persis yang perlu dilihat operator untuk tahu
+    // apakah rutenya keliru.
+    tanpaRute: tanpaRute.map(({ kelurahan, rute, laporanHarian, ...p }) => ({
+      ...p,
+      kelurahan: kelurahan?.nama ?? null,
+      kodeRute: rute?.kode ?? null,
+      sudahDicatat: laporanHarian.length > 0,
+    })),
+    ruteTanpaPencatat: ruteTanpaPencatat.map(({ rute, kelurahan, ...p }) => ({
+      ...p,
+      kelurahan: kelurahan?.nama ?? null,
+      kodeRute: rute?.kode ?? null,
+      sudahDicatat: false,
+    })),
+    rute: rute.map((r) => ({
+      id: r.id,
+      kode: r.kode,
+      pencatat: r.penugasanRute[0]?.pencatat.namaLapangan ?? null,
+    })),
+  }
 }

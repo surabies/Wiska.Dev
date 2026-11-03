@@ -34,7 +34,7 @@ import {
 } from "@/lib/domain/Tagihan"
 import { BadRequestError, ConflictError } from "../../lib/Galat"
 import { recordAudit } from "../../lib/Audit"
-import { periodeToDate } from "../../lib/Periode"
+import { periodeToDate } from "@/lib/domain/Periode"
 
 /// Berapa baris ditulis sekaligus. Tagihan diterbitkan lewat createMany
 /// berkelompok — 22 ribu insert satu per satu ke Postgres terkelola makan
@@ -751,4 +751,70 @@ export async function bukaPeriode(input: BukaPeriodeInput) {
     })
     return updated
   })
+}
+
+export async function daftarPeriodePenagihan() {
+  const rows = await prisma.periodePenagihan.findMany({
+    orderBy: { periode: "desc" },
+    take: 36,
+    include: {
+      ditutupBy: { select: { id: true, name: true } },
+      dibukaBy: { select: { id: true, name: true } },
+    },
+  })
+  // BigInt tidak bisa di-JSON.stringify — dikonversi ke string di batas API
+  // supaya klien menerima angka utuh (bukan number yang kehilangan presisi
+  // di atas 2^53).
+  return rows.map((r) => ({
+    ...r,
+    totalTagihan: r.totalTagihan?.toString() ?? null,
+  }))
+}
+
+// ── PERIODE KERJA — satu sumber kebenaran untuk seluruh layar ────────────
+//
+// MASALAH YANG DIPECAHKAN. Sebelum ini tiap layar menurunkan sendiri
+// "periode yang sedang dikerjakan": layar verifikasi memakai periode
+// terbaru yang punya laporan, layar PBPK memakai bulan kalender, layar
+// pemetaan memakai campuran keduanya. Akibatnya nyata dan sudah terjadi:
+// PBPK mendarat di periode kalender (Juli) sementara seluruh layar lain
+// menunjuk Januari — sambungannya lahir, tapi tidak muncul di mana pun dan
+// tidak ikut closing.
+//
+// Turunan yang benar: PERIODE TERBARU YANG PUNYA DAFTAR CATAT DAN BELUM
+// TERKUNCI. Daftar catat adalah tanda pekerjaan lapangan sudah diterbitkan;
+// TERKUNCI adalah tanda pekerjaannya selesai. Keduanya sudah tersimpan —
+// tidak perlu kolom baru, tidak perlu pilihan saat login.
+//
+// Kalau TIDAK ADA yang terbuka (semua periode berdaftar-catat sudah
+// terkunci), itu bukan galat melainkan keadaan sah: siklus menunggu "buka
+// bulan baru". Jawabannya menyebutkan itu supaya layar bisa menuntun, bukan
+// diam.
+export async function dapatkanPeriodeKerja() {
+  const [periodeDaftarCatat, terkunci] = await Promise.all([
+    prisma.daftarCatat.groupBy({
+      by: ["periode"],
+      orderBy: { periode: "desc" },
+    }),
+    prisma.periodePenagihan.findMany({
+      where: { status: "TERKUNCI" },
+      select: { periode: true },
+    }),
+  ])
+  const kunci = new Set(terkunci.map((p) => p.periode))
+  const semua = periodeDaftarCatat.map((p) => p.periode)
+  const terbuka = semua.find((p) => !kunci.has(p)) ?? null
+
+  return {
+    /// Periode yang harus dipakai layar. null = tidak ada yang terbuka.
+    periodeKerja: terbuka,
+    /// Semua periode yang punya daftar catat, terbaru dulu — untuk pemilih
+    /// periode; yang terkunci boleh dilihat, tapi hanya baca.
+    periode: semua.map((p) => ({ periode: p, terkunci: kunci.has(p) })),
+    /// Petunjuk tindakan saat tidak ada periode terbuka.
+    saran:
+      terbuka === null && semua.length > 0
+        ? `Semua periode sudah ditutup. Buka bulan baru dari periode ${semua[0]} untuk melanjutkan siklus.`
+        : null,
+  }
 }

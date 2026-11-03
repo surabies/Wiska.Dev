@@ -5,11 +5,11 @@ import Link from "next/link"
 import type { IconSvgElement } from "@hugeicons/react"
 import { cn } from "@/lib/Utilitas"
 import { isNavFolder, type NavNode } from "@/config/Navigasi"
-import { getItemIcon } from "./types/Icons"
+import { getItemIcon } from "./lib/Icons"
 import { NavRowContent } from "./NavRow"
-import { SECTION_LABEL, navRowClass } from "./types/Styles"
+import { SECTION_LABEL, navRowClass } from "./lib/Styles"
 import type { ActiveInfo } from "./types/Tipe"
-import { isPending, nodeKey } from "./types/Utilitas"
+import { isPending, nodeKey } from "./lib/Utilitas"
 
 type Props = {
   node: NavNode

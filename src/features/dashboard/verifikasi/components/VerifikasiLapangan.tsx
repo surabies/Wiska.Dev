@@ -472,6 +472,9 @@ export function VerifikasiLapangan({ role }: { role: string }) {
           tahap === "MENUNGGU_V3"))
 
     // Unverifikasi = batalkan SATU tahap terakhir.
+    // Sesuai kebijakan VERIFIKASI.md: V1 hanya dapat dibatalkan oleh V2/V3
+    // (bisaV2), V2 hanya dapat dibatalkan oleh V3 (bisaV3), dan V3 dapat
+    // membuka kembali (reopen) hasil V3 sebelum Tagihan.
     const unverif =
       tahap === "RESMI"
         ? {
@@ -485,14 +488,14 @@ export function VerifikasiLapangan({ role }: { role: string }) {
         : tahap === "MENUNGGU_V3"
           ? {
               nama: "Batalkan V2",
-              boleh: bisaV2,
+              boleh: bisaV3,
               judul: "Batalkan V2?",
               deskripsi: `Tanda validasi V2 pada laporan ${nama} dihapus; laporan kembali menunggu V2.`,
             }
           : tahap === "MENUNGGU_V2"
             ? {
                 nama: "Batalkan V1",
-                boleh: bisaV1,
+                boleh: bisaV2,
                 judul: "Batalkan V1?",
                 deskripsi: `Hasil pemeriksaan V1 pada laporan ${nama} (termasuk revisi stand dan pilihan meter) dihapus; laporan kembali menunggu V1.`,
               }
@@ -523,21 +526,35 @@ export function VerifikasiLapangan({ role }: { role: string }) {
       edit: {
         aktif:
           bisaEdit &&
+          tahap !== "RESMI" &&
           (role === "STAFF" ||
-            (tahap === "RESMI"
+            (tahap === "MENUNGGU_V3"
               ? bisaV3
-              : tahap === "MENUNGGU_V3"
+              : tahap === "MENUNGGU_V2"
                 ? bisaV2
                 : bisaV1)),
         keterangan:
-          tahap === "RESMI" && !bisaV3
-            ? "Koreksi hasil V3 memerlukan Senior Manager ke atas"
-            : tahap === "MENUNGGU_V3" && !bisaV2
-              ? "Koreksi setelah V2 memerlukan Manager ke atas"
-              : undefined,
+          tahap === "RESMI"
+            ? "Buka kembali (Batalkan V3) terlebih dahulu sebelum mengoreksi hasil resmi"
+            : tahap === "MENUNGGU_V3" && !bisaV3 && role !== "STAFF"
+              ? "Koreksi setelah V2 memerlukan Senior Manager ke atas (V3)"
+              : tahap === "MENUNGGU_V2" && !bisaV2 && role !== "STAFF"
+                ? "Koreksi setelah V1 memerlukan Manager ke atas (V2/V3)"
+                : undefined,
         onPilih: () => bukaModal(profil === "chn" ? "chn" : "edit"),
       },
-      add: { aktif: bisaEdit, onPilih: () => bukaModal("add") },
+      add: {
+        aktif:
+          bisaEdit &&
+          (tahap === "MENUNGGU_V2" ||
+            tahap === "MENUNGGU_V3" ||
+            tahap === "RESMI"),
+        keterangan:
+          tahap === "MENUNGGU_V1" || tahap === "DITOLAK"
+            ? "Laporan belum diverifikasi; gunakan menu Edit/Koreksi"
+            : undefined,
+        onPilih: () => bukaModal("add"),
+      },
       kondisiFoto: { aktif: bisaV1, onPilih: () => bukaModal("foto") },
       bacaUlang: {
         aktif: bisaV1 && tahap !== "RESMI" && tahap !== "DITOLAK",

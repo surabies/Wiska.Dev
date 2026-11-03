@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/Utilitas"
 import { ApiError } from "@/features/dashboard/api/ApiDashboard"
-import { AKIBAT_JENIS, JENIS } from "./Konstanta"
+import { AKIBAT_JENIS, JENIS } from "../lib/Konstanta"
 import type { JenisTugas, Pencatat } from "../types/TipePetugas"
 
 export function DialogJenisTugas({

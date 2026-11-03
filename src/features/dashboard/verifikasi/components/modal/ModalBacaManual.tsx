@@ -286,8 +286,9 @@ export function ModalBacaManual({
             )}
             {!laporanBolehDitimpa && (
               <p role="alert" className="text-sm text-destructive">
-                Hasil periode ini sudah dipakai tagihan atau memiliki pembacaan
-                lain sehingga tidak dapat ditimpa.
+                Laporan periode ini masih menunggu verifikasi, sudah dipakai
+                tagihan, atau memiliki pembacaan lain sehingga tidak dapat
+                ditimpa melalui Manual Add.
               </p>
             )}
             {pelanggan.sudahAdaLaporan && laporanBolehDitimpa && (

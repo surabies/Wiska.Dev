@@ -5,39 +5,27 @@
 // field lain — lihat komentar di TarifBlok (pelanggan.prisma).
 import { Hono } from "hono"
 import { validate } from "../../lib/Validasi"
-import { z } from "zod"
-import { prisma } from "@db"
 import { requireRole, ROLE_GROUPS } from "../../middleware/RBAC"
 import { getSessionUser } from "../../lib/Sesi"
-import { recordAudit, auditMetaFromRequest } from "../../lib/Audit"
-import {
-  paginationQuerySchema,
-  buildSkipTake,
-  buildMeta,
-  buildOrderBy,
-  sortQuery,
-} from "../../lib/Pagination"
+import { auditMetaFromRequest } from "../../lib/Audit"
 import { ok, created, paginated } from "../../lib/Respons"
-import { NotFoundError } from "../../lib/Galat"
 import {
+  listTarifQuerySchema,
   createTarifGolonganSchema,
   updateTarifGolonganSchema,
   createTarifBlokSchema,
   closeTarifBlokSchema,
 } from "./Tarif.schema"
+import {
+  listTarifGolongan,
+  getTarifGolonganById,
+  createTarifGolongan,
+  updateTarifGolongan,
+  createTarifBlok,
+  closeTarifBlok,
+} from "./Tarif.service"
 
 export const tarifRouter = new Hono()
-
-const listQuerySchema = paginationQuerySchema.extend({
-  ...sortQuery(["kode", "kodeAsli", "nama", "kategori", "isActive"]),
-  q: z.string().trim().min(1).optional(),
-  // hanyaAktif=true: hanya blok tarif yang BERLAKU saat ini (berlakuMulai
-  // <= now && (berlakuSampai null || > now)). Dipakai aplikasi mobile untuk
-  // estimasi progresif — tanpa ini, golongan yang pernah ganti tarif membawa
-  // blok generasi lama (nomor blok ganda) dan estimasi salah hitung. Dashboard
-  // web tetap default menerima seluruh histori (audit/penagihan ulang).
-  hanyaAktif: z.coerce.boolean().optional(),
-})
 
 // MEMBACA tarif = LAPANGAN, bukan STAFF_UP. PELAKSANA sengaja di luar
 // STAFF_UP (lihat rbac.ts), tapi justru dialah yang butuh angka ini: aplikasi
@@ -51,45 +39,15 @@ const listQuerySchema = paginationQuerySchema.extend({
 tarifRouter.get(
   "/",
   requireRole(...ROLE_GROUPS.LAPANGAN),
-  validate("query", listQuerySchema),
+  validate("query", listTarifQuerySchema),
   async (c) => {
-    const query = c.req.valid("query")
-    const { skip, take } = buildSkipTake(query)
-    const where = query.q
-      ? {
-          OR: [
-            { nama: { contains: query.q, mode: "insensitive" as const } },
-            { kodeAsli: { contains: query.q, mode: "insensitive" as const } },
-          ],
-        }
-      : {}
-    const now = new Date()
-    const blokWhere = query.hanyaAktif
-      ? {
-          berlakuMulai: { lte: now },
-          OR: [{ berlakuSampai: null }, { berlakuSampai: { gt: now } }],
-        }
-      : undefined
-    const [data, total] = await Promise.all([
-      prisma.tarifGolongan.findMany({
-        where,
-        skip,
-        take,
-        orderBy: buildOrderBy(query, { kode: "asc" }),
-        include: { blokTarif: { where: blokWhere, orderBy: { blok: "asc" } } },
-      }),
-      prisma.tarifGolongan.count({ where }),
-    ])
-    return paginated(c, data, buildMeta(total, query))
+    const { data, meta } = await listTarifGolongan(c.req.valid("query"))
+    return paginated(c, data, meta)
   }
 )
 
 tarifRouter.get("/:id", requireRole(...ROLE_GROUPS.LAPANGAN), async (c) => {
-  const row = await prisma.tarifGolongan.findUnique({
-    where: { id: c.req.param("id") },
-    include: { blokTarif: { orderBy: { blok: "asc" } } },
-  })
-  if (!row) throw new NotFoundError("TarifGolongan")
+  const row = await getTarifGolonganById(c.req.param("id"))
   return ok(c, row)
 })
 
@@ -98,7 +56,7 @@ tarifRouter.post(
   requireRole(...ROLE_GROUPS.ADMIN),
   validate("json", createTarifGolonganSchema),
   async (c) => {
-    const row = await prisma.tarifGolongan.create({ data: c.req.valid("json") })
+    const row = await createTarifGolongan(c.req.valid("json"))
     return created(c, row)
   }
 )
@@ -108,13 +66,10 @@ tarifRouter.patch(
   requireRole(...ROLE_GROUPS.ADMIN),
   validate("json", updateTarifGolonganSchema),
   async (c) => {
-    const id = c.req.param("id")
-    const existing = await prisma.tarifGolongan.findUnique({ where: { id } })
-    if (!existing) throw new NotFoundError("TarifGolongan")
-    const row = await prisma.tarifGolongan.update({
-      where: { id },
-      data: c.req.valid("json"),
-    })
+    const row = await updateTarifGolongan(
+      c.req.param("id"),
+      c.req.valid("json")
+    )
     return ok(c, row)
   }
 )
@@ -128,30 +83,14 @@ tarifRouter.post(
   validate("json", createTarifBlokSchema),
   async (c) => {
     const tarifGolonganId = c.req.param("id")
-    const body = c.req.valid("json")
     const requester = getSessionUser(c)
-    const { ipAddress, userAgent } = auditMetaFromRequest(c.req.raw)
-
-    const existing = await prisma.tarifGolongan.findUnique({
-      where: { id: tarifGolonganId },
-    })
-    if (!existing) throw new NotFoundError("TarifGolongan")
-
-    const row = await prisma.$transaction(async (tx) => {
-      const row = await tx.tarifBlok.create({
-        data: { ...body, tarifGolonganId },
-      })
-      await recordAudit(tx, {
-        userId: requester.id,
-        aksi: "TARIF_BLOK_BARU",
-        entitas: "TarifBlok",
-        entitasId: row.id,
-        perubahan: { golongan: existing.kode, after: row },
-        ipAddress,
-        userAgent,
-      })
-      return row
-    })
+    const auditMeta = auditMetaFromRequest(c.req.raw)
+    const row = await createTarifBlok(
+      tarifGolonganId,
+      c.req.valid("json"),
+      requester.id,
+      auditMeta
+    )
     return created(c, row)
   }
 )
@@ -163,31 +102,14 @@ tarifRouter.patch(
   async (c) => {
     const { id: tarifGolonganId, blokId } = c.req.param()
     const requester = getSessionUser(c)
-    const { ipAddress, userAgent } = auditMetaFromRequest(c.req.raw)
-
-    const blok = await prisma.tarifBlok.findUnique({ where: { id: blokId } })
-    if (!blok || blok.tarifGolonganId !== tarifGolonganId)
-      throw new NotFoundError("TarifBlok")
-
-    const row = await prisma.$transaction(async (tx) => {
-      const row = await tx.tarifBlok.update({
-        where: { id: blokId },
-        data: c.req.valid("json"),
-      })
-      await recordAudit(tx, {
-        userId: requester.id,
-        aksi: "TARIF_BLOK_DITUTUP",
-        entitas: "TarifBlok",
-        entitasId: blokId,
-        perubahan: {
-          before: { berlakuSampai: blok.berlakuSampai },
-          after: { berlakuSampai: row.berlakuSampai },
-        },
-        ipAddress,
-        userAgent,
-      })
-      return row
-    })
+    const auditMeta = auditMetaFromRequest(c.req.raw)
+    const row = await closeTarifBlok(
+      tarifGolonganId,
+      blokId,
+      c.req.valid("json"),
+      requester.id,
+      auditMeta
+    )
     return ok(c, row)
   }
 )

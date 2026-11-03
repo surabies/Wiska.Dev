@@ -13,7 +13,7 @@
 import { useRouter } from "next/navigation"
 import { DataGrid } from "@/features/dashboard/shared/data-grid/index"
 import { KartuStatistik } from "./KartuStatistik"
-import { FILTER_PENGADUAN } from "./Penyaring"
+import { FILTER_PENGADUAN } from "../../lib/Penyaring"
 import { KOLOM_PENGADUAN } from "./Kolom"
 import { useStatistikPengaduan } from "../../hooks/UseStatistikPengaduan"
 
