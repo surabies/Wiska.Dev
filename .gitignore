@@ -46,3 +46,11 @@ next-env.d.ts
 /prisma/seed/reports/
 /.claude/
 /.windsurf/
+
+# turborepo
+.turbo
+**/.turbo
+**/.next/
+**/generated/
+**/prisma/data/
+**/prisma/seed/reports/

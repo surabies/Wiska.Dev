@@ -1,0 +1,44 @@
+/*
+ * Menyelaraskan popup dan kontrol MapLibre dengan tema shadcn / UI Tirtawening.
+ */
+.maplibregl-popup-content {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border-radius: 0.75rem;
+  padding: 0;
+  box-shadow: 0 10px 30px -8px rgb(0 0 0 / 0.25);
+}
+
+.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+  border-bottom-color: var(--popover);
+}
+
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+  border-top-color: var(--popover);
+}
+
+.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: var(--popover);
+}
+
+.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: var(--popover);
+}
+
+/* Dukungan tema gelap untuk latar kanvas & atribusi MapLibre */
+.dark .maplibregl-canvas-container {
+  background-color: #0b0f17;
+}
+
+.dark .maplibregl-ctrl-attrib {
+  background-color: rgb(15 23 42 / 0.85);
+  color: #94a3b8;
+}
+
+.dark .maplibregl-ctrl-attrib a {
+  color: #38bdf8;
+}

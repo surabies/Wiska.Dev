@@ -1,0 +1,41 @@
+/*
+ * MENYIMPANG DARI HULU react-native-reusables — JANGAN dikembalikan saat
+ * menyalin ulang komponen dari shadcn/RNR.
+ *
+ * Varian `sm:`/`md:` bawaan (mis. `sm:h-9`, `md:text-sm`) MENGECILKAN
+ * komponen di layar lebar. Itu masuk akal di web, tapi NativeWind menghitung
+ * breakpoint dari LEBAR JENDELA: di HP (390-430px) varian itu tidak pernah
+ * aktif, sedangkan di tablet dan di `expo start --web` ia aktif dan membuat
+ * tombol/field 48px menyusut jadi 36px. Untuk aplikasi lapangan, layar yang
+ * lebih besar tidak pernah berarti target ketuk yang lebih kecil — jadi
+ * varian penyusut itu dibuang, dan satu komponen kini punya satu ukuran.
+ */
+import { cn } from '@/lib/utils';
+import { Platform, TextInput } from 'react-native';
+
+function Input({ className, ...props }: React.ComponentProps<typeof TextInput> & React.RefAttributes<TextInput>) {
+  return (
+    <TextInput
+      className={cn(
+        'dark:bg-input/30 border-input bg-background text-foreground flex h-10 w-full min-w-0 flex-row items-center rounded-md border px-3 py-1 text-base leading-5 shadow-sm shadow-black/5',
+        props.editable === false &&
+        cn(
+          'opacity-50',
+          Platform.select({ web: 'disabled:pointer-events-none disabled:cursor-not-allowed' })
+        ),
+        Platform.select({
+          web: cn(
+            'placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground outline-none transition-[color,box-shadow]',
+            'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+            'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive'
+          ),
+          native: 'placeholder:text-muted-foreground/50',
+        }),
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+export { Input };

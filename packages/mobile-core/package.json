@@ -1,0 +1,28 @@
+{
+  "name": "@workspace/mobile-core",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./network": "./src/network/index.ts",
+    "./models": "./src/models/index.ts",
+    "./utils": "./src/utils/index.ts",
+    "./auth": "./src/auth/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "expo-image-manipulator": "*",
+    "expo-secure-store": "*"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "expo": "~57.0.8",
+    "expo-image-manipulator": "~57.0.6",
+    "expo-secure-store": "~57.0.1",
+    "typescript": "~6.0.3"
+  }
+}

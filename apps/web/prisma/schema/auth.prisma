@@ -1,0 +1,200 @@
+model User {
+  id                    String                  @id @default(cuid())
+  name                  String?
+  /// Login non-Google (petugas lapangan, staf internal) memakai username,
+  /// bukan email. Email tetap wajib & unik untuk akun Google.
+  username              String?                 @unique
+  email                 String                  @unique
+  emailVerified         DateTime?
+  image                 String?
+  /// Hash Argon2id untuk login Credentials. Null untuk akun yang hanya
+  /// login via Google (OAuth-only).
+  passwordHash          String?
+  role                  Role                    @default(USER)
+  status                UserStatus              @default(ACTIVE)
+  jenisAkun             JenisAkun               @default(PETUGAS)
+  nik                   String?                 @unique
+  nip                   String?                 @unique
+  nomorPelanggan        String?
+  jabatan               String?
+  telepon               String?
+  twoFactorEnabled      Boolean                 @default(false)
+  divisiId              String?
+  bagianId              String?
+  subBagianId           String?
+  /// Denormalized dari divisi/subBagian — dibaca langsung di JWT/session
+  /// (lihat auth.ts callbacks.jwt) supaya authorization check di edge
+  /// middleware (proxy.ts) tidak perlu query Prisma. WAJIB tetap sinkron
+  /// dengan divisiId/subBagianId setiap kali penempatan user diubah.
+  divisiKode            String?
+  subBagianKode         String?
+  lastLoginAt           DateTime?
+  loginCount            Int                     @default(0)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  accounts              Account[]
+  auditLogs             AuditLog[]
+  langgananWarga        LanggananWarga[]
+  laporanVerif1         LaporanHarianPetugas[]  @relation("LaporanVerif1")
+  laporanVerif2         LaporanHarianPetugas[]  @relation("LaporanVerif2")
+  laporanVerif3         LaporanHarianPetugas[]  @relation("LaporanVerif3")
+  laporanDiverifikasi   LaporanHarianPetugas[]  @relation("LaporanVerifikator")
+  laporanMandiriVerif   LaporanMandiri[]        @relation("LaporanMandiriVerifikator")
+  kirimanLaporanMandiri KirimanLaporanMandiri[] @relation("KirimanLaporanMandiriPengirim")
+  mutasiDiproses        MutasiPelanggan[]       @relation("MutasiProsesOleh")
+  notifikasi            Notifikasi[]
+  perangkatNotif        PerangkatNotif[]
+  pelangganDibuat       Pelanggan[]             @relation("PelangganAuthor")
+  pelangganDiupdate     Pelanggan[]             @relation("PelangganLastEditor")
+  pemutusanDiproses     Pemutusan[]             @relation("PemutusanProsesOleh")
+  pencatat              Pencatat?
+  pengaduanDitugaskan   Pengaduan[]             @relation("PengaduanDitugaskan")
+  pengaduanEskalasi     Pengaduan[]             @relation("PengaduanEskalasi")
+  riwayatPengaduan      RiwayatPengaduan[]      @relation("RiwayatPengaduanOleh")
+  sessions              Session[]
+  tagihanDivalidasi     Tagihan[]               @relation("TagihanValidator")
+  periodeDitutup        PeriodePenagihan[]      @relation("PeriodeDitutupBy")
+  periodeDibuka         PeriodePenagihan[]      @relation("PeriodeDibukaBy")
+  twoFactors            TwoFactor[]
+  bagian                Bagian?                 @relation(fields: [bagianId], references: [id])
+  divisi                Divisi?                 @relation(fields: [divisiId], references: [id])
+  subBagian             SubBagian?              @relation(fields: [subBagianId], references: [id])
+
+  @@index([email])
+  @@index([username])
+  @@index([role, status])
+  @@map("user")
+}
+
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  password          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("account")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_token")
+}
+
+model TwoFactor {
+  id          String @id @default(cuid())
+  secret      String
+  backupCodes String
+  userId      String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("two_factor")
+}
+
+/// Token perangkat untuk push notification (FCM). Satu user boleh punya
+/// banyak perangkat (HP + tablet), pola sama dengan Account. Token
+/// didaftarkan aplikasi mobile saat login (POST /api/v1/perangkat/token) dan
+/// dihapus saat logout. `token` unik lintas user: FCM bisa memindahkan token
+/// ke akun lain saat perangkat dipakai bergantian — upsert-by-token menjaga
+/// satu baris per perangkat fisik.
+model PerangkatNotif {
+  id         String   @id @default(cuid())
+  userId     String
+  token      String   @unique
+  platform   String   @default("android")
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("perangkat_notif")
+}
+
+/// Inbox notifikasi in-app per user. Sumber kebenaran notifikasi yang tetap
+/// terlihat walau push FCM belum aktif / gagal sampai — NotifierLog menulis
+/// ke sini, NotifierFcm menulis ke sini SEKALIGUS mengirim push. `data`
+/// menyimpan tautan dalam-app (mis. { "tipe": "pengaduan", "id": "..." })
+/// sebagai JSON string.
+model Notifikasi {
+  id        String    @id @default(cuid())
+  userId    String
+  judul     String
+  isi       String
+  tipe      String    @default("umum")
+  data      String?
+  dibacaAt  DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, dibacaAt])
+  @@index([userId, createdAt])
+  @@map("notifikasi")
+}
+
+/// Jenjang akses. Enam yang pertama adalah jenjang STRUKTURAL kantor;
+/// PELAKSANA berdiri di luar jenjang itu.
+enum Role {
+  SUPER_ADMIN
+  DIREKSI
+  SENIOR_MANAGER
+  MANAGER
+  SUPERVISOR
+  STAFF
+  /// Petugas lapangan (pencatat meter). BUKAN staf kantor, dan aksesnya
+  /// memang berbeda: ia menyetor pencatatan dari aplikasi mobile, mengunduh
+  /// rute yang ditugaskan padanya, dan mengunggah bukti — tapi tidak boleh
+  /// menyentuh layar dashboard, verifikasi, closing, atau data induk.
+  ///
+  /// Sengaja TIDAK ditaruh di bawah STAFF sebagai "STAFF yang lebih rendah":
+  /// jenjangnya bukan lebih rendah, melainkan LAIN. Karena itu ROLE_GROUPS
+  /// tidak memasukkannya ke STAFF_UP; ia punya grup sendiri (LAPANGAN).
+  ///
+  /// Penempatannya wajib jelas — User.bagianId & User.subBagianId diisi
+  /// (mis. SUB-PW5-CATER = Pencatatan Meter, Pelayanan Wilayah 5).
+  PELAKSANA
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum JenisAkun {
+  PETUGAS
+  PELANGGAN
+}
