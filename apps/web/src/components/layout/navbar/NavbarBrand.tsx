@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { versions } from "@/config/Navigasi"
-import { BRAND } from "@/lib/landing/Konten"
+import { BRAND } from "@/config/site"
 
 export function NavbarBrand() {
   return (

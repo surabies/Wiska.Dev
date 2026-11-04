@@ -1,0 +1,113 @@
+/*
+ * Design tokens & utilitas khusus DICE.
+ * Di-import SEKALI dari globals.css (lihat README) — jangan menimpa token shadcn.
+ */
+
+@theme {
+  /* DICE memakai breakpoint "desktop" di 992px, bukan 1024px. */
+  --breakpoint-lg: 62rem;
+  --radius-4: 4px;
+
+  /* Warna */
+  --color-placeholder: #d9d9d9;
+  --color-surface-muted: #f2f2f2;
+  --color-ink-muted: #595959;
+  --color-store-button: #333333;
+  --color-brand-yellow: #f2ef1d;
+  --color-brand-green: #4bfa94;
+  --color-dice-green: #00d8af;
+  --color-dice-blue: #0000fe;
+  --color-dice-blue-light: #24afee;
+  --color-dice-purple-light: #a783ff;
+
+  /* Motion */
+  --ease-out-sine: cubic-bezier(0.39, 0.575, 0.565, 1);
+  --animate-swipe-up: swipe-up 250ms var(--ease-out-sine)
+    calc(30ms * var(--index, 0)) forwards;
+
+  /* Tailwind v4 memakai properti `translate`, jadi keyframes pun harus sama. */
+  @keyframes swipe-up {
+    from {
+      translate: 0 100%;
+    }
+    to {
+      translate: 0 0;
+    }
+  }
+}
+
+/* Font family dipetakan ke variable next/font (lihat src/lib/fonts.ts). */
+@theme inline {
+  --font-body: var(--font-body-src), Helvetica, Arial, sans-serif;
+  --font-display: var(--font-display-src), Impact, "Arial Narrow", sans-serif;
+}
+
+/* ---------- Skala tipografi (1 kelas = 1 peran) ---------- */
+
+@utility type-display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  text-transform: uppercase;
+  font-size: 48px;
+  line-height: 48px;
+
+  @media (min-width: 62rem) {
+    font-size: 106px;
+    line-height: 88px;
+  }
+}
+
+@utility type-heading {
+  font-weight: 350;
+  font-size: 20px;
+  line-height: 25px;
+
+  @media (min-width: 62rem) {
+    font-size: 28px;
+    line-height: 34px;
+  }
+}
+
+@utility type-body {
+  font-weight: 350;
+  letter-spacing: 0.01em;
+  font-size: 15px;
+  line-height: 20px;
+
+  @media (min-width: 62rem) {
+    letter-spacing: normal;
+    font-size: 18px;
+    line-height: 22px;
+  }
+}
+
+@utility type-caption {
+  font-weight: 350;
+  letter-spacing: 0.01em;
+  font-size: 13px;
+  line-height: 17px;
+
+  @media (min-width: 62rem) {
+    letter-spacing: normal;
+    font-size: 16px;
+    line-height: 20px;
+  }
+}
+
+/* ---------- Efek garis bawah animasi pada link footer ---------- */
+
+@utility link-underline {
+  position: relative;
+  display: inline;
+  padding-bottom: 1px;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  background-size: 0 1px;
+  transition: background-size 150ms ease-in-out;
+
+  &:hover,
+  &:focus-visible {
+    background-size: 100% 1px;
+  }
+}

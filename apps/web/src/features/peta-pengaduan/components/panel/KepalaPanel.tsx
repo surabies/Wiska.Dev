@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { AppLogo } from "@/components/LogoAplikasi"
 import type { StatusPengaduan } from "../../types/TipePengaduan"
 
@@ -18,15 +19,26 @@ export function KepalaPanel({
 }: Props) {
   return (
     <header className="flex flex-col gap-3 border-b bg-card/60 p-4 backdrop-blur-xs shrink-0">
-      {/* Baris Identitas Logo & Judul (Tanpa Tombol Kembali Dashboard) */}
+      {/* Baris Identitas Logo & Judul dengan tautan kembali ke Dashboard */}
       <div className="flex items-center gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-card p-1.5 shadow-2xs">
+        <Link
+          href="/dashboard"
+          title="Kembali ke Dashboard"
+          aria-label="Kembali ke Dashboard"
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-card p-1.5 shadow-2xs transition-all hover:border-primary/50 hover:bg-muted hover:scale-105 active:scale-95 cursor-pointer"
+        >
           <AppLogo className="size-7" />
-        </div>
+        </Link>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-sm font-bold tracking-tight text-foreground leading-tight">
-            Peta Kendali Pengaduan
-          </h1>
+          <Link
+            href="/dashboard"
+            className="group block outline-none"
+            title="Kembali ke Dashboard"
+          >
+            <h1 className="truncate text-sm font-bold tracking-tight text-foreground leading-tight group-hover:text-primary transition-colors cursor-pointer">
+              Peta Kendali Pengaduan
+            </h1>
+          </Link>
           <p className="truncate text-[11px] text-muted-foreground">
             Pusat Monitoring GIS & Dispatch Petugas
           </p>

@@ -66,8 +66,8 @@ export function DialogDetailPengaduan({ pengaduan: p, buka, onBukaChange, onIkut
                 />
                 {p.foto.length > 1 && (
                   <ul className="grid grid-cols-3 gap-2">
-                    {p.foto.slice(1).map((url) => (
-                      <li key={url}>
+                    {p.foto.slice(1).map((url, idx) => (
+                      <li key={`${url}-${idx}`}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={url}
@@ -112,7 +112,7 @@ export function DialogDetailPengaduan({ pengaduan: p, buka, onBukaChange, onIkut
                 const meta = STATUS_META[r.status]
                 const Ikon = IKON_STATUS[r.status]
                 return (
-                  <li key={r.waktu + r.status} className="flex gap-3">
+                  <li key={r.id ? `${r.id}-${i}` : `${r.waktu}-${r.status}-${i}`} className="flex gap-3">
                     <div className="flex flex-col items-center">
                       <span
                         className="flex size-7 shrink-0 items-center justify-center rounded-full text-white"

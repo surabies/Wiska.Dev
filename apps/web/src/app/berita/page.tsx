@@ -4,7 +4,7 @@ import {
   Bagian,
   HalamanInfo,
   KontenContoh,
-} from "@/components/landing/HalamanInfo"
+} from "@/components/shared/HalamanInfo"
 
 export const metadata: Metadata = { title: "Berita" }
 

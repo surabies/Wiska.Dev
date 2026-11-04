@@ -384,19 +384,41 @@ export function LaporMeterForm() {
         )}
 
         {pratinjau && (
-          <div className="mt-4 space-y-2.5 rounded-lg border border-green-200 bg-green-100 px-3 py-3 dark:border-green-800 dark:bg-green-900/30">
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-              <p className="text-sm font-semibold">{pratinjau.nama}</p>
+          <div className="mt-4 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4 text-xs dark:border-emerald-500/30 dark:bg-emerald-500/10">
+            <div className="flex items-center justify-between border-b border-emerald-500/15 pb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="flex size-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="size-3.5" />
+                </div>
+                <div>
+                  <p className="font-bold text-foreground">
+                    {pratinjau.nama}
+                  </p>
+                  <p className="font-mono text-[11px] text-muted-foreground">
+                    {pratinjau.nomorLangganan}
+                  </p>
+                </div>
+              </div>
+              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 font-mono text-[10px] font-bold tracking-wider text-emerald-700 uppercase dark:text-emerald-300">
+                Terverifikasi
+              </span>
             </div>
-            <div className="grid grid-cols-2 text-xs">
+            <div className="mt-3 grid grid-cols-2 gap-3">
               <div>
-                <p className="text-muted-foreground uppercase">Alamat</p>
-                <p>{pratinjau.alamat}</p>
+                <p className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                  Alamat Sambungan
+                </p>
+                <p className="mt-0.5 leading-snug font-medium text-foreground">
+                  {pratinjau.alamat}
+                </p>
               </div>
               <div>
-                <p className="text-muted-foreground uppercase">Gol. tarif</p>
-                <p>{pratinjau.tarifGolongan?.kategori ?? "—"}</p>
+                <p className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                  Golongan Tarif
+                </p>
+                <p className="mt-0.5 font-mono font-medium text-foreground">
+                  {pratinjau.tarifGolongan?.kategori ?? "—"}
+                </p>
               </div>
             </div>
           </div>
@@ -445,15 +467,20 @@ export function LaporMeterForm() {
         <>
           <div className="space-y-1.5">
             <Label htmlFor="standDilaporkan">Angka stand meter (m³)</Label>
-            <Input
-              id="standDilaporkan"
-              value={standInput}
-              onChange={(e) => setStandInput(e.target.value.replace(/\D/g, ""))}
-              inputMode="numeric"
-              placeholder="Contoh: 3955"
-              size="xl"
-              className="rounded-xl font-mono"
-            />
+            <div className="relative">
+              <Input
+                id="standDilaporkan"
+                value={standInput}
+                onChange={(e) => setStandInput(e.target.value.replace(/\D/g, ""))}
+                inputMode="numeric"
+                placeholder="Masukkan angka stand hitam (contoh: 3955)"
+                size="xl"
+                className="rounded-xl font-mono pr-12"
+              />
+              <span className="pointer-events-none absolute inset-y-0 right-3.5 flex items-center font-mono text-xs font-bold text-muted-foreground">
+                m³
+              </span>
+            </div>
             <p className="text-xs text-muted-foreground">
               Isi sesuai angka hitam yang tertera di meter air, tanpa titik atau
               koma.
@@ -476,7 +503,7 @@ export function LaporMeterForm() {
             </Label>
             <div className="space-y-1">
               <Input
-                placeholder="Nama lengkap"
+                placeholder="Nama lengkap pelapor (sesuai KTP)"
                 value={namaPelapor}
                 onChange={(e) => setNamaPelapor(e.target.value)}
                 size="xl"
@@ -488,7 +515,7 @@ export function LaporMeterForm() {
             </div>
             <div className="space-y-1">
               <Input
-                placeholder="0812…"
+                placeholder="08xxxxxxxxxx (Nomor WhatsApp aktif)"
                 value={nomorPelapor}
                 onChange={(e) =>
                   setNomorPelapor(

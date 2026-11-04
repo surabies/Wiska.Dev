@@ -4,8 +4,8 @@ import {
   Bagian,
   HalamanInfo,
   KontenContoh,
-} from "@/components/landing/HalamanInfo"
-import { BRAND } from "@/lib/landing/Konten"
+} from "@/components/shared/HalamanInfo"
+import { BRAND } from "@/config/site"
 
 export const metadata: Metadata = { title: "Profil Perusahaan" }
 

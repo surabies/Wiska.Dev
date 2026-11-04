@@ -174,7 +174,11 @@ export function petakanBarisDbKePengaduan(rows: unknown[]): Pengaduan[] {
             status: petakanDbStatusKeFrontend(r.statusKe || r.status || "BARU"),
             statusDari: r.statusDari,
             aksi: r.aksi,
-            waktu: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
+            waktu: r.createdAt
+              ? new Date(r.createdAt).toISOString()
+              : r.waktu
+                ? new Date(r.waktu).toISOString()
+                : new Date().toISOString(),
             catatan: r.catatan,
             olehNama: r.olehNama || r.oleh?.name || "Petugas Lapangan",
           }))
@@ -317,7 +321,11 @@ export async function ambilDaftarPengaduan(): Promise<Pengaduan[]> {
                 status: petakanDbStatusKeFrontend(r.statusKe || r.status || "BARU"),
                 statusDari: r.statusDari,
                 aksi: r.aksi,
-                waktu: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
+                waktu: r.createdAt
+              ? new Date(r.createdAt).toISOString()
+              : r.waktu
+                ? new Date(r.waktu).toISOString()
+                : new Date().toISOString(),
                 catatan: r.catatan,
                 olehNama: r.olehNama,
               }))
@@ -388,7 +396,7 @@ export async function buatPengaduan(input: BuatPengaduanInput): Promise<Pengadua
     status: "baru",
     diikuti: true,
     dibuatPada: sekarang,
-    riwayat: [{ status: "baru", waktu: sekarang, catatan: "Pengaduan diterima sistem." }],
+    riwayat: [{ id: `rw-${Date.now()}`, status: "baru", waktu: sekarang, catatan: "Pengaduan diterima sistem." }],
   }
 }
 

@@ -2,8 +2,9 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { ThemeProvider } from "@/components/PenyediaTema"
 import { Toaster } from "@/components/ui/sonner"
+import { fontBody, fontDisplay } from "@/lib/fonts"
 import "./globals.css"
-import { LandingShell } from "@/components/landing/KerangkaBeranda"
+import { LandingShell } from "@/components/layout/LandingShell"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,7 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="id"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${fontBody.variable} ${fontDisplay.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">

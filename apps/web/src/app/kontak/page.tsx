@@ -5,8 +5,8 @@ import {
   Bagian,
   HalamanInfo,
   KontenContoh,
-} from "@/components/landing/HalamanInfo"
-import { RUTE } from "@/lib/landing/Konten"
+} from "@/components/shared/HalamanInfo"
+import { RUTE } from "@/config/site"
 
 export const metadata: Metadata = { title: "Kontak & Kantor Layanan" }
 

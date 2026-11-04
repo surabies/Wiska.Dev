@@ -1,20 +1,26 @@
-// Beranda /landing: hanya menyusun section. Isi teks ada di lib/landing/Konten.ts.
-import { CtaSection } from "@/components/landing/sections/BagianAjakan"
-import { FiturSection } from "@/components/landing/sections/FiturBagian"
-import { HeroSection } from "@/components/landing/sections/BagianHero"
-import { ShowcaseSection } from "@/components/landing/sections/BagianEtalase"
-import { TemplateSection } from "@/components/landing/sections/TemplatBagian"
-import { ToolingSection } from "@/components/landing/sections/BagianPeralatan"
+import { BenefitsSection } from "@/components/home/BenefitsSection"
+import { FeatureSection } from "@/components/home/FeatureSection"
+import { HeroSection } from "@/components/home/HeroSection"
+import { TicketingSection } from "@/components/home/TicketingSection"
+import { TopEventsSection } from "@/components/home/TopEventsSection"
+import {
+  benefitsContent,
+  featureSections,
+  heroContent,
+  ticketingContent,
+  topEventsContent,
+} from "@/data/home"
 
-export default function LandingPage() {
+export default function BerandaPage() {
   return (
     <>
-      <HeroSection />
-      <FiturSection />
-      <ToolingSection />
-      <ShowcaseSection />
-      <TemplateSection />
-      <CtaSection />
+      <HeroSection content={heroContent} />
+      <TopEventsSection content={topEventsContent} />
+      <TicketingSection content={ticketingContent} />
+      <BenefitsSection content={benefitsContent} />
+      {featureSections.map((section) => (
+        <FeatureSection key={section.id} section={section} />
+      ))}
     </>
   )
 }

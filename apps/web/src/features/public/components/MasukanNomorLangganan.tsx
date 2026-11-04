@@ -46,7 +46,7 @@ export function InputNomorLangganan({
           }
           inputMode="numeric"
           autoComplete="off"
-          placeholder="Contoh: 00401700010"
+          placeholder="Masukkan 11 digit nomor langganan (contoh: 00401700010)"
           maxLength={11}
           disabled={pending}
           size="xl"

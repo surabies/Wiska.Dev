@@ -99,7 +99,7 @@ export function PanelPetaPengaduan({
     for (const p of data) {
       for (const r of p.riwayat) {
         list.push({
-          id: r.id || `${p.id}-${r.waktu}`,
+          id: r.id ? `${r.id}-${list.length}` : `${p.id}-${r.waktu}-${list.length}`,
           tiketId: p.id,
           nomorTiket: p.nomor,
           kategori: labelKategori(p.kategori),
